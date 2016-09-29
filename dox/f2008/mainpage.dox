@@ -1,0 +1,1208 @@
+// ================================================================
+// 
+// Author: Walid Keyrouz <walid.keyrouz@nist.gov>
+// Date:   Mon Sep 23 11:51:49 2013 EDT
+// 
+// Holds "mainpage.dox" for ZENO.
+// 
+// Time-stamp: <2015-03-11 13:51:39 wtk>
+// 
+// ================================================================
+
+/**
+
+@mainpage ZENO-v4
+
+@version Version 4.0
+
+@author Marc L. Mansfield or assistants (formerly of Stevens Institute of Technology); up to v 3.3.
+@author Walid Keyrouz (walid.keyrouz@nist.gov)
+
+@section introsection Introduction
+
+Perform four different computations on bodies
+
+- Zeno computation
+
+	Computes the capacitance and polarizability of 
+	bodies by the "Zeno" algorithm, and then uses
+	these to estimate transport properties.
+
+- Interior computation
+
+	Computes the volume, the radius of gyration, and the
+	structure factor of the 
+	interior -- by a Monte Carlo integration -- by generating
+	a set of points through the interior.
+
+- Surface computation
+
+	Computes the surface area, the radius of gyration
+	of the surface, and the Kirkwood-hydrodynamic radius
+	(i.e., the hydrodynamic radius as evaluated by the
+	Kirkwood double sum <1/Rij> approximation) --  by Monte
+	Carlo integration --  by generating 
+	surface points.
+
+- Project-onto-a-line computation
+
+	Computes the Giddings length, LG, which according to some models,
+	is expected to be a predictor
+	of the elution volume in size excusion chromatrography,
+	Also computes the mean projection onto a plane.
+
+@section references References
+
+- Mansfield, Douglas, Garbozci
+  "Intrinsic viscosity and the electrical polarizability of
+   arbitrarily shaped objects,"
+  Physical Review E, 64, 061401 (2001).
+
+- Mansfield, Douglas
+  "Improved path-integration method for estimating the intrinsic
+   viscosity of arbitrarily-shaped particles," Physical Review E,
+  Physical Review E, 78, 046712 (2008).
+
+- Mansfield, Douglas
+  "Numerical Path-Integration Calculation of Transport
+   Properties of Star Polymers and DLA Aggregates,"
+  Condensed Matter Physics, 5, 249 (2002).
+
+- Kang, Mansfield, Douglas
+  "Numerical path integration technique for the calculation
+   of transport properties of proteins,"
+  Physical Review E, 69, 031918 (2004).
+
+- Mansfield, Douglas
+  "Transport properties of rod-like polymers,"
+  Macromolecules, 41, 5422-5432 (2008).
+
+- Mansfield, Douglas, Irfan, Kang
+  "Comparison of Approximate Methods for Calculating the
+   Friction Coefficient and Intrinsic Viscosity of Nanoparticles
+   and Macromolecules,"
+  Macromolecules, 40, 2575-2589 (2007).
+
+- Mansfield, Douglas
+  "Transport properties of wormlike chains with applications
+   to double helical DNA and carbon nanotubes,"
+  Macromolecules, 41, 5412-5421 (2008).
+
+@section commandline Command Line
+
+The `ZENO` is the command line is as follows:
+
+@code
+./zeno  [CLI_options] <identifier> <action1> <action2> <action3> <action4>
+@endcode
+
+The *CLI_options* (CLI = Command Line Interface) are new additions to ZENO and are make it easier to make the results of ZENO computations *deterministic* and to control the naming and destination of ZENO's output files.  The *CLI_options* must appear *immediately* after the program's name on the command line and have both *short* and *long* forms.  The recognized CLI options are:
+
+-# `--seed` or `-s`: 
+
+  this option takes a Unix-style date-and-time string parameter that is used to set the seed of ZENO's random number generator.  This parameter must be quoted because it contains spaces.  The seed is saved in the `<case_id>.zsd` file.
+
+-# `--odir` or `-d`:
+
+  this option takes a directory parameter that will be used to write ZENO's output files to.  The program assumes that the directory exists.
+
+-# `--case_id` or `-c`:
+
+  this option takes a string parameter (with no blank spaces) which will be used as the `basename(1)` of output files instead of the `id` used to specify the `.bod` file.
+
+  This option is useful to write the output files of multiple runs to the same directory and allows one to avoid creating separate dirctories for each run of the same case.
+
+-# `--version` or `-V`:
+
+	this option instructs the program to print a message relating to its current version (4.0 as of the current writing) and then stops.
+
+-# `--verbose` or `-v`:
+
+  this option controls the generation of *debug* output.
+
+-# `--flush_print` or `-f`:
+
+  this option controls the use of *backspace* characters in the output.
+
+Before issuing this command, you need to set up the body file,
+which specifies the body.  The body file must be created with 
+the name `<identifier>.bod`
+
+- `<identifier>` identifies the model.  Input (the
+  specification for the model) is read from the
+  file `<identifier>.bod` and a report of the
+  calculation is sent to `<identifier>.zno`
+
+- You specify between 0 and 4 actions, i.e., 
+  not all four need to be given, but if you don't specify any, 
+  the program will not do anything.
+
+  The actions, also referred to as *action codes*, are cumulative and, as such, can appear in any order.
+
+@subsection action_codes Action Codes
+
+Each action code is a character string, with three
+parts, a one-byte prefix, a set of digits in the
+middle, and optionally, a suffix.
+The prefix is one of four bytes:
+
+Prefix | Description
+------ | -----------
+`z`    |  Do the Zeno computation on the body, without recording hits
+`Z`    |  Do the Zeno computation on the body, and record all hits
+`i`    |  Do the interior integration on the body, without recording hits
+`I`    |  Do the interior integration on the body, and record all hits
+`c`    |  Do the covered-once-interior integration on the body, without recording hits
+`C`    |  Do the covered-once-interior integration on the body, and record all hits
+`s`    |  Do the surface computation on the body, without recording hits
+`S`    |  Do the surface computation on the body, and record hits
+`p`    |  Do the projection-onto-a-line computation on the body, without recording hits
+`P`    |  Do the projection-onto-a-line computation, and record hits
+
+
+Allowed suffixes are any of the three *bytes*, but these suffixes are
+optional.
+
+Suffix | Multiplier
+-------|-----------
+  `t`  | thousand
+  `m`  | million
+  `b`  | billion
+
+A few examples will be used to explain the action codes:
+
+A few examples will be used to explain the action codes:
+
+Example     | Description
+------------|-------------------------------------------------------------
+ `z100t`    | Do the Zeno calculation with 1E5 walks
+ `i1b`      | Do the interior computation with 1E9 walks
+ `s5000000` | Do the surface computation with 5E6 pairs of surface points
+
+See below for limitations on both the surface and the
+interior calculations.
+
+You can specify as few as zero (which will result in
+no action being taken by the program), or as many as
+four action codes with each call.
+
+The program accepts at most four action codes, but that is because
+the interior and covered-once-interior actions are intended to
+be mutually exclusive.  If you try to execute one of each, 
+the latter overwrites the results of the former one.
+
+@section bodydefinition Body Definition
+
+The body is taken as the union of body elements.  
+Each body element requires a set of values that specify
+size, shape, position, and spatial orientation.
+
+All the following body elements are now implemented.
+Also shown are variables for the values needed to
+specify the shape.
+
+@verbatim
+SPHERE    cx cy cz   r
+TRIANGLE  v1x v1y v1z   v2x v2y v2z   v3x v3y v3z
+DISK      cx cy cz   nx ny nz   r
+CYLINDER  cx cy cz   nx ny nz   r   l
+SOL_CYL   cx cy cz   nx ny nz   r   l
+TORUS     cx cy cz   nx ny nz   r1   r2
+ELLIPSOID cx cy cz   n1x n1y n1z   n2x n2y n2z   aa bb cc
+CUBE      cx cy cz   s
+PILLAR    x1 y1 zl1 zh1 x2 y2 zl2 zh2 x3 y3 zl3 zh3
+
+ST        t
+UNITS     unit_name
+HUNITS    value unit_name
+TEMP      value unit_name
+MASS      value unit_name
+VISCOSITY value unit_name
+SOLVENT   solvent_name
+BF        value
+@endverbatim
+
+The complete body is specified by supplying a "body file."
+This is a file with the name:
+@code
+	<identifier>.bod
+@endcode
+where `<identifier>` represents a character string that 
+identifies the model.
+
+The data in the `bod` file consists of a series of commands, which
+have the general form:
+@code
+<predicate> <modifier1> <modifier2> <modifier3> ...
+@endcode
+
+The symbols `<predicate>` and `<modifierN>` each represent a
+character string, and are delimited in the file by spaces or carriage
+returns.  The program accepts more than one string per line, up to a
+total of 80 characters per line.
+
+The modifiers belong to, or modify, the predicate, and
+each predicate along with its modifiers constitutes
+a single *command*.
+
+The modifiers to each predicate come in a specific order
+following that predicate, and each predicate requires
+a specific number of modifiers.
+
+There are no punctuation marks flagging the end of
+one command or the beginning of another.  The command
+is defined as a valid predicate followed by the correct
+number of modifiers.  However, for ease in reading,
+the user will probably want to design the body file 
+with carriage returns between commands.
+
+Usually (but not always) the modifiers are strings 
+representing numbers.  Such strings are called "numeric
+strings," or simply "numbers."  A valid numeric
+string is any character string that can be interpreted
+by the fortran internal-read, free-format command:
+@code
+  read(string,*) value
+@endcode
+
+To process the file, the program looks at the first
+string on the file.  This string must be a valid predicate.
+If it is not, then the program aborts.  Then, the program
+takes the next *N* strings, where *N* is the number of
+modifiers required for this particular predicate.  The
+program aborts if it has trouble interpreting any of
+the modifiers.  Assuming these *N* strings are interpreted
+successfully, the program repeats, reading a predicate
+and its modifiers, until it encounters the end of the
+file.
+
+The following paragraphs summarize each command-type,
+giving the valid predicate or predicates, and the valid 
+modifiers.  And they also briefly explain the action
+of the command.  Full definitions of each modifer are
+given later.  Most of the commands add a body-element 
+to the growing body.  All the others are used to set
+the value of a variable or other parameter.  Most of the
+commands have several synonymous predicates.  E.g.,
+the four strings `SPHERE`, `sphere`, `S`, `s` are
+all valid predicates for the *ADD A SPHERE* command.
+The order of the modifiers as given in the following 
+paragraphs must be followed in each command of the body 
+file.
+
+@subsection add-a-sphere Add a Sphere
+
+Add a solid sphere to the list of body elements.
+
+- Command syntax:
+@code
+SPHERE  cx  cy  cz  r
+@endcode
+This adds a solid sphere centered at `C=(cx, cy, cx)` with radius `r`.
+
+- The `Fortran77 read` statement is:
+@code
+real*4 c(3),r
+@endcode
+
+- Valid predicates: `SPHERE`, `sphere`, `S`, or `s`
+
+- Modifiers---four numbers: `cx`, `cy`, `cz`, `r`
+
+- Internal code: `sphere_code`
+
+- Example command:
+@code
+SPHERE  0 2 0 5
+@endcode
+adds a sphere of radius 5 at point (0,2,0).
+
+
+@subsection add-a-triangle Add a Triangle
+
+Add a triangle to the list of body elements; the triangle is not a
+space-filling body.
+
+- Command syntax:
+@code
+TRIANGLE  v1x v1y v1z  v2x v2y v2z  v3x v3y v3z
+@endcode
+  This defines the triangle with 3 vertices, `V1`, `V2`, and `V3`:
+
+  - `v1(v1x, v1y, v1z)`
+
+  - `v2(v2x, v2y, v2z)`
+
+  - `v3(v3x, v3y, v3z)`.
+
+- The corresponding `Fortran77 read` statement is:
+@code
+real*4 v1(3),v2(3),v3(3)
+@endcode
+
+- Valid predicates: `TRIANGLE`, `triangle`, `T`, `t`
+
+- Internal code: `triangle_code`
+
+- Modifiers---nine numbers (3 per point in 3D): `v1x`, `v1y`,
+  `v1z`, `v2x`, `v2y`, `v2z`, `v3x`, `v3y`, `v3z`
+
+- Example command:
+@code
+TRIANGLE  0 0 0   5 0 0    0 2 0
+@endcode
+  adds a triangle with vertices (0,0,0), (5,0,0), and (0,2,0) to the body.
+
+@subsection add-a-circular-disk Add a Circular Disk
+
+Add a circular disk to the list of body elements; the disk is not a
+space-filling body.
+
+- Command syntax:
+@code
+DISK  cx cy cz  nx ny nz  r
+@endcode
+  This defines a circular disk with center `C(cx, cy, cz)`, normal 
+  `N(nx, ny, nz)`, and radius `r`.
+
+  The vector `N=(nx,ny,nz)` is the "unit normal"; it points in the
+  direction normal to the plane of the disk.  The vector `N` may be
+  unnormalized in the file; it is automatically normalized when
+  processed.
+
+- The corresponding `Fortran77 read` statement is:
+@code
+real*4 c(3),n(3),r
+@endcode
+
+- Valid predicates: `DISK`, `disk`, `D`, `d`
+
+- Internal code: `disk_code`
+
+- Modifiers---seven numbers (3 for the center, 3 for the normal, and 1
+  for the radius): `cx`, `cy`, `cz`, `nx`, `ny`, `nz`, `r`
+
+- Example command:
+@code
+DISK  0 0 0    0 0 1   5
+@endcode
+  Adds a disk of radius 5, centered at (0,0,0), and vector (0,0,1) as
+  the outward normal, to the list of body elements.
+
+@subsection add-an-open-cylinder Add an Open Cylinder
+
+Add an *open* cylinder to the list of body elements; the open cylinder
+is not a space-filling body.
+
+- Command syntax:
+@code
+CYLINDER  cx cy cz  nx ny nz  r  l
+@endcode
+
+  An open cylinder is the equivalent of a tin can with both lids cut
+  off.  To do a closed cylinder, use the `SOL_CYL` body element.  In
+  the open cylinder:
+
+  - `c` is the geometric center of the cylinder.
+
+  - `n` is a vector pointing in the direction of the cylinder axis.  
+    `n` may be unnormalized in the input; it will be normalized when
+    processed.
+
+  - `r` is the radius and `l` is the total length.
+
+  The cylinder extends from @f$-l/2@f$ to @f$l/2@f$.
+
+- The corresponding `Fortran77 read` statement is:
+@code
+real*4 c(3),n(3),r,l
+@endcode
+
+- Valid predicates: `CYLINDER`, `cylinder`
+
+- Internal code: `open_cylinder_code`
+
+- Modifiers---eight numbers (3 for the center of one face, 3 for the
+  normal at the same face, the radius, and one for the length): `cx`,
+  `cy`, `cz`, `nx`, `ny`, `nz`, `r`, `l`
+
+- Example command:
+@code
+CYLINDER  0 0 0   0 0 2   5  3
+@endcode
+  This adds an open cylinder of radius 5 and height 3, centered at the
+  point (0,0,0), and with its symmetry axis parallel to the vector
+  (0,0,2)
+
+@subsection add-a-solid-cylinder Add a Solid Cylinder
+
+Add a *solid* cylinder to the list of body elements.  The command is
+almost identical to the `CYLINDER` command.
+
+- Command syntax:
+@code
+SOL_CYL  cx cy cz  nx ny nz  r  l
+@endcode
+
+- Valid predicates: `SOL_CYL`, `sol_cyl`, `SC`, `sc`
+
+- Internal code:  `solid_cylinder_code`
+
+- Modifiers-- eight numbers (as in `CYLINDER` command): `cx`, `cy`,
+`cz`, `nx`, `ny`, `nz`, `r`, `l`
+
+- Example command:
+@code
+SOL_CYL  0 0 0   0 0 2   5  3
+@endcode
+  This adds a solid cylinder of radius 5 and and height 3, centered at
+  the point (0,0,0), and with its symmetry axis parallel to the vector
+  (0,0,2)
+
+
+@subsection add-a-torus Add a Torus
+
+Add a torus to the list of body elements.
+
+- Command syntax:
+@code
+TORUS  cx cy cz  nx ny nz  r1  r2
+@endcode
+
+  The torus has the following geometric properties:
+
+  - `c(cx, cy, cz)` is the center of the torus.
+
+  - `n(nx, ny, nz)` is a vector pointing in the direction of the
+    symmetry axis.  `n` may be unnormalized in the file; it will be
+	automatically normalized when processed.
+
+  - `r1` and `r2` define the dimensions of the torus:
+@verbatim
+      x                         x
+  x       x                 x       x
+ x         x               x         x   ___
+ x         x               x         x    |
+  x       x                 x       x     |  r2
+      x                         x        ---
+
+      |-----------2 * r1 -------| 
+@endverbatim
+
+- The corresponding `Fortran77 read` statement is:
+@code
+real*4 c(3),n(3),r1,r2
+@endcode
+
+- Valid predicates:  `TORUS`,  `torus`,  `TO`,  `to`
+
+- Internal code:  `donut_code`
+
+- Modifiers---eight numbers (3 for the center, 3 for the normal, 2 for
+the outer and inner radii: `cx`, `cy`, `cz`, `nx`, `ny`, `nz`,
+`r1`, `r2`
+
+- Example command:
+@code
+TORUS   0 0 0    0 0 1   5 2
+@endcode
+  adds a torus centered at (0,0,0), with symmetry axis parallel to the
+  vector (0,0,1), and with r1 and r2 values of 5 and 2, respectively.
+
+
+@subsection add-an-ellipsoid Add an Ellipsoid
+
+Adds an ellipsoid to the list of body elements.
+
+- Command:
+@code
+ELLIPSOID  cx cy cz  n1x n1y n1z  n2x n2y n2z  l1 l2 l3
+@endcode
+  The ellipsoid is defined as follows:
+
+  - `c(cx, cy, cz)` is the center of the ellipsoid.
+
+  - Vector `n1(n1x, n1y, n1z)` and `n2(n2x, n2y, n2z)` are parallel to
+    the ellipsoid's `aa` and `bb` axes respectively.
+
+    - Vectors `n1` and `n2` may be entered as unnormalized; they will be
+      normalized upon processing.
+
+    - Vectors `n1` and `n2` must be *orthogonal*; unpredictable results
+      will occur if they are not!
+
+    The third axis of the ellipsoid `n3` is computed as the
+    cross-product of `n1` and `n2`.
+
+  - `aa` is the length of the semi-axis along `n1`, `bb` along `n2`,
+    and `cc` along `n3`.
+
+  Assuming that the ellipsoid's center `c` is at the origin, and its
+  axes are the `x`, `y`, and `z` axes, then the equation of the
+  ellipsoid's surface is:
+@verbatim
+(x/aa)**2 + (y/bb)**2 + (z/cc)**2 = 1
+@endverbatim
+
+- Valid predicates:  `ELLIPSOID`,  `ellipsoid`,  `E`,  `e`
+
+- Internal code:  `ellipsoid_code`
+
+- Modifiers---twelve numbers (3 for the center, 3 for each of two
+  direction vectors and 3 lengths for each of 3 axes; the third axis
+  is the cross product of the first two): `cx`, `cy`, `cz`, `n1x`,
+  `n1y`, `n1z`, `n2x`, `n2y`, `n2z`, `aa`, `bb`, `cc`
+
+- Example:
+@code
+ELLIPSOID  0 0 0   1 0 0   0 1 0   5 3 2
+@endcode
+  adds an ellipsoid centered at the point (0,0,0).  One semi-axis of
+  length 5 is parallel to the vector (1,0,0).  A second semi-axis of
+  length 3 is parallel to the vector (0,1,0).  The third semi-axis has
+  length 2, and is parallel to (0,0,1), the cross-product of the other
+  two axes.
+
+
+@subsection add-a-cube Add a Cube
+
+Add a cube aligned with the coordinate frame to the list of body
+elements.
+
+- Command syntax:
+@code
+CUBE  cx cy cz  s
+@endcode
+  The cube's lower corner is at (cx, cy, cz); its side length is `s`.
+
+  Cubes are currently restricted to be parallel to the axes of coordinates.
+
+- The corresponding `Fortran77 read` statement is:
+@code
+real*4 c(3),s
+@endcode
+
+- Valid predicates:  `CUBE`,  `cube`
+
+- Internal code:  `cube_code`
+
+- Modifiers---four numbers (3 for the center, 1 for the side length):
+  `cx`, `cy`, `cz`, `s`
+
+- Example command:
+@code
+CUBE  -0.5  -0.5  -0.5    1
+@endcode
+  adds a unit cube centered at the origin.
+
+
+@subsection add-a-pillar Add A Pillar
+
+Add a *pillar* to the list of body elements.
+
+- A pillar is a solid body element with a main axis that is parallel to
+  the z-axis and with a triangular cross-section.  If you project a
+  pillar along the z-axis, you get the triangle (x1,y1); (x2,y2);
+  (x3,y3).
+
+  The pillar has two triangular faces at the top and the bottom; these
+  are the triangles [(x1,y1,z1l); (x2,y2,z2l); (x3,y3,z3l)] and
+  [(x1,y1,z1h); (x2,y2,z2h); (x3,y3,z3h)].  It is assumed that z1l <
+  z1h, z2l < z2h, and z3l < z3h.
+
+- Command syntax:
+@code
+PILLAR  x1 y1 z1l z1h  x2 y2 z2l z2h  x3 y3 z3l z3h
+@endcode
+
+- The corresponding `Fortran77 read` statement is:
+@code
+real*4 x1,x2,x3,y1,y2,y3,z1l,z2h,z3l,z1h,z2h,z3h
+@endcode
+
+- Valid predicates:  `PILLAR`,  `pillar`,  `PI`,  `pi`
+
+- Internal code:  `pillar_code`
+
+- Modifiers---twelve numbers (4 per line segment): `x1`, `y1`,
+  `z1l`, `z1h`, `x2`, `y2`, `z2l`, `z2h`, `x3`, `y3`, `z3l`,
+  `z3h`
+
+- Example:
+@code
+PILLAR  0 0 0 2   1 0 0 3   0 1 0 5
+@endcode
+
+This adds the pillar defined by the following 3 line segments:
+[(0, 0, 0)--(0,0,2)], [(1, 0, 0,)--(1, 0, 3)], [(0, 1, 0)--(0, 1, 5)].
+
+
+@subsection specify-skin-thickness Specify Value of Skin Thickness
+
+Specify the skin thickness for the problem, @f$\epsilon@f$.
+
+- This command is *optional* and specifies the skin thickness for the
+  problem.  The thickness is only used in the Zeno calculation and,
+  when not specified, *defaults* to 1.0e-6 times the launch radius.
+
+- Command:
+@code
+ST  t
+@endcode
+
+- Valid predicates: `ST`, `st`
+
+- Internal code: `skin_code`
+
+- Modifiers---one number: the value of the skin thickness.
+
+- Example:
+@code
+ST 0.0001
+@endcode
+This sets the skin-thickness of the problem to 0.0001.
+
+
+@subsection specify-length-units Specify Length Units
+
+There are two *optional* commands for specifying the units of length used in reporting ZENO's results.  These two commands are `UNITS` and `HUNITS` and will be described below.  When the body file does not specify a named unit length, the value `L` will be used for units to indicate generic or unspecified length units.
+
+The first command, `UNITS`, allows a user to specify the unit to use for lengths by name; this unit will be then be used to express all lengths.
+
+- Command:
+@code
+UNITS  unit_name
+@endcode
+
+- Valid predicates:  `UNITS`,  `units`
+
+- Internal code: `units_code`
+
+- Modifiers---one (a string): the name of the unit to be used for
+  reporting lengths.  Only one of the following five strings is
+  accepted as the modifier.
+
+Modifier |    Int. code     |   Meaning
+---------|------------------|------------
+ `m`     |  `meter_code`    |  meters
+ `cm`    |  `cm_code`       |  centimeters
+ `nm`    |  `nm_code`       |  nanometers
+ `A`     |  `angstrom_code` |  Angstroms
+ `L`     |  `length_code`   |  generic or unspecified length units
+
+
+- Example:
+@code
+UNITS nm
+@endcode
+This indicates that all lengths are reported in nanometers.
+
+The second optional command for specify length units is `HUNITS`.  It allows the user to @em define the unit used for reporting lengths and to define a multiplicative factor for mapping lengths used in the body file to certain length units by name.
+
+- Command:
+@code
+HUNITS number unit_name
+@endcode
+
+- Valid predicates: `HUNITS`, `hunits`
+
+- Modifiers---two (a number and a string): the command gives the
+  length units in which all length values re expressed.  Only the
+  following 4 unit names are acceptable as modifiers:
+  
+Modifier |    Int. code     |   Meaning
+---------|------------------|------------
+ `m`     |  `meter_code`    |  meters
+ `cm`    |  `cm_code`       |  centimeters
+ `nm`    |  `nm_code`       |  nanometers
+ `A`     |  `angstrom_code` |  Angstroms
+
+
+- Internal code:  `hunits_code`
+
+- Example:
+@code
+HUNITS 1000 nm
+@endcode
+This command instructs the program to report all lengths in micron units.
+
+- Note that the following two commands are equivalent; they both setup
+  the system to report lengths in *nanometers*.
+@code
+HUNITS 1 nm
+UNITS nm
+@endcode
+
+@subsection specify-temperature Specify Temperature
+
+Specify the temperature of the problem in *Kelvin* or *Celcius*.
+
+- This command is optional.  When present, it is used to compute the
+  diffusion coefficient from the Stokes-Einstein formula.
+
+- Command:
+@code
+TEMP value unit_name
+@endcode
+
+- Valid predicates: `TEMP`, `temp`
+
+- Internal code: `temp_code`
+
+- Modifiers---two (one number and one string): a value and unit pair.
+  The acceptable units are:
+
+  -# `C` for Celcius (internal code: `celcius_code`)
+  -# `K` for Kelvin (internal code: `kelvin_code`)
+
+- Example:
+@code
+TEMP  20 C
+@endcode
+This sets the temperature to be 20 C.
+
+@subsection specify-mass Specify Mass
+
+Specify the problem's mass.
+
+- This command is optional.  When present, the mass is used to compute
+  the intrinsic viscosity in conventional units.
+
+- Command:
+@code
+MASS  value unit_name
+@endcode
+
+- Valid predicates: `MASS`, `mass`
+
+- Internal code:  `mass_code`
+
+- Modifiers---two (one number and one string): a value and unit pair.
+  The acceptable units are:
+
+  -# `Da` for `Daltons` (internal code: `da_code`)
+  -# `kDa` for `kilodaltons` (internal code:  `kda_code`)
+  -# `g` for `grams` (internal code: `gram_code`)
+  -# `kg` for `kilograms` (internal code: `kg_code`)
+
+- Example:
+@code
+MASS  324 kDa
+@endcode
+  This sets the mass to be 324 kDa.
+
+@subsection specify-solvent-viscosity Specify Solvent Viscosity
+
+There are two optional commands for specifying the solvent viscosity in a problem, `VISCOSITY` and `SOLVENT`.  The viscosity is used to calculate the diffusion coefficient as per the Stokes-Einstein formula.
+
+The first command, `VISCOSITY`, specifies the solvent viscosity's value directly.
+
+- Command:
+@code
+VISCOSITY  value unit_name
+@endcode
+
+- Valid predicates: `VISCOSITY`, `viscosity`
+
+- Internal code: `visc_code`
+
+- Modifiers---two (a number and a string): a value and unit pair.  The
+  acceptable units are:
+
+  -# `p` for poise (internal code: `poise_code`)
+  -# `cp` for centipoise (internal code: `cp_code`)
+
+- Example:
+@code
+VISCOSITY  1.004 cp
+@endcode
+  This sets the solvent viscosity at `1.004 cp`.
+
+The second command, `SOLVENT`, specifies the viscosity indirectly by selecting a solvent by name.  For the time being, the user can only choose water; eventually other solvents will be available.  The program computes the viscosity of water a per a standard formula (CRC Handbook of Chemistry and Physics, 55th edition, p. F49).  However, the user must also specify the temperature to enable this computation.
+
+- Command:
+@code
+SOLVENT  solvent_name
+@endcode
+
+- Valid predicates: `SOLVENT`, `solvent`
+
+- Internal code: `solent_code`
+
+- Modifiers---one string: a solvent name.  At this point, the only
+  valid solvent names are `WATER` and `water`.
+
+- Example:
+@code
+SOLVENT  water
+@endcode
+  This directs the program to compute the solvent viscosity using the
+standard formula for water.
+
+@subsection specify-buoancy-factor Specify Buoancy Factor
+
+Specify the buoancy factor of the problem.
+
+- The buoancy factor is dimensionless.  As such, this command does not
+  use units.  The value specified is used to compute the sedimentation
+  coefficient.
+
+- Command:
+@code
+BF  value
+@endcode
+
+- Valid predicates: `BF`, `bf`
+
+- Modifiers---one numeric value.
+
+- Example:
+@code
+BF  value
+@endcode
+
+@subsection specify-launch-radius  Specify Launch Radius
+
+This command is optional.  It allows the user to override the value of
+the launch radius as computed automatically by the program.  Two notes:
+
+-# This command only overrides the computed value if the computed
+   value for the launch radius is less than or equal to the value
+   supplied by the command.  Otherwise, the program *aborts*.
+
+-# The program can determine the launch radius automatically.
+   However, when we are planning to do a conformational average, all
+   the computations on each member of the ensemble have to be done
+   with the same value for the launch radius, and we can use this
+   command to override the computed value.
+
+- Command:
+@code
+RLAUNCH  value
+@endcode
+
+- Valid predicates: `RLAUNCH`, `rlaunch`
+
+- Modifiers: one numeric value.
+
+- Example:
+@code
+RLAUNCH  45
+@endcode
+This sets the launch radius at 45.
+
+@subsection commands-order Order of Commands
+
+The order of commands in a ZENO body (`.bod`) file is **not important**.  This is so because the complete body is the union of all the body elements and, as such, the elements can be listed in any order.  All other commands set the values of variables and they can be interspersed with the body-element commands.
+
+@subsection body-file-example Body File Example
+
+The body file can contain comments; these are lines that begin with an
+asterisk, `*`.  The program processes the body of the file until it
+reaches the end of the file.  It can handle commands that are split
+across lines.
+
+Example of a body file:
+
+@verbatim
+*  This body consists of 5 spheres
+*  Blank lines are OK:
+
+*  This line inserts a sphere of radius 1 at the origin
+SPHERE 0 0 0 1
+
+*  The next line inserts a sphere of radius 2 tangent
+*  to the first sphere with center on the x axis
+S 3 0 0 2
+
+*  Carriage returns are permissible during the specification
+*  of any one element:
+sphere -3 0 0
+            2
+
+*  You can also run different elements together on
+*  the same line
+
+     S 1 1 1 1   s -1 -1 -1 1
+* This gives the skin thickness
+  st   0.00001
+
+* This command establishes nanometers as the length unit
+  units nm
+@endverbatim
+
+@section zeno-calculation Zeno Calculations
+
+You call for a zeno calculation on the body whenever you use
+the `z` prefix on any of the `action_codes`.
+
+The electrostatic capacitance and the electrostatic
+polarizability are calculated according to the numerical
+path integration approach described in: 
+
+- Mansfield, Douglas, Garbozci
+  "Intrinsic viscosity and the electrical
+  polarizability of arbitrarily shaped objects,"
+  Physical Review E, 64, 061401 (2001).
+
+- Kang, Mansfield, Douglas
+  "Numerical path integration technique for the calculation
+  of transport properties of proteins,"
+  Physical Review E, 69, 031918 (2004).
+
+- Mansfield, Douglas
+  "Improved path-integration method for estimating the intrinsic
+  viscosity of arbitrarily-shaped particles," Physical Review E,
+  Physical Review E, 78, 046712 (2008).
+
+@subsection interior-calculations Interior Calculations
+
+You call for an interior calculation if you use the
+`i` prefix on any of the `action_codes`.
+
+The interior calculation is done by generating a set 
+of points on the interior of the body, and doing a numerical
+integration over this set.  It is therefore limited to bodies
+that are unions of space filling elements:  spheres, cubes,
+solid cylinders, tori, and ellipsoids.  If you call for the interior 
+calculation given bodies formed from other elements, 
+the program omits the calculation.
+
+This calculation determines the volume of the body, the
+radius of gyration of the interior, and it calculates the
+structure factor at a set of momentum points scaled by the
+launch radius.  If the launch sphere has radius X, then the
+structure factor is determined at q-values between 0.01/X and
+100/X.
+
+The structure factor is defined as 
+@code
+(1/V**2) INT_i INT_j < exp ( i q_vec dot r_ij ) >
+@endcode
+where `q_vec` is the scattering vector, `q` is its length, `r_ij` is
+the displacement vector between volume elements `i` and `j`, and
+`INT_i` and `INT_j` are volume integrals.  This calculation also
+determines a length parameter `L_half`, which is `1/q` for the
+`q-value` at which `S(q) = 1/2`.  The value is determined by linear
+interpolation after the structure factor has been determined.
+
+Of course, you can create a space-filling body using a union
+of triangles distributed over the surface, but since it is
+difficult to determine a priori that the body so built is
+space-filling, we just will not try it here.  Bottom line:
+Only bodies built up from spheres, tori, cubes, solid cylinders,
+and ellipsoids will be treated with the interior calculation.
+If the other body elements (triangles, disks, open cylinders)
+are found in the body, an interior calculation will not be done,
+even if one is requested.
+
+The set of points is obtained by generating random points inside 
+a rectangular prism, and retaining only those that are also 
+inside the body. 
+
+@subsection c1-interior Covered-Once Interior Calculations
+
+Also known as "C1 Interior"
+
+This is in most ways equivalent to the INTERIOR CALCULATION,
+except that it can be much faster in situations where it can
+be applied.  Both of these interior integrations can be
+performed whenever the body formed as the union of space-filling
+elements.  The C1 INTERIOR calculation can be applied if the
+elements do not overlap, i.e., each point of the body is covered
+by one and only one primitive element, or each point is "covered
+once."  Obviously, the lack of overlap means that the volume
+can be calculated directly, and interior points can be generated
+much more rapidly.
+
+No effort is made by the program to determine if there is
+any overlap.  The user is on his own to verify this, and
+obviously, the results returned by the integration will be
+invalid if they are.
+
+@subsection surface-calculation Surface Calculation
+
+You call for a surface calculation by supplying the prefix `s`
+on one of the `action_codes`.
+
+The surface calculation works by generating a set of points
+distributed randomly over the surface.  It provides an 
+estimate of the surface area, the radius of gyration of the
+surface, and an estimate of the hydrodynamic radius using
+the Kirkwood double sum formula.
+
+The capacitance-hydrodynamic radius analogy results from 
+pre-averaging the Oseen tensor over orientations.  The
+well-known formula of Kirkwood for the diffusion constant
+approximates the hydrodynamic radius as the harmonic 
+mean distance between arbitrary pairs of points on the
+surface.
+
+For the purposes of this calculation, a point is defined to be on the surface
+if it is on the surface of one of the body elements, and
+not inside any other space-filling body element.
+
+Therefore, if your body is constructed so that any of the
+above points are not accessible to the solvent, the
+results will not be trustworthy.  An example of when this
+could happen is if you use a triangular grid to set up a
+closed surface, and then you put something like a sphere
+so that it is partly outside and partly inside the triangular
+grid.  Those inside points will be counted as part of 
+the surface.
+
+@subsection projection-on-a-line-calc Projection on a Line Calculation
+
+You call for a projection-onto-a-line calculation by supplying 
+the prefix p in any one of the action codes.
+
+The calculation works by generating a large number of randomly
+oriented unit vectors in random orientations.  For any given
+unit vector, it determines the two planes normal to the vector,
+and tangent to the object, which do not intersect the object.  It
+takes the average distance between these two planes,
+averaged over all orientations.  The Giddings length
+is half this average distance.
+
+@section numerical-error-estimtes Numerical Error Estimates
+
+The program performs numerical error estimates on all computations.
+
+The following rules apply:
+
+-#  Significant figures of input variables.  The input values of
+  mass, viscosity, temperature are all assumed to have a precision
+  equal to 0.5 times the place value of the last digit given.
+
+-#  Sampling errors of all Monte Carlo integrations are estimated
+  by evaluating each integral independently 20 times, and setting
+  the sampling error equal to (sigma)/sqrt(20), where sigma
+  is the standard deviation of the 20 results.
+
+-#  Electrostatic-hydrodynamic analogy.
+  The hydrodynamic radius and volume are rounded to reflect the
+  1% and 1.5% error that results from the electrostatic-hydrodynamic
+  analogy.
+
+-#  Errors propagate through all subsequent calculations.
+
+-#  The final results are reported with rounding to the last
+  significant digit.  The uncertainty in the last digit
+  appears in parentheses in the computation report.
+
+-#  The unrounded results are reported in an auxiliary file,
+  `<identifier>.znr` (zeno non-rounded)
+
+@section notes-units-etc Notes on Units, Definitions, and Conventions
+
+It is assumed that all parameters supplied by the `.bod`
+file are in the same set of length units.
+
+You have the option of specifying these units as either `meters`,
+`centimeters`, `nanometers`, or `Angstroms` using one of the two
+versions of the *specify units* command.  However, if you omit this
+command, the program just assumes generic length units.
+
+The capacitance is reported in length units, such that
+the capacitance of a sphere equals its radius.
+If the length-dimensions have also been set, then the
+capacitance is also reported in farads.
+
+The polarizability tensor is reported in volume units.
+
+The form of the polarizability tensor calculated internally
+by this program will be called `alpha.bongo`.
+
+The form of the polarizability tensor that is output
+will be called `alpha.paper`.  `alpha.paper` is the
+definition that coincides with the Mansfield, Douglas,
+Garbozci paper.
+
+- `alpha.bongo`	= polarizability tensor calculated internally
+                  by this program (units: volume)
+
+- `alpha.paper`	= polarizability tensor as defined in
+                  Mansfield-Douglas-Garbozci paper and as output
+                  (units: volume)
+
+- pi = 3.14159265...
+
+Then:
+@code
+alpha.paper = 4 * PI * alpha.bongo
+@endcode
+
+@section integer-codes Integer Codes
+
+Internal codes are defined for each shape class,
+for the predicate of each command, and for the alphabetical
+modifiers that accompany each command.  These codes
+are given descriptive names by subroutine establish_codes,
+and are stored in common block morse.
+
+@section file-names-n-units File Names and File Units
+
+As many as 11 files will be created.
+File names and file units are established in subroutine setup.
+
+- `bod`	"body" file -- input file for body specification and
+  input variables -- opened by `parse`, closed by `parse`
+
+  name and unit: `fbod`, `nbod`
+
+- `zno`	"zeno" file -- main output file for results --
+	opened by `setup`, closed by `main` program just before
+	stopping
+
+  name and unit:  `fzno`, `nzno`
+
+- `znr`	"zeno-not-rounded" file -- same output as zno but
+  without rounding -- opened by `poplar`, closed by `poplar`
+
+  name and unit:    `fznr`, `nznr`
+
+- `stk`	hits on body elements during path-integration --
+	opened and closed by `blizzard`
+
+  name and unit:   `fstk`, `nstk`
+
+- `dfl` --	Unix time stamp at beginning
+
+- `efl` -- Unit time stamp at end
+
+  Both `dfl` and `efl` time stamps are copied directly to `zno` file,
+  so it is OK to delete these.
+
+- `zsd` "seed" file -- Seed used to initialize random number generator.
+  Contents can be passed to program using "--seed" option.
+
+  name and unit:	`fzsd`, `nzsd`
+
+- `zh` --	hits during path-integration, open and closed by `blizzard`.
+
+   name and unit:   `fzh`, `nzh`
+
+- `ih` -- hits during interior-integration, i.e., set of points
+  distributed randomly throughout the interior.
+
+  name and unit:  `fih`, `nih`
+
+- `sh` -- hits during surface-integration, i.e., set of points distributed
+  randomly over the surface.
+
+  name and unit: `fsh`, `nsh`
+
+- `ph` -- hits during projection-integration, i.e., projection of object
+  on random directions.
+
+  name and unit:  `fph`, `nph`
+
+*/
+
+// ================================================================
+
+// Local Variables:
+// mode: markdown
+// time-stamp-line-limit: 30
+// word-wrap: t
+// End:

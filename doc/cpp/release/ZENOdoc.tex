@@ -1,0 +1,717 @@
+\documentclass[12pt,letterpaper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage[margin=1in]{geometry}
+\usepackage{hanging}
+\usepackage[hidelinks]{hyperref}
+\usepackage{pdflscape}
+\usepackage{dcolumn}
+\usepackage{caption}
+\usepackage{hyperref}
+\usepackage{longtable}
+\newcolumntype{d}[1]{D{.}{.}{#1}}
+\title{ZENO Documentation: Version 5 \vspace{-16pt}}
+\begin{document}
+\maketitle
+\hyphenpenalty=1000
+
+\section{Calculations}
+The ZENO code is composed of two types of calculations: exterior and interior.
+
+\subsection{Exterior calculation}
+The exterior calculation focuses on the computation of electrical properties including the capacitance, the electric polarizability tensor, and the intrinsic conductivity. Once the electrical properties are known, the hydrodynamic properties, including the hydrodynamic radius and the intrinsic viscosity, can be precisely estimated by invoking an electrostatic-hydrodynamic analogy as detailed in Refs.~\cite{Douglas1995,Douglas1994,Hubbard1993}. Other related properties are also determined. \\ \\
+To compute the aforementioned properties for an object requires the solution of Laplace's equation outside the object with appropriate boundary conditions. This is efficiently accomplished by using a Monte Carlo method, which involves (1) creating a launch sphere that encloses the object, (2) launching random walks from the surface of the launch sphere, and (3) determining the fate of such walks---if they hit the object or go to infinity. These walks are exterior to the object, hence the name for the calculation. Each random walk is generated using a method called Walk on Spheres. This algorithm requires generating a sphere for each step in the random walk. The center of this sphere is located at the end of the current random walk; the radius of the sphere is determined by finding the shortest distance between the center of the sphere and the object. Finally, the step in the walk is taken by randomly choosing a point on the surface of the sphere. The process is then repeated. Since the size of spheres will progressively get smaller as the object is approached, a cutoff distance, known as the skin thickness, is required. Without a cutoff distance, the algorithm would continue, at least theoretically, indefinitely. As this is reminiscent of Zeno's paradox of Tortoise and Achilles, the code is named in Zeno's honor. For more details on this method refer to Refs.~\cite{Douglas1995,Mansfield2008,Mansfield2001}.
+
+\subsection{Interior calculation}
+The interior calculation determines the volume and the gyration tensor for an object using a Monte Carlo method. Specifically, this calculation involves generating random points within the same launch sphere as in the exterior calculation. The location of these points can then be used to approximate all of the relevant properties. For example, the volume of the object is estimated by the fraction of points inside the object multiplied by the the volume of the launch sphere. The interior calculation is given its name since the points in the interior of the object are essential for computing the properties.
+
+\section{Compilation of code}
+
+\noindent The code is written in \texttt{C++} and requires a compiler that supports the \texttt{C++11} standard; recent versions of \texttt{g++} have been found to work. \\
+
+\noindent The only essential external libraries are the nanoflann Nearest Neighbor library (header-only, does not require compilation) and the SPRNG random number library (requires compilation).  These can be obtained from the sources:
+\begin{itemize}
+\item[] \url{https://github.com/jlblancoc/nanoflann/}
+\item[] \url{http://sprng.org/}
+\end{itemize}
+
+\noindent You will need to set \verb'NANOFLANN_DIR' and \verb'SPRNG_DIR' at the top of the \texttt{Makefile} to point to the locations of these libraries, respectively. \\
+
+\noindent You should then be able to build the executable \texttt{zeno} by simply typing \texttt{make}.
+
+\subsection{MPI support}
+
+\noindent MPI support is included, but is optional.  If MPI libraries are installed on your system, you may be able to build the MPI-enabled executable \texttt{zeno-mpi} by simply typing \texttt{make mpi}.  If this does not work, you will need to change \verb'MPI_CXX', \verb'MPI_CXXFLAGS', and \verb'MPI_LDFLAGS' in the \texttt{Makefile} to values appropriate for your installation.
+
+\subsection{Modifying the code}
+
+\noindent If you modify the source code, some external utilities may be required.  \texttt{Gengetopt} is required to modify command-line parameters, while \texttt{Bisonc++} and \texttt{Flexc++} are required to modify the input file format.  These can be obtained from the sources:
+\begin{itemize}
+\item[] \url{https://www.gnu.org/software/gengetopt/}
+\item[] \url{https://fbb-git.github.io/bisoncpp/}
+\item[] \url{https://fbb-git.github.io/flexcpp/}
+\end{itemize} 
+
+\subsection{Simple check}
+
+Once the code has been compiled, you can perform a quick self-test by typing \texttt{make check}.  This will run \texttt{zeno} and, if it exists, \texttt{zeno-mpi} on various test cases and compare the output against the output from a correctly built version.  Floating-point values will be allowed some tolerance to account for differences in compilers, machine precision, etc. 
+
+\section{Running the code}
+\label{sec:runcode}
+The code is run using: \\
+
+\texttt{./zeno [OPTIONS]} \\
+
+\noindent The output can be printed to file using: \\
+
+\texttt{./zeno [OPTIONS] >\& <name of output file>} \\
+
+\noindent For example, the command to run ZENO for 1e6 random walks and 1e5 interior samples on an object described in the file \texttt{obj.bod} is: \\
+
+\texttt{./zeno -i obj.bod --numwalks=1000000 --num-interior-samples=100000 >\& out.txt} \\
+
+\noindent Detailed descriptions of all options are below.
+
+\subsection{Required options}
+These inputs are given via the command-line. 
+
+\subsubsection{Input file}
+The input or \texttt{.bod} file must contain a list of spheres that define the shape of the object. See Sec.~\ref{sec:structure} for details on the content of this file. Note that it can also contain optional quantities as specified in Sec.~\ref{sec:optinputs}. The input file is specified via the command-line argument\\ 
+
+\texttt{-i <input file name>}
+
+\subsubsection{Exterior calculation}
+Either the number of exterior walks, the maximum relative standard deviation of the capacitance, or the maximum relative standard deviation of the mean electric polarizability must be specified. If one of the relative standard deviations are specified, then the calculation will continue performing walks until the relative standard deviation is less than the specified value. One of the following options is required for running the exterior calculation. \\
+
+\indent \texttt{--numwalks=<number of walks>} \\
+\indent \texttt{--max-rsd-capacitance=<maximum relative standard deviation of capacitance>} \\
+\indent \texttt{--max-rsd-polarizability=<maximum relative standard deviation of mean electric polarizability>}
+
+\subsubsection{Interior calculation}
+Either the number of interior samples or the maximum relative standard deviation of the volume must be specified. If the relative standard deviation is specified, then the calculation will continue performing walks until the relative standard deviation is less than the specified value. One of the following options is required for running the interior calculation.  \\
+
+\indent \texttt{--num-interior-samples=<number of interior samples>} \\
+\indent \texttt{--max-rsd-volume=<maximum relative standard deviation of volume>} 
+
+\subsection{Description of command-line options}
+\label{sec:cmdline}
+
+\begin{longtable}{ l l p{3 in} }
+  \texttt{-h}, & \texttt{--help }                  & Print help and exit \\
+  \texttt{-V}, & \texttt{--version }               & Print version and exit \\
+  \texttt{-i}, & \texttt{--input-file=string}      & Input file name \\
+      & \texttt{--num-walks=int}          & Number of exterior walks to perform \\
+      & \texttt{--num-interior-samples=int}
+                                & Number of interior samples to take \\
+      & \texttt{--max-rsd-capacitance=double}
+                                & \hangpara{1em}{1}Perform exterior walks until the relative standard deviation
+                                  of the capacitance drops below this value.  Relative standard deviation
+                                  is defined as \mbox{(Standard Deviation/Mean) $\times$ 100\% } \\
+      & \texttt{--max-rsd-polarizability=double}
+                                & \hangpara{1em}{1}Perform exterior walks until the relative standard deviation
+                                  of the mean electric polarizability drops below this
+                                  value.  Relative standard deviation is defined as
+                                  (Standard Deviation/Mean) $\times$ 100\% \\ 
+      & \texttt{--max-rsd-volume=double} & \hangpara{1em}{1}Take interior samples until the relative standard deviation of the volume
+                                  drops below this value.  Relative standard deviation is defined as
+                                  \mbox{(Standard Deviation/Mean) $\times$ 100\%} \\
+      & \texttt{--min-num-walks=int}       & \hangpara{1em}{1}Minimum number of exterior walks to
+                                  perform when using max-rsd stopping
+                                  conditions  \mbox{(default=1000)} \\
+      & \texttt{--min-num-interior-samples=int}
+                                & \hangpara{1em}{1}Minimum number of interior samples to take when
+                                  using max-rsd stopping conditions
+                                  \mbox{(default=10000)} \\
+      & \texttt{--num-threads=int}         & \hangpara{1em}{1}Number of threads to use  (default=Number of
+                                  logical cores) \\
+      & \texttt{--seed=INT}                & \hangpara{1em}{1}Seed for the random number generator
+                                  (default=Randomly set) \\
+      & \texttt{--surface-points-file=string}
+                                & \hangpara{1em}{1}Name of file for writing the surface
+                                  points from exterior calculation \\
+      & \texttt{--interior-points-file=string}
+                                & \hangpara{1em}{1}Name of file for writing the interior
+                                  sample points \\
+      & \texttt{--print-counts}            & \hangpara{1em}{1}Print statistics related to counts of hit
+                                  points \\
+      & \texttt{--print-benchmarks}       & \hangpara{1em}{1}Print detailed RAM and timing information \\
+\end{longtable}
+\addtocounter{table}{-1}
+
+\section{Input file}
+The input file, also known as a \texttt{.bod} file, contains the description of the object and some additional input parameters.
+
+\subsection{Defining the object}
+\label{sec:structure}
+The object of interest must be described by a collection of spheres, which may or may not be overlapping. The shape of the object is defined in the \texttt{.bod} file. This file should contain lines of \\
+
+\texttt{SPHERE x y z r} \\
+
+where \texttt{x}, \texttt{y}, and \texttt{z} are the $x$, $y$, and $z$ positions of the center of the sphere, respectively. \texttt{r} is the radius. For example, a \texttt{.bod} file that contains the following describes an object composed of two spheres: one of radius 2 at $x=0$, $y=0$, and $z=1$ and one of radius 3 at $x=0$, $y=0$, and $z=-1$.\\
+
+\texttt{SPHERE 0 0 1 2} \\
+\indent \texttt{SPHERE 0 0 -1 3}
+
+\subsection{Optional inputs}
+\label{sec:optinputs}
+
+\subsubsection{Launch radius}
+\begin{tabular}{p{1in} p{5.5in}}
+Command: & \texttt{rlaunch double} \\ 
+Explanation: & Sets the radius, which is radius of the sphere from which random walks are launched. The radius must be large enough to enclose the entire object. \\
+Default value: & The smallest radius that encloses the smallest axis-aligned bounding-box of the object. \\ 
+Example: & \texttt{rlaunch 20} means that the launch radius is 20.
+\end{tabular}
+
+\subsubsection{Skin thickness}
+\begin{tabular}{p{1in} p{5in}}
+Command: & \texttt{st double} \\ 
+Explanation: & Sets the skin thickness. A random walker is assumed to have hit the surface of the object if the distance between the surface and the walker is less than the skin thickness. \\
+Default value: & 1e-6 times the launch radius \\
+Example: &\texttt{st 0.01} means that the skin thickness is 0.01.
+\end{tabular}
+
+\subsubsection{Units for length}
+\begin{tabular}{p{1in} p{5.5in}}
+Command: & \texttt{hunits double string} \\ 
+Explanation: & Specifies the units for the length for all objects.\\
+Options: & The string can take the following values: 
+\begin{itemize}
+\item \texttt{m} (meters)
+\item \texttt{cm} (centimeters)
+\item \texttt{nm} (nanometers)
+\item \texttt{A} (Angstroms)
+\item \texttt{L} (generic or unspecified length units)
+\end{itemize} \\
+Default value: & 1 \texttt{L} \\
+Example: & \texttt{hunits 10 cm} means that a length of 1 for an object is equivalent to 10 cm.
+\end{tabular}
+
+
+\subsubsection{Temperature}
+\begin{tabular}{p{1in} p{5.5in}}
+Command: & \texttt{temp double string} \\ 
+Explanation: & Specifies the temperature, which is used for computing the diffusion coefficient.\\
+Options: & The string can take the following values:
+\begin{itemize}
+\item \texttt{C} (Celsius)
+\item \texttt{K} (Kelvin)
+\end{itemize} \\
+Default value: & None \\
+Example: & \texttt{temp 20 C} means that the temperature is 20$^\circ$C.
+\end{tabular}
+
+\subsubsection{Mass}
+\begin{tabular}{p{1in} p{5.5in}}
+Command: & \texttt{mass double string} \\ 
+Explanation: & Specify the mass of the object, which is used for computing the intrinsic viscosity in conventional units and the sedimentation coefficient.\\
+Options: & The string can take the following values:
+\begin{itemize}
+\item \texttt{Da} (Daltons)
+\item \texttt{kDa} (kiloDaltons)
+\item \texttt{g} (grams)
+\item \texttt{kg} (kilograms)
+\end{itemize} \\
+Default value: & None \\
+Example: & \texttt{mass 2 g} means that the mass of the object is 2 grams.
+\end{tabular}
+
+\subsubsection{Solvent viscosity}
+\begin{tabular}{p{1in} p{5.5in}}
+Command: & \texttt{viscosity double string} \\ 
+Explanation: & Specify the solvent viscosity, which is used for computing the diffusion coefficient, the friction coefficient, and the sedimentation coefficient.\\
+Options: & The string can take the following values:
+\begin{itemize}
+\item \texttt{p} (poise)
+\item \texttt{cp} (centipoise)
+\end{itemize} \\
+Default value: & None \\
+Example: & \texttt{viscosity 2 cp} means that the solvent has a viscosity of 2 centipoise.
+\end{tabular}
+
+\subsubsection{Buoyancy factor}
+\begin{tabular}{p{1in} p{5.5in}}
+Command: & \texttt{bf double} \\ 
+Explanation: & Specify the buoyancy factor, which is used for computing the sedimentation coefficient.\\
+Default value: & None \\
+Example: & \texttt{bf 2} means that the buoyancy factor is 2.
+\end{tabular}
+
+\section{Output}
+
+Depending on the quantity, the requirements for calculations are different. Some quantities require the exterior calculation, some the interior, and some both. Additionally, some quantities are direct outputs, while others are indirect---requiring only the direct outputs coupled with algebraic expressions. Finally, some special quantities require optional input such as the temperature. Each of these dependencies are listed.
+
+\subsection{Capacitance}
+\begin{tabular}{p{1in} p{5.5in}}
+Equation: & $C = tR$\\
+Calculation: & Direct exterior  \\
+Explanation: & $t$ is the fraction of random walks that hit the object as opposed to go to infinity, and $R$ is the radius of the launch sphere. \\
+Uncertainty: & Determined by directly estimating the variance of $t$ and then applying propagation of uncertainties. \\
+Units: & Length \\
+\end{tabular}
+
+\subsection{Electric polarizability tensor}
+\begin{tabular}{p{1in} p{5.5in}}
+Equation: & $\mathbf{\alpha}$ is expressed in Ref.~\cite{Mansfield2001}.\\
+Calculation: & Direct exterior  \\
+Explanation: & Several different counting variables from the exterior calculation are combined to evaluate this quantity. \\
+Uncertainty: & Determined by directly estimating the variances of $t$, $u$, $v$, and $w$ from Ref.~\cite{Mansfield2001} and then applying propagation of uncertainties. \\
+Units: & Length cubed \\
+\end{tabular}
+
+\subsection{Eigenvalues of electric polarizability tensor}
+\begin{tabular}{p{1in} p{5.5in}}
+Calculation: & Indirect exterior  \\
+Explanation: & The eigenvalues of the previously computed electric polarizability tensor $\mathbf{\alpha}$ are determined. \\
+Uncertainty: & Determined via propagation of uncertainties. \\
+Units: & Length cubed\\
+\end{tabular}
+
+\subsection{Mean electric polarizability}
+\begin{tabular}{p{1in} p{5.5in}}
+Equation: & $\langle \alpha \rangle = \mathrm{Tr}(\mathbf{\alpha})/3$ \\
+Calculation: & Indirect exterior  \\
+Explanation: & The trace of the previously computed electric polarizability tensor $\mathbf{\alpha}$ is computed and then divided by three. \\
+Uncertainty: & Determined via propagation of uncertainties. \\
+Units: & Length cubed \\
+\end{tabular}
+
+\subsection{Intrinsic conductivity}
+\begin{tabular}{p{1in} p{5.5in}}
+Equation: & $[\sigma]_\infty = \langle \alpha \rangle/V$ \\
+Explanation: & $\mathbf{\alpha}$ is the electric polarizability tensor; $V$ is the volume. \\
+Calculation: & Indirect exterior and interior\\
+Uncertainty: & Determined via propagation of uncertainties. \\
+Units: & None \\
+\end{tabular}
+
+\subsection{Volume}
+\begin{tabular}{p{1in} p{5.5in}}
+Equation: & $V= p \frac{4}{3} \pi R^{3}$ \\
+Explanation: & $p$ is the fraction of points inside the object; $R$ is the radius of the launch sphere. \\
+Calculation: & Direct interior  \\
+Uncertainty: & Determined by directly estimating the variance of $p$ and then applying propagation of uncertainties. \\
+Units: & Length cubed \\
+\end{tabular}
+
+\subsection{Gyration tensor}
+\begin{tabular}{p{1in} p{5.5in}}
+Equation: & $\mathbf{S}$ is expressed in Ref.~\cite{Theodorou1985} \\
+Explanation: &  Several different counting variables from the interior calculation are combined to evaluate this quantity. \\
+Calculation: & Direct interior  \\
+Uncertainty: & Determined by directly estimating the variance of sums and the sums of products of interior sample point coordinates, and then applying propagation of uncertainties. \\
+Units: & Length squared \\
+\end{tabular}
+
+\subsection{Eigenvalues of gyration tensor}
+\begin{tabular}{p{1in} p{5.5in}}
+Calculation: & Indirect interior  \\
+Explanation: & The eigenvalues of the previously computed gyration tensor $\mathbf{S}$ are determined. \\
+Uncertainty: & Determined via propagation of uncertainties. \\
+Units: & Length squared \\
+\end{tabular}
+
+\subsection{Capacitance of a sphere of the same volume}
+\begin{tabular}{p{1in} p{5.5in}}
+Equation: & $C_0 = \left(3V/(4\pi)\right)^{1/3}$\\
+Calculation: & Indirect interior  \\
+Explanation: & $V$ is the volume of the object. \\
+Uncertainty: & Determined via propagation of uncertainties. \\
+Units: & Length \\
+\end{tabular}
+
+\subsection{Hydrodynamic radius}
+\begin{tabular}{p{1in} p{5.5in}}
+Equation: & $R_{h}=q_{R_{h}}C$  \\
+Explanation: &  $q_{R_{h}}\approx 1$, and $C$ is the capacitance.\\
+Calculation: & Indirect exterior  \\
+Uncertainty:& Determined via propagation of uncertainties assuming the standard deviation of $q_{R_{h}}$ is $0.01$. \\
+Units: & Length \\
+\end{tabular}
+
+\subsection{Prefactor relating average polarizability to intrinsic viscosity}
+\begin{tabular}{p{1in} p{5.5in}}
+Equation: & $q_\eta$ varies slowly with shape and is expressed in Ref.~\cite{Mansfield2008}.\\
+Calculation: & Indirect exterior  \\
+Explanation: & The electric polarizability tensor plus a complicated Pad\'e approximate is used to determine this quantity. \\
+Uncertainty: & $0.015q_\eta$ \\
+Units: & None \\
+\end{tabular}
+
+\subsection{Viscometric radius}
+\begin{tabular}{p{1in} p{5.5in}}
+Equation: & $R_{v}= (3 q_\eta \langle \alpha \rangle/(10 \pi))^{1/3}$  \\
+Explanation: &  $q_\eta$ is the prefactor for the intrinsic viscosity, and $\langle \alpha \rangle$ is the mean polarizability.\\
+Calculation: & Indirect exterior  \\
+Uncertainty:& Determined via propagation of uncertainties.\\
+Units: & Length \\
+\end{tabular}
+
+\subsection{Intrinsic viscosity}
+\begin{tabular}{p{1in} p{5.5in}}
+Equation: & $[\eta]=q_\eta [\sigma]_\infty$  \\
+Explanation: &  $q_\eta$ is a prefactor, and $[\sigma]_\infty$ is the intrinsic conductivity.\\
+Calculation: & Indirect exterior and interior  \\
+Uncertainty:& Determined via propagation of uncertainties.\\
+Units: & None \\
+\end{tabular}
+
+\subsection{Intrinsic viscosity with mass units}
+\begin{tabular}{p{1in} p{5.5in}}
+Equation: & $[\eta]_{m}=q_\eta \langle\alpha\rangle/m$  \\
+Explanation: &  $q_\eta$ is the prefactor,  $\alpha$ is the polarizability tensor, and $m$ is the specified mass.\\
+Calculation: & Indirect exterior  \\
+Uncertainty:& Determined via propagation of uncertainties.\\
+Units: & Length cubed / mass \\
+Requirements: & Specified mass. \\
+\end{tabular}
+
+
+\subsection{Friction coefficient}
+\begin{tabular}{p{1in} p{5.5in}}
+Equation: & $f = 6\pi\eta R_h$  \\
+Explanation: &  $\eta$ is the solvent viscosity, and $R_h$ is the hydrodynamic radius.\\
+Calculation: & Indirect exterior  \\
+Uncertainty:& Determined via propagation of uncertainties.\\
+Units: & Mass / time \\
+Requirements: & Specified length scale and solvent viscosity.\\
+\end{tabular}
+
+\subsection{Diffusion coefficient}
+\begin{tabular}{p{1in} p{5.5in}}
+Equation: & $D = k_{B}T/f$  \\
+Explanation: &  $k_{B}$ is the Boltzmann constant, $T$ is the temperature, and $f$ is the friction coefficient.\\
+Calculation: & Indirect exterior  \\
+Uncertainty:& Determined via propagation of uncertainties.\\
+Units: & Length squared / time \\
+Requirements: & Specified length scale, solvent viscosity, and temperature.\\
+\end{tabular}
+
+\subsection{Sedimentation coefficient}
+\begin{tabular}{p{1in} p{5.5in}}
+Equation: & $s = mb/f$  \\
+Explanation: &  $m$ is the mass, $b$ is the buoyancy factor, and $f$ is the friction coefficient.\\
+Calculation: & Indirect exterior  \\
+Uncertainty:& Determined via propagation of uncertainties.\\
+Units: & Time \\
+Requirements: & Specified length scale, solvent viscosity, mass, and buoyancy factor.\\
+\end{tabular}
+
+\section{Units}
+
+\subsection{Notation}
+
+We use the following definitions: \\
+\begin{tabular}{| l | c | c |}
+\hline Command & \texttt{double} & \texttt{string} \\
+\hline\hline\texttt{hunits} & $l$ & \textbf{l\_unit} \\
+\hline\texttt{temp} & $T$ & \textbf{T\_unit} \\
+\hline\texttt{mass} & $m$ & \textbf{m\_unit} \\
+\hline\texttt{viscosity} & $\eta$ & $\mathbf{\eta}$\textbf{\_unit} \\
+\hline
+\end{tabular}
+
+\subsection{Properties with length scaling}
+
+If the units of the output is length to the $x$ power, and $r$ is the result prior to unit conversion, then the output is
+\begin{center}
+$r \cdot l^x$ \textbf{l\_unit}$^x$.
+\end{center}
+
+\subsection{Intrinsic viscosity with mass units}
+
+If \textbf{l\_unit} = \texttt{L}, then
+\begin{center}
+$[\eta]_{m}=q_\eta \langle\alpha\rangle/m \cdot l^3$ \textbf{l\_unit}$^3$/\textbf{m\_unit}
+\end{center}
+else
+\begin{center}
+$[\eta]_{m}=q_\eta \langle\alpha\rangle/m \cdot l^3 a_{l}^3 a_{m}$ \texttt{cm}$^3$/\texttt{g}.
+\end{center} 
+
+
+\subsection{Friction coefficient}
+
+If \textbf{l\_unit} is different than \texttt{L}, then \\
+\begin{center}
+$f = 6\pi\eta R_H \cdot 10^{-2} l a_l a_\eta $ \texttt{dyne}$\cdot$\texttt{s}/\texttt{cm}.
+\end{center} 
+
+\subsection{Diffusion coefficient}
+
+If \textbf{l\_unit} is different than \texttt{L}, then \\
+\begin{center}
+$D = k_{B}(T + a_T)/(6\pi\eta R_H) \cdot 10^{9} l^{-1} a_l^{-1} a_\eta^{-1} $ \texttt{cm}$^2$/\texttt{s}.
+\end{center} 
+
+\subsection{Sedimentation coefficient}
+
+If \textbf{l\_unit} is different than \texttt{L}, then \\
+\begin{center}
+$s = mb/(6\pi\eta R_H) \cdot 10^{15} l^{-1} a_l^{-1} a_\eta^{-1} a_m^{-1}$ \texttt{Sved}.
+\end{center} 
+
+\subsection{Conversion tables}
+
+\begin{tabular}{| l | c | c |}
+\hline \textbf{l\_unit} & $a_{l}$ & uncertainty \\
+\hline\hline \texttt{m} & 100 & 0 \\
+\hline\texttt{cm} & 1 & 0 \\
+\hline\texttt{nm} & $10^{-7}$ & 0 \\
+\hline\texttt{A} & $10^{-8}$ & 0 \\
+\hline
+\end{tabular} \\ \\
+
+\noindent \begin{tabular}{| l | c | c |}
+\hline \textbf{T\_unit} & $a_{T}$ & uncertainty \\
+\hline\hline \texttt{C} & 273.15 & 0 \\
+\hline \texttt{K} & 0 & 0 \\
+\hline
+\end{tabular} \\ \\
+
+\noindent \begin{tabular}{| l | c | c |}
+\hline \textbf{m\_unit} & $a_{m}$ & uncertainty \\
+\hline\hline \texttt{Da} & $6.02214 \cdot 10^{23}$ & $10^{18}$ \\
+\hline \texttt{kDa} & $6.02214 \cdot 10^{20}$ & $10^{15}$ \\
+\hline \texttt{g} & $1$ & 0 \\
+\hline \texttt{kg} & $10^{-3}$ & 0 \\
+\hline
+\end{tabular} \\ \\
+
+\noindent \begin{tabular}{| l | c | c |}
+\hline $\eta$\textbf{\_unit} & $a_{\eta}$ & uncertainty \\
+\hline\hline \texttt{cP} & 1 & 0 \\
+\hline \texttt{P} & 100 & 0 \\
+\hline
+\end{tabular} \\ \\
+
+\noindent \begin{tabular}{| l | c |}
+\hline $k_B$ & uncertainty \\
+\hline\hline $1.38065 \cdot 10^{-23}$ & $10^{-28}$ \\
+\hline
+\end{tabular}
+
+\section{Historical notes}
+
+The development of the current version (v5) of the code was motivated by the need to modernize the code base and to significantly speedup the computation. ZENO up to version 3.x was written in Fortran77. These versions were developed at Stevens Institute of Technology by Dr.~Marc Mansfield and coworkers; they can be downloaded from \url{https://web.stevens.edu/zeno/}.  For version~4, the code was ported to Fortran 2008.  For version~5, ZENO is implemented from scratch in C++.  This new version takes advantage of parallelism to deliver up to four orders of magnitude  speedup compared to the Fortran versions as described in Ref.~\cite{Juba2016}. Note that the algorithms in ZENO have been extensively tested previously, e.g., Refs.~\cite{Mansfield2008,Mansfield2001}. 
+
+\section{Contact information}
+
+The developers may be contacted at \href{mailto:zeno@nist.gov}{\texttt{zeno@nist.gov}}.
+
+\section{Validation}
+
+In order to validate the current version of the code, as well as provide examples for users, five different systems were considered: (1) two touching spheres of radius 1, (2) two touching spheres: one of radius 1 and one of $1/4$, (3) a torus with a minor radius of 1 and major radius of 4, (4) a ``polymer" composed of 20 beads, and (5) the protein lysozyme. In the case of the torus, it is represented by a collection of 416 uniformly distributed spheres. For lysozyme, the pdb file 1LYD (see Refs.~\cite{pdbonline,pdb}) was used, and a 5 $\mathrm{\AA}$ sphere was placed at the center of each alpha carbon of each amino acid. This procedure was previously used in Ref.~\cite{Kang2004}. All \texttt{.bod} files used in testing can be found in \texttt{src/cpp/SelfTests}. \\
+
+\noindent For systems composed of two spheres or a torus, the analytic values from Ref.~\cite{Mansfield2001} are used to define the true value, or ground truth. Since ground truths do not exist for the ``polymer" and protein, the output associated with 1e11 walks and 1e11 interior samples was used as a surrogate. The ground truth is taken as the mean from three runs, and the accuracy is determined using the expanded uncertainty (see below) from those three runs. Note that the $t$ statistic is modified ($t=4.302653$). When differences cannot be determined due to limited accuracy, results are omitted.\\
+
+\noindent For each property, the following quantities were calculated: the mean ($\bar{y}=\sum_{i} y_{i}/N$), difference between ground truth and mean ($\Delta=|\mu-\bar{y}|$), relative difference (${(\Delta / \mu) \cdot 100\,\%}$), standard deviation ($s=\sum_{i} (y_{i}-\bar{y})^{2}/(N-1)$), standard uncertainty ($s/\sqrt{N}$), expanded uncertainty ($st/\sqrt{N}$), and relative expanded uncertainty ($st/(\mu\sqrt{N}) \cdot 100\,\%$). For the equations, the ground truth is represented by $\mu$, the number of samples is $N$, and the value of observation $i$ of a property is $y_{i}$. The expanded uncertainty was computed using a 95\,\% confidence interval ($t=2.009575$). Each of the properties was found to have a normal distribution. As a result, the mean and standard deviation should define the distribution. \\
+
+\noindent Results from the aforementioned tests can be found in the following tables. Each test was run a total of 50 different times for 1e6 walks and 1e6 interior samples, as well as 1e7 walks and 1e7 interior samples. Note that these two quantities should be chosen carefully as they affect the uncertainty of the calculation; choosing larger values reduces the expanded uncertainty.
+
+\begin{landscape}
+
+\begin{center}
+\captionof{table}{\textbf{Two touching spheres of radius 1}}
+\begin{tabular}{ l d{2.8} l | d{2.8} c c c c c c }
+Property & \multicolumn{1}{c}{Ground Truth} & Units & \multicolumn{1}{c}{Mean} & Difference & Rel. & Std. & Std. & Expand & Rel. Exp. \\
+ &  &  &  &  & Diff. & Dev. & Uncert. & Uncert. & Uncert. \\ \hline
+ & & & \multicolumn{7}{c}{\textbf{number of walks = 1e6; number of interior samples = 1e6}} \\ \hline
+$C$ & 1.38629 & L & 1.38629& 1e-7& 0.000\,\%& 1.14e-3& 1.6e-4& 3.2e-4& 0.023\,\%\\ 
+Eigenvalue of $\mathbf{\alpha}$ & 22.658 & L$^{3}$ & 22.568& 9.0e-2& 0.396\,\%& 8.0e-2& 1.1e-2& 2.3e-2& 0.101\,\%\\ 
+Eigenvalue of $\mathbf{\alpha}$ & 22.658 & L$^{3}$ & 22.745& 8.7e-2& 0.383\,\%& 9.4e-2& 1.3e-2& 2.7e-2& 0.118\,\%\\ 
+Eigenvalue of $\mathbf{\alpha}$ & 60.421 & L$^{3}$ & 60.427& 6e-3& 0.011\,\%& 1.91e-1& 2.7e-2& 5.4e-2& 0.090\,\%\\ 
+$\langle\mathbf{\alpha}\rangle$ & 35.246 & L$^{3}$ & 35.247& 8e-4& 0.002\,\%& 6.6e-2& 9e-3& 1.9e-2& 0.054\,\%\\ 
+$R_{h}$ & 1.38629 & L & 1.38629& 1e-7& 0.000\,\%& 1.14e-3& 1.6e-4& 3.2e-4& 0.023\,\%\\ 
+$V$ & 8.377580 & L$^{3}$ & 8.377812& 2.32e-4& 0.003\,\%& 2.20e-2& 3.11e-3& 6.24e-3& 0.074\,\%\\ 
+$C_{0}$ & 1.25992 & L & 1.25993& 1e-5& 0.001\,\%& 1.10e-3& 1.6e-4& 3.1e-4& 0.025\,\%\\ 
+Eigenvalue of $\mathbf{S}$ & 0.200000 & L$^{2}$ & 0.199307& 6.93e-4& 0.347\,\%& 4.83e-4& 6.8e-5& 1.37e-4& 0.069\,\%\\ 
+Eigenvalue of $\mathbf{S}$ & 0.200000 & L$^{2}$ & 0.200566& 5.66e-4& 0.283\,\%& 4.13e-4& 5.8e-5& 1.17e-4& 0.059\,\%\\ 
+Eigenvalue of $\mathbf{S}$ & 1.200000 & L$^{2}$ & 1.199827& 1.73e-4& 0.014\,\%& 2.55e-3& 3.60e-4& 7.24e-4& 0.060\,\%\\ 
+$[\sigma]$ & 4.2072 &  & 4.2072& 8e-6& 0.000\,\%& 1.50e-2& 2.1e-3& 4.3e-3& 0.101\,\%\\ 
+$[\eta]$ & 3.4499 &  & 3.4473& 2.6e-3& 0.075\,\%& 1.23e-2& 1.7e-3& 3.5e-3& 0.101\,\%\\  
+\hline 
+ & & & \multicolumn{7}{c}{\textbf{number of walks = 1e7; number of interior samples = 1e7}} \\ \hline
+$C$ & 1.38629 & L & 1.38634& 5e-5& 0.004\,\%& 3.5e-4& 5e-5& 1.0e-4& 0.007\,\%\\ 
+Eigenvalue of $\mathbf{\alpha}$ & 22.658 & L$^{3}$ & 22.637& 2.1e-2& 0.095\,\%& 2.7e-2& 4e-3& 8e-3& 0.034\,\%\\ 
+Eigenvalue of $\mathbf{\alpha}$ & 22.658 & L$^{3}$ & 22.690& 3.2e-2& 0.143\,\%& 2.5e-2& 4e-3& 7e-3& 0.032\,\%\\ 
+Eigenvalue of $\mathbf{\alpha}$ & 60.421 & L$^{3}$ & 60.419& 2e-3& 0.004\,\%& 7.3e-2& 1.0e-2& 2.1e-2& 0.034\,\%\\ 
+$\langle\mathbf{\alpha}\rangle$ & 35.246 & L$^{3}$ & 35.249& 3e-3& 0.007\,\%& 2.6e-2& 4e-3& 7e-3& 0.021\,\%\\ 
+$R_{h}$ & 1.38629 & L & 1.38634& 5e-5& 0.004\,\%& 3.5e-4& 5e-5& 1.0e-4& 0.007\,\%\\ 
+$V$ & 8.377580 & L$^{3}$ & 8.376747& 8.33e-4& 0.010\,\%& 6.95e-3& 9.83e-4& 1.98e-3& 0.024\,\%\\ 
+$C_{0}$ & 1.25992 & L & 1.25988& 4e-5& 0.003\,\%& 3.5e-4& 5e-5& 1e-4& 0.008\,\%\\ 
+Eigenvalue of $\mathbf{S}$ & 0.200000 & L$^{2}$ & 0.199817& 1.83e-4& 0.091\,\%& 1.67e-4& 2.4e-5& 4.7e-5& 0.024\,\%\\ 
+Eigenvalue of $\mathbf{S}$ & 0.200000 & L$^{2}$ & 0.200197& 1.97e-4& 0.098\,\%& 1.65e-4& 2.3e-5& 4.7e-5& 0.023\,\%\\ 
+Eigenvalue of $\mathbf{S}$ & 1.200000 & L$^{2}$ & 1.200179& 1.79e-4& 0.015\,\%& 7.55e-4& 1.07e-4& 2.15e-4& 0.018\,\%\\ 
+$[\sigma]$ & 4.2072 &  & 4.2079& 7e-4& 0.017\,\%& 5.2e-3& 7e-4& 1.5e-3& 0.035\,\%\\ 
+$[\eta]$ & 3.4499 &  & 3.4479& 2.0e-3& 0.058\,\%& 4.3e-3& 6e-4& 1.2e-3& 0.035\,\%\\
+\end{tabular}
+\end{center}
+
+\pagebreak
+
+\begin{center}
+\captionof{table}{\textbf{Two touching spheres one of radius 1 and one of radius $\mathbf{1/4}$}}
+\begin{tabular}{ l d{2.8} l | d{2.8} c c c c c c }
+Property & \multicolumn{1}{c}{Ground Truth} & Units & \multicolumn{1}{c}{Mean} & Difference & Rel. & Std. & Std. & Expand & Rel. Exp. \\
+ &  &  &  &  & Diff. & Dev. & Uncert. & Uncert. & Uncert. \\ \hline
+ & & & \multicolumn{7}{c}{\textbf{number of walks = 1e6; number of interior samples = 1e6}} \\ \hline
+$C$ & 1.01992 & L & 1.01996& 4e-5& 0.004\,\%& 8.7e-4& 1.2e-4& 2.5e-4& 0.024\,\%\\ 
+Eigenvalue of $\mathbf{\alpha}$ & 12.621 & L$^{3}$ & 12.570& 5.1e-2& 0.401\,\%& 5.3e-2& 7e-3& 1.5e-2& 0.119\,\%\\ 
+Eigenvalue of $\mathbf{\alpha}$ & 12.621 & L$^{3}$ & 12.666& 4.5e-2& 0.354\,\%& 4.9e-2& 7e-3& 1.4e-2& 0.111\,\%\\ 
+Eigenvalue of $\mathbf{\alpha}$ & 14.885 & L$^{3}$ & 14.888& 3e-3& 0.020\,\%& 5.9e-2& 8e-3& 1.7e-2& 0.112\,\%\\ 
+$\langle\mathbf{\alpha}\rangle$ & 13.376 & L$^{3}$ & 13.375& 1e-3& 0.010\,\%& 3.1e-2& 4e-3& 9e-3& 0.066\,\%\\ 
+$R_{h}$ & 1.01992 & L & 1.01996& 4e-5& 0.004\,\%& 8.7e-4& 1.2e-4& 2.5e-4& 0.024\,\%\\ 
+$V$ & 4.254240 & L$^{3}$ & 4.251482& 2.76e-3& 0.065\,\%& 1.03e-2& 1.46e-3& 2.92e-3& 0.069\,\%\\ 
+$C_{0}$ & 1.00518 & L & 1.00496& 2.2e-4& 0.022\,\%& 8.1e-4& 1.1e-4& 2.3e-4& 0.023\,\%\\ 
+Eigenvalue of $\mathbf{S}$ & 0.197115 & L$^{2}$ & 0.196618& 4.97e-4& 0.252\,\%& 4.63e-4& 6.5e-5& 1.31e-4& 0.067\,\%\\ 
+Eigenvalue of $\mathbf{S}$ & 0.197115 & L$^{2}$ & 0.197705& 5.90e-4& 0.299\,\%& 3.82e-4& 5.4e-5& 1.09e-4& 0.055\,\%\\ 
+Eigenvalue of $\mathbf{S}$ & 0.220784 & L$^{2}$ & 0.220712& 7.2e-5& 0.033\,\%& 7.14e-4& 1.01e-4& 2.03e-4& 0.092\,\%\\ 
+$[\sigma]$ & 3.1442 &  & 3.1459& 1.7e-3& 0.054\,\%& 1.06e-2& 1.5e-3& 3.0e-3& 0.096\,\%\\ 
+\hline 
+ & & & \multicolumn{7}{c}{\textbf{number of walks = 1e7; number of interior samples = 1e7}} \\ \hline
+$C$ & 1.01992 & L & 1.01999& 7e-5& 0.006\,\%& 3.5e-4& 5e-5& 1e-4& 0.010\,\%\\ 
+Eigenvalue of $\mathbf{\alpha}$ & 12.621 & L$^{3}$ & 12.606& 1.5e-2& 0.119\,\%& 1.6e-2& 2e-3& 4e-3& 0.035\,\%\\ 
+Eigenvalue of $\mathbf{\alpha}$ & 12.621 & L$^{3}$ & 12.635& 1.4e-2& 0.114\,\%& 1.5e-2& 2e-3& 4e-3& 0.035\,\%\\ 
+Eigenvalue of $\mathbf{\alpha}$ & 14.885 & L$^{3}$ & 14.882& 3e-3& 0.017\,\%& 2.2e-2& 3e-3& 6e-3& 0.041\,\%\\ 
+$\langle\mathbf{\alpha}\rangle$ & 13.376 & L$^{3}$ & 13.375& 1e-3& 0.010\,\%& 1.1e-2& 2e-3& 3e-3& 0.024\,\%\\ 
+$R_{h}$ & 1.01992 & L & 1.01999& 7e-5& 0.006\,\%& 3.5e-4& 5e-5& 1e-4& 0.010\,\%\\ 
+$V$ & 4.254240 & L$^{3}$ & 4.253419& 8.21e-4& 0.019\,\%& 2.93e-3& 4.15e-4& 8.34e-4& 0.020\,\%\\ 
+$C_{0}$ & 1.00518 & L & 1.00512& 6e-5& 0.006\,\%& 2.3e-4& 3e-5& 7e-5& 0.007\,\%\\ 
+Eigenvalue of $\mathbf{S}$ & 0.197115 & L$^{2}$ & 0.196960& 1.55e-4& 0.078\,\%& 1.35e-4& 1.9e-5& 3.9e-5& 0.020\,\%\\ 
+Eigenvalue of $\mathbf{S}$ & 0.197115 & L$^{2}$ & 0.197299& 1.84e-4& 0.093\,\%& 1.33e-4& 1.9e-5& 3.8e-5& 0.019\,\%\\ 
+Eigenvalue of $\mathbf{S}$ & 0.220784 & L$^{2}$ & 0.220771& 1.3e-5& 0.006\,\%& 2.07e-4& 2.9e-5& 5.9e-5& 0.027\,\%\\ 
+$[\sigma]$ & 3.1442 &  & 3.1444& 2e-4& 0.008\,\%& 3.6e-3& 5e-4& 1.0e-3& 0.032\,\%\\
+\end{tabular}
+\end{center}
+
+\pagebreak
+
+\begin{center}
+\captionof{table}{\textbf{Torus with a minor radius of 1 and major radius of 4}}
+\begin{tabular}{ l d{3.8} l | d{3.8} c c c c c c }
+Property & \multicolumn{1}{c}{Ground Truth} & Units & \multicolumn{1}{c}{Mean} & Difference & Rel. & Std. & Std. & Expand & Rel. Exp. \\
+ &  &  &  &  & Diff. & Dev. & Uncert. & Uncert. & Uncert. \\ \hline
+ & & & \multicolumn{7}{c}{\textbf{number of walks = 1e6; number of interior samples = 1e6}} \\ \hline
+$C$ & 3.72768 & L & 3.72754& 1.4e-4& 0.004\,\%& 3.93e-3& 5.6e-4& 1.12e-3& 0.030\,\%\\ 
+Eigenvalue of $\mathbf{\alpha}$ & 156.53 & L$^{3}$ & 156.41& 1.2e-1& 0.078\,\%& 9.0e-1& 1.3e-1& 2.6e-1& 0.163\,\%\\ 
+Eigenvalue of $\mathbf{\alpha}$ & 972.21 & L$^{3}$ & 967.94& 4.3e0& 0.439\,\%& 3.3e0& 4.6e-1& 9.3e-1& 0.095\,\%\\ 
+Eigenvalue of $\mathbf{\alpha}$ & 972.21 & L$^{3}$ & 976.53& 4.3e0& 0.444\,\%& 4.6e0& 6.5e-1& 1.3e0& 0.133\,\%\\ 
+$\langle\mathbf{\alpha}\rangle$ & 700.31 & L$^{3}$ & 700.29& 2e-2& 0.003\,\%& 2.2e0& 3.2e-1& 6.4e-1& 0.091\,\%\\ 
+$R_{h}$ & 3.72768 & L & 3.72754& 1.4e-4& 0.004\,\%& 3.93e-3& 5.6e-4& 1.12e-3& 0.030\,\%\\ 
+$V$ & 78.956835 & L$^{3}$ & 78.902721& 5.41e-2& 0.069\,\%& 3.11e-1& 4.39e-2& 8.83e-2& 0.112\,\%\\ 
+$C_{0}$ & 2.66134 & L & 2.66073& 6.1e-4& 0.023\,\%& 3.49e-3& 4.9e-4& 9.9e-4& 0.037\,\%\\ 
+Eigenvalue of $\mathbf{S}$ & 0.250000 & L$^{2}$ & 0.249765& 2.35e-4& 0.094\,\%& 9.81e-4& 1.39e-4& 2.79e-4& 0.112\,\%\\ 
+Eigenvalue of $\mathbf{S}$ & 8.375000 & L$^{2}$ & 8.345469& 2.95e-2& 0.353\,\%& 1.99e-2& 2.82e-3& 5.67e-3& 0.068\,\%\\ 
+Eigenvalue of $\mathbf{S}$ & 8.375000 & L$^{2}$ & 8.405032& 3.00e-2& 0.359\,\%& 2.02e-2& 2.86e-3& 5.75e-3& 0.069\,\%\\ 
+$[\sigma]$ & 8.8696 &  & 8.8755& 5.9e-3& 0.066\,\%& 4.03e-2& 5.7e-3& 1.14e-2& 0.129\,\%\\  
+\hline 
+ & & & \multicolumn{7}{c}{\textbf{number of walks = 1e7; number of interior samples = 1e7}} \\ \hline
+$C$ & 3.72768 & L & 3.72771& 3e-5& 0.001\,\%& 1.11e-3& 1.6e-4& 3.2e-4& 0.008\,\%\\ 
+Eigenvalue of $\mathbf{\alpha}$ & 156.53 & L$^{3}$ & 156.48& 5e-2& 0.035\,\%& 2.9e-1& 4e-2& 8e-2& 0.053\,\%\\ 
+Eigenvalue of $\mathbf{\alpha}$ & 972.21 & L$^{3}$ & 970.89& 1.3e0& 0.136\,\%& 1.3e0& 1.9e-1& 3.8e-1& 0.039\,\%\\ 
+Eigenvalue of $\mathbf{\alpha}$ & 972.21 & L$^{3}$ & 973.54& 1.3e0& 0.137\,\%& 1.1e0& 1.6e-1& 3.2e-1& 0.033\,\%\\ 
+$\langle\mathbf{\alpha}\rangle$ & 700.31 & L$^{3}$ & 700.30& 7e-3& 0.001\,\%& 6.8e-1& 1e-1& 1.9e-1& 0.028\,\%\\ 
+$R_{h}$ & 3.72768 & L & 3.72771& 3e-5& 0.001\,\%& 1.11e-3& 1.6e-4& 3.2e-4& 0.008\,\%\\ 
+$V$ & 78.956835 & L$^{3}$ & 78.913530& 4.33e-2& 0.055\,\%& 1.19e-1& 1.69e-2& 3.40e-2& 0.043\,\%\\ 
+$C_{0}$ & 2.66134 & L & 2.66085& 4.9e-4& 0.018\,\%& 1.34e-3& 1.9e-4& 3.8e-4& 0.014\,\%\\ 
+Eigenvalue of $\mathbf{S}$ & 0.250000 & L$^{2}$ & 0.249928& 7.2e-5& 0.029\,\%& 3.87e-4& 5.5e-5& 1.10e-4& 0.044\,\%\\ 
+Eigenvalue of $\mathbf{S}$ & 8.375000 & L$^{2}$ & 8.363658& 1.13e-2& 0.135\,\%& 5.68e-3& 8.03e-4& 1.61e-3& 0.019\,\%\\ 
+Eigenvalue of $\mathbf{S}$ & 8.375000 & L$^{2}$ & 8.385071& 1.01e-2& 0.120\,\%& 6.28e-3& 8.88e-4& 1.79e-3& 0.021\,\%\\ 
+$[\sigma]$ & 8.8696 &  & 8.8743& 4.7e-3& 0.053\,\%& 1.61e-2& 2.3e-3& 4.6e-3& 0.052\,\%\\
+\end{tabular}
+\end{center}
+
+\pagebreak
+
+\begin{center}
+\captionof{table}{\textbf{``Polymer"}}
+\begin{tabular}{ l d{3.8} l | d{3.8} c c c c c c }
+Property & \multicolumn{1}{c}{Ground Truth} & Units & \multicolumn{1}{c}{Mean} & Difference & Rel. & Std. & Std. & Expand & Rel. Exp. \\
+ &  &  &  &  & Diff. & Dev. & Uncert. & Uncert. & Uncert. \\ \hline
+ & & & \multicolumn{7}{c}{\textbf{number of walks = 1e6; number of interior samples = 1e6}} \\ \hline
+$C$ & 2.15962 & L & 2.15963& 1e-5& 0.000\%& 2.56e-3& 3.6e-4& 7.3e-4& 0.034\%\\ 
+Eigenvalue of $\mathbf{\alpha}$ & 65.42 & L$^{3}$ & 65.39& 3e-2& 0.049\%& 4.9e-1& 7e-2& 1.4e-1& 0.211\%\\ 
+Eigenvalue of $\mathbf{\alpha}$ & 84.09 & L$^{3}$ & 83.91& 1.8e-1& 0.215\%& 4.9e-1& 7e-2& 1.4e-1& 0.166\%\\ 
+Eigenvalue of $\mathbf{\alpha}$ & 270.51 & L$^{3}$ & 270.51& \textemdash & \textemdash& 1.2e0& 1.8e-1& 3.5e-1& 0.130\%\\ 
+$\langle\mathbf{\alpha}\rangle$ & 140.004 & L$^{3}$ & 139.936& 6.8e-2& 0.049\%& 4.64e-1& 6.6e-2& 1.32e-1& 0.094\%\\ 
+$R_{h}$ & 2.15962 & L & 2.15963& 1e-5& 0.000\%& 2.56e-3& 3.6e-4& 7.3e-4& 0.034\%\\ 
+$V$ & 17.102 & L$^{3}$ & 17.095& 7e-3& 0.043\%& 7.8e-2& 1.1e-2& 2.2e-2& 0.129\%\\ 
+$C_{0}$ & 1.59828 & L & 1.59805& 2.3e-4& 0.014\%& 2.42e-3& 3.4e-4& 6.9e-4& 0.043\%\\ 
+Eigenvalue of $\mathbf{S}$ & 0.41542 & L$^{2}$ & 0.41513& 2.9e-4& 0.070\%& 2.52e-3& 3.6e-4& 7.2e-4& 0.172\%\\ 
+Eigenvalue of $\mathbf{S}$ & 0.64271 & L$^{2}$ & 0.64342& 7.1e-4& 0.111\%& 3.80e-3& 5.4e-4& 1.08e-3& 0.168\%\\ 
+Eigenvalue of $\mathbf{S}$ & 3.6002 & L$^{2}$ & 3.6002& \textemdash & \textemdash& 2.02e-2& 2.9e-3& 5.7e-3& 0.159\%\\ 
+$[\sigma]$ & 8.1864 &  & 8.1861& 3e-4& 0.004\%& 4.88e-2& 6.9e-3& 1.39e-2& 0.170\%\\ 
+$[\eta]$ & 6.6823 &  & 6.6817& 6e-4& 0.009\%& 3.96e-2& 5.6e-3& 1.13e-2& 0.169\%\\ 
+\hline 
+ & & & \multicolumn{7}{c}{\textbf{number of walks = 1e7; number of interior samples = 1e7}} \\ \hline
+$C$ & 2.15962 & L & 2.15963& 1e-5& 0.000\%& 2.56e-3& 3.6e-4& 7.3e-4& 0.034\%\\ 
+Eigenvalue of $\mathbf{\alpha}$ & 65.42 & L$^{3}$ & 65.39& 3e-2& 0.049\%& 4.9e-1& 7e-2& 1.4e-1& 0.211\%\\ 
+Eigenvalue of $\mathbf{\alpha}$ & 84.09 & L$^{3}$ & 83.91& 1.8e-1& 0.215\%& 4.9e-1& 7e-2& 1.4e-1& 0.166\%\\ 
+Eigenvalue of $\mathbf{\alpha}$ & 270.51 & L$^{3}$ & 270.51& \textemdash & \textemdash& 1.2e0& 1.8e-1& 3.5e-1& 0.130\%\\ 
+$\langle\mathbf{\alpha}\rangle$ & 140.004 & L$^{3}$ & 139.991& 1.3e-2& 0.009\%& 1.82e-1& 2.6e-2& 5.2e-2& 0.037\%\\
+$R_{h}$ & 2.15962 & L & 2.15963& 1e-5& 0.000\%& 2.56e-3& 3.6e-4& 7.3e-4& 0.034\%\\ 
+$V$ & 17.102 & L$^{3}$ & 17.095& 7e-3& 0.043\%& 7.8e-2& 1.1e-2& 2.2e-2& 0.129\%\\ 
+$C_{0}$ & 1.59828 & L & 1.59805& 2.3e-4& 0.014\%& 2.42e-3& 3.4e-4& 6.9e-4& 0.043\%\\ 
+Eigenvalue of $\mathbf{S}$ & 0.41542 & L$^{2}$ & 0.41513& 2.9e-4& 0.070\%& 2.52e-3& 3.6e-4& 7.2e-4& 0.172\%\\ 
+Eigenvalue of $\mathbf{S}$ & 0.64271 & L$^{2}$ & 0.64342& 7.1e-4& 0.111\%& 3.80e-3& 5.4e-4& 1.08e-3& 0.168\%\\ 
+Eigenvalue of $\mathbf{S}$ & 3.6002 & L$^{2}$ & 3.6002& \textemdash & \textemdash& 2.02e-2& 2.9e-3& 5.7e-3& 0.159\%\\ 
+$[\sigma]$ & 8.1864 &  & 8.1861& 3e-4& 0.004\%& 4.88e-2& 6.9e-3& 1.39e-2& 0.170\%\\ 
+$[\eta]$ & 6.6823 &  & 6.6817& 6e-4& 0.009\%& 3.96e-2& 5.6e-3& 1.13e-2& 0.169\%\\ 
+\end{tabular}
+\end{center}
+
+\end{landscape}
+
+\newgeometry{top=1in,bottom=1in,left=1in,right=0.8in}
+\begin{landscape}
+
+\pagebreak
+\begin{center}
+\captionof{table}{\textbf{Protein}}
+\begin{tabular}{ l d{6.4} l | d{6.4} c c c c c c }
+Property & \multicolumn{1}{c}{Ground Truth} & Units & \multicolumn{1}{c}{Mean} & Difference & Rel. & Std. & Std. & Expand & Rel. Exp. \\
+ &  &  &  &  & Diff. & Dev. & Uncert. & Uncert. & Uncert. \\ \hline
+ & & & \multicolumn{7}{c}{\textbf{number of walks = 1e6; number of interior samples = 1e6}} \\ \hline
+$C$ & 21.4869 & \AA & 21.4846& 2.3e-3& 0.011\%& 2.16e-2& 3.1e-3& 6.1e-3& 0.029\%\\ 
+Eigenvalue of $\mathbf{\alpha}$ & 96681 & \AA$^3$ & 96641& 4e1& 0.041\%& 4.9e2& 7e1& 1.4e2& 0.145\%\\ 
+Eigenvalue of $\mathbf{\alpha}$ & 100999 & \AA$^3$ & 100952& 5e1& 0.046\%& 5.5e2& 8e1& 1.6e2& 0.156\%\\ 
+Eigenvalue of $\mathbf{\alpha}$ & 184490 & \AA$^3$ & 184460& 3e1& 0.016\%& 7.4e2& 1.1e2& 2.1e2& 0.115\%\\ 
+$\langle\mathbf{\alpha}\rangle$ & 127390 & \AA$^3$ & 127351& 4e1& 0.030\%& 3.2e2& 4e1& 9e1& 0.071\%\\ 
+$R_{h}$ & 21.4869 & \AA & 21.4846& 2.3e-3& 0.011\%& 2.16e-2& 3.1e-3& 6.1e-3& 0.029\%\\ 
+$V$ & 32214 & \AA$^3$ & 32222& 8e0 & 0.025\%& 1.0e2& 1e1& 3e1& 0.092\%\\ 
+$C_{0}$ & 19.7387 & \AA & 19.7403& 1.6e-3& 0.008\%& 2.12e-2& 3.0e-3& 6.0e-3& 0.031\%\\ 
+Eigenvalue of $\mathbf{S}$ & 58.975 & \AA$^2$ & 58.942& 3.3e-2& 0.056\%& 2.00e-1& 2.8e-2& 5.7e-2& 0.097\%\\ 
+Eigenvalue of $\mathbf{S}$ & 62.500 & \AA$^2$ & 62.502& 2e-3& 0.003\%& 2.40e-1& 3.4e-2& 6.8e-2& 0.109\%\\
+Eigenvalue of $\mathbf{S}$ & 184.32 & \AA$^2$ & 184.21& 1.1e-1& 0.060\%& 6.8e-1& 1e-1& 1.9e-1& 0.105\%\\ 
+$[\sigma]$ & 3.9545 &  & 3.9524& 2.1e-3& 0.054\%& 1.71e-2& 2.4e-3& 4.9e-3& 0.123\%\\ 
+$[\eta]$ & 3.2907 &  & 3.2889& 1.8e-3& 0.055\%& 1.42e-2& 2.0e-3& 4.0e-3& 0.123\%\\ 
+\hline 
+ & & & \multicolumn{7}{c}{\textbf{number of walks = 1e7; number of interior samples = 1e7}} \\ \hline
+$C$ & 21.4869 & \AA & 21.4856& 1.3e-3& 0.006\%& 7.0e-3& 1e-3& 2.0e-3& 0.009\%\\ 
+Eigenvalue of $\mathbf{\alpha}$ & 96681 & \AA$^3$ & 96659& 2e1& 0.023\%& 1.3e2& 2e1& 4e1& 0.038\%\\ 
+Eigenvalue of $\mathbf{\alpha}$ & 100999 & \AA$^3$ & 101009& 1e1 & 0.010\%& 1.7e2& 2e1& 5e1& 0.049\%\\ 
+Eigenvalue of $\mathbf{\alpha}$ & 184490 & \AA$^3$ & 184490& \textemdash & \textemdash& 2.6e2& 4e1& 7e1& 0.040\%\\ 
+$\langle\mathbf{\alpha}\rangle$ & 127390 & \AA$^3$ & 127386& 4e0 & 0.003\%& 1.2e2& 2e1& 3e1& 0.026\%\\ 
+$R_{h}$ & 21.4869 & \AA & 21.4856& 1.3e-3& 0.006\%& 7.0e-3& 1e-3& 2.0e-3& 0.009\%\\  
+$V$ & 32214 & \AA$^3$ & 32218& 4e0 & 0.012\%& 4e1& 5e0& 1e1& 0.032\%\\ 
+$C_{0}$ & 19.7387 & \AA & 19.7395& 8e-4& 0.004\%& 7.3e-3& 1.0e-3& 2.1e-3& 0.011\%\\ 
+Eigenvalue of $\mathbf{S}$ & 58.975 & \AA$^2$ & 58.981& 6e-3& 0.011\%& 7.4e-2& 1.0e-2& 2.1e-2& 0.035\%\\ 
+Eigenvalue of $\mathbf{S}$ & 62.500 & \AA$^2$ & 62.512& 1.2e-2& 0.018\%& 7.0e-2& 1e-2& 2.0e-2& 0.032\%\\ 
+Eigenvalue of $\mathbf{S}$ & 184.32 & \AA$^2$ & 184.30& 2e-2& 0.008\%& 1.8e-1& 3e-2& 5e-2& 0.028\%\\ 
+$[\sigma]$ & 3.9545 &  & 3.9539& 6e-4& 0.016\%& 5.8e-3& 8e-4& 1.7e-3& 0.042\%\\ 
+$[\eta]$ & 3.2907 &  & 3.2901& 6e-4& 0.017\%& 4.9e-3& 7e-4& 1.4e-3& 0.042\%\\ 
+\end{tabular}
+\end{center}
+
+\end{landscape}
+
+\restoregeometry
+
+\bibliography{ZENO}
+\bibliographystyle{abbrv}
+
+\end{document}
