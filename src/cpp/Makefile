@@ -33,10 +33,10 @@ MPI_CXX := mpic++
 #MPI_CXXFLAGS := -I/usr/lib/openmpi/include -I/usr/lib/openmpi/include/openmpi
 #MPI_LDFLAGS  := -L/usr/lib/openmpi/lib -lmpi_cxx -lmpi -ldl -lhwloc
 
-GENGETOPT := true #gengetopt
+GENGETOPT := gengetopt
 
-FLEXCXX  := true #flexc++
-BISONCXX := true #bisonc++
+FLEXCXX  := flexc++
+BISONCXX := bisonc++
 
 LEXER   := lexer
 GRAMMAR := grammar
@@ -46,6 +46,8 @@ PARSE.cc     := parse.cc
 
 SCANNERBASE.h := Scannerbase.h
 SCAN.cc       := lex.cc
+
+MAKEFILE := Makefile
 
 DEPEND := depend
 
@@ -123,17 +125,17 @@ $(MPI_EXECUTABLE): $(MPI_OBJECTS.cc) $(OBJECTS.c)
 $(MPI_OBJECTS.cc): %.mpi_o: %.cc
 	$(MPI_CXX) -DUSE_MPI -c $(CXXFLAGS) $(MPI_CXXFLAGS) $< -o $@
 
-$(CMDLINE).c $(CMDLINE).h: $(OPTIONS)
-	$(GENGETOPT) --file-name=$(CMDLINE) < $<
+#$(CMDLINE).c $(CMDLINE).h: $(OPTIONS)
+#	$(GENGETOPT) --file-name=$(CMDLINE) < $<
 
-$(SCANNERBASE.h) $(SCAN.cc): $(LEXER)
-	$(FLEXCXX) $(LEXER)
+#$(SCANNERBASE.h) $(SCAN.cc): $(LEXER)
+#	$(FLEXCXX) $(LEXER)
 
-$(PARSERBASE.h) $(PARSE.cc): $(GRAMMAR)
-	$(BISONCXX) $(GRAMMAR)
+#$(PARSERBASE.h) $(PARSE.cc): $(GRAMMAR)
+#	$(BISONCXX) $(GRAMMAR)
 
-$(DEPEND): $(SOURCES.cc) $(SOURCES.c)
-	$(CXX) -MM -MG $(CXXFLAGS) $^ > $@
+$(DEPEND): $(SOURCES.cc) $(SOURCES.c) $(MAKEFILE)
+	$(CXX) -MM -MG $(CXXFLAGS) $(SOURCES.cc) $(SOURCES.c) > $@
 
 # ================================================================
 
