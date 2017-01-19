@@ -23,7 +23,7 @@ project (zeno-v4)
 enable_language (Fortran)
 
 # Enable private CMake modules
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/../cmake")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
 # ----------------------------------------------------------------
 
