@@ -14,7 +14,7 @@
 # ================================================================
 # 
 # Author: Roger Sachan (naryanroger@gmail.com)
-# Date:   Wed Jan  25 16:34:30 2016 EDT
+# Date:   Wed Jan  25 16:34:30 2017 EDT
 # 
 # Time-stamp: <2017-01-25 16:34:30 narayanroger>
 # 
@@ -50,3 +50,7 @@
 *.exe
 *.out
 *.app
+
+# Local Variables:
+# time-stamp-line-limit: 30
+# End:
