@@ -1,0 +1,52 @@
+# ================================================================
+# 
+# This software was developed at the National Institute of
+# Standards and Technology by employees of the Federal Government
+# in the course of their official duties.  Pursuant to Title 17
+# Section 105 of the United States Code, this software is not
+# subject to copyright protection and is in the public domain.
+# This software is an experimental system.  NIST assumes no
+# responsibility whatsoever for its use by other parties, and makes
+# no guarantees, expressed or implied, about its quality,
+# reliability, or any other characteristic.  We would appreciate
+# acknowledgment if the software is used.
+#
+# ================================================================
+# 
+# Author: Roger Sachan (naryanroger@gmail.com)
+# Date:   Wed Jan  25 16:34:30 2016 EDT
+# 
+# Time-stamp: <2017-01-25 16:34:30 narayanroger>
+# 
+# ================================================================
+
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
