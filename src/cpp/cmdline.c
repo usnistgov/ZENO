@@ -42,9 +42,10 @@ const char *gengetopt_args_info_full_help[] = {
   "      --num-interior-samples=LONGLONG\n                                Number of interior samples to take",
   "      --max-rsd-capacitance=DOUBLE\n                                Perform walk-on-spheres walks until the\n                                  relative standard deviation of the\n                                  capacitance drops below this value.  Relative\n                                  standard deviation is defined as\n                                  (Standard_Deviation/Mean)*100%",
   "      --max-rsd-polarizability=DOUBLE\n                                Perform walk-on-spheres walks until the\n                                  relative standard deviation of the mean\n                                  electric polarizability drops below this\n                                  value.  Relative standard deviation is\n                                  defined as (Standard_Deviation/Mean)*100%",
-  "      --max-rsd-volume=DOUBLE   Take interior samples until the relative\n                                  standard deviation of the volume drops below\n                                  this value.  Relative standard deviation is\n                                  defined as (Standard_Deviation/Mean)*100%",
+  "      --max-rsd-volume=DOUBLE   Take interior samples until the relative\n                                  standard deviation of volume drops below this\n                                  value.  Relative standard deviation is\n                                  defined as (Standard_Deviation/Mean)*100%",
   "      --min-num-walks=LONGLONG  Minimum number of walk-on-spheres walks to\n                                  perform when using max-rsd stopping\n                                  conditions  (default=`1000')",
   "      --min-num-interior-samples=LONGLONG\n                                Minimum number of interior samples to take when\n                                  using max-rsd stopping conditions\n                                  (default=`10000')",
+  "      --compute-form            Compute form factor",
   "      --num-threads=INT         Number of threads to use  (default=Number of\n                                  logical cores)",
   "      --seed=INT                Seed for the random number generator\n                                  (default=Randomly set)",
   "      --frac-error-bound=DOUBLE Fractional error bound for nearest neighbor\n                                  search  (default=`0')",
@@ -71,15 +72,16 @@ init_help_array(void)
   gengetopt_args_info_help[10] = gengetopt_args_info_full_help[10];
   gengetopt_args_info_help[11] = gengetopt_args_info_full_help[11];
   gengetopt_args_info_help[12] = gengetopt_args_info_full_help[12];
-  gengetopt_args_info_help[13] = gengetopt_args_info_full_help[14];
+  gengetopt_args_info_help[13] = gengetopt_args_info_full_help[13];
   gengetopt_args_info_help[14] = gengetopt_args_info_full_help[15];
   gengetopt_args_info_help[15] = gengetopt_args_info_full_help[16];
   gengetopt_args_info_help[16] = gengetopt_args_info_full_help[17];
-  gengetopt_args_info_help[17] = 0; 
+  gengetopt_args_info_help[17] = gengetopt_args_info_full_help[18];
+  gengetopt_args_info_help[18] = 0; 
   
 }
 
-const char *gengetopt_args_info_help[18];
+const char *gengetopt_args_info_help[19];
 
 typedef enum {ARG_NO
   , ARG_STRING
@@ -117,6 +119,7 @@ void clear_given (struct gengetopt_args_info *args_info)
   args_info->max_rsd_volume_given = 0 ;
   args_info->min_num_walks_given = 0 ;
   args_info->min_num_interior_samples_given = 0 ;
+  args_info->compute_form_given = 0 ;
   args_info->num_threads_given = 0 ;
   args_info->seed_given = 0 ;
   args_info->frac_error_bound_given = 0 ;
@@ -168,13 +171,14 @@ void init_args_info(struct gengetopt_args_info *args_info)
   args_info->max_rsd_volume_help = gengetopt_args_info_full_help[8] ;
   args_info->min_num_walks_help = gengetopt_args_info_full_help[9] ;
   args_info->min_num_interior_samples_help = gengetopt_args_info_full_help[10] ;
-  args_info->num_threads_help = gengetopt_args_info_full_help[11] ;
-  args_info->seed_help = gengetopt_args_info_full_help[12] ;
-  args_info->frac_error_bound_help = gengetopt_args_info_full_help[13] ;
-  args_info->surface_points_file_help = gengetopt_args_info_full_help[14] ;
-  args_info->interior_points_file_help = gengetopt_args_info_full_help[15] ;
-  args_info->print_counts_help = gengetopt_args_info_full_help[16] ;
-  args_info->print_benchmarks_help = gengetopt_args_info_full_help[17] ;
+  args_info->compute_form_help = gengetopt_args_info_full_help[11] ;
+  args_info->num_threads_help = gengetopt_args_info_full_help[12] ;
+  args_info->seed_help = gengetopt_args_info_full_help[13] ;
+  args_info->frac_error_bound_help = gengetopt_args_info_full_help[14] ;
+  args_info->surface_points_file_help = gengetopt_args_info_full_help[15] ;
+  args_info->interior_points_file_help = gengetopt_args_info_full_help[16] ;
+  args_info->print_counts_help = gengetopt_args_info_full_help[17] ;
+  args_info->print_benchmarks_help = gengetopt_args_info_full_help[18] ;
   
 }
 
@@ -335,6 +339,8 @@ cmdline_parser_dump(FILE *outfile, struct gengetopt_args_info *args_info)
     write_into_file(outfile, "min-num-walks", args_info->min_num_walks_orig, 0);
   if (args_info->min_num_interior_samples_given)
     write_into_file(outfile, "min-num-interior-samples", args_info->min_num_interior_samples_orig, 0);
+  if (args_info->compute_form_given)
+    write_into_file(outfile, "compute-form", 0, 0 );
   if (args_info->num_threads_given)
     write_into_file(outfile, "num-threads", args_info->num_threads_orig, 0);
   if (args_info->seed_given)
@@ -650,6 +656,7 @@ cmdline_parser_internal (
         { "max-rsd-volume",	1, NULL, 0 },
         { "min-num-walks",	1, NULL, 0 },
         { "min-num-interior-samples",	1, NULL, 0 },
+        { "compute-form",	0, NULL, 0 },
         { "num-threads",	1, NULL, 0 },
         { "seed",	1, NULL, 0 },
         { "frac-error-bound",	1, NULL, 0 },
@@ -752,7 +759,7 @@ cmdline_parser_internal (
               goto failure;
           
           }
-          /* Take interior samples until the relative standard deviation of the volume drops below this value.  Relative standard deviation is defined as (Standard_Deviation/Mean)*100%.  */
+          /* Take interior samples until the relative standard deviation of volume drops below this value.  Relative standard deviation is defined as (Standard_Deviation/Mean)*100%.  */
           else if (strcmp (long_options[option_index].name, "max-rsd-volume") == 0)
           {
           
@@ -790,6 +797,20 @@ cmdline_parser_internal (
                 &(local_args_info.min_num_interior_samples_given), optarg, 0, "10000", ARG_LONGLONG,
                 check_ambiguity, override, 0, 0,
                 "min-num-interior-samples", '-',
+                additional_error))
+              goto failure;
+          
+          }
+          /* Compute form factor.  */
+          else if (strcmp (long_options[option_index].name, "compute-form") == 0)
+          {
+          
+          
+            if (update_arg( 0 , 
+                 0 , &(args_info->compute_form_given),
+                &(local_args_info.compute_form_given), optarg, 0, 0, ARG_NO,
+                check_ambiguity, override, 0, 0,
+                "compute-form", '-',
                 additional_error))
               goto failure;
           

@@ -31,7 +31,7 @@ extern "C" {
 
 #ifndef CMDLINE_PARSER_VERSION
 /** @brief the program version */
-#define CMDLINE_PARSER_VERSION "5.0"
+#define CMDLINE_PARSER_VERSION "5.0.1"
 #endif
 
 /** @brief Where the command line options are stored */
@@ -63,9 +63,9 @@ struct gengetopt_args_info
   double max_rsd_polarizability_arg;	/**< @brief Perform walk-on-spheres walks until the relative standard deviation of the mean electric polarizability drops below this value.  Relative standard deviation is defined as (Standard_Deviation/Mean)*100%.  */
   char * max_rsd_polarizability_orig;	/**< @brief Perform walk-on-spheres walks until the relative standard deviation of the mean electric polarizability drops below this value.  Relative standard deviation is defined as (Standard_Deviation/Mean)*100% original value given at command line.  */
   const char *max_rsd_polarizability_help; /**< @brief Perform walk-on-spheres walks until the relative standard deviation of the mean electric polarizability drops below this value.  Relative standard deviation is defined as (Standard_Deviation/Mean)*100% help description.  */
-  double max_rsd_volume_arg;	/**< @brief Take interior samples until the relative standard deviation of the volume drops below this value.  Relative standard deviation is defined as (Standard_Deviation/Mean)*100%.  */
-  char * max_rsd_volume_orig;	/**< @brief Take interior samples until the relative standard deviation of the volume drops below this value.  Relative standard deviation is defined as (Standard_Deviation/Mean)*100% original value given at command line.  */
-  const char *max_rsd_volume_help; /**< @brief Take interior samples until the relative standard deviation of the volume drops below this value.  Relative standard deviation is defined as (Standard_Deviation/Mean)*100% help description.  */
+  double max_rsd_volume_arg;	/**< @brief Take interior samples until the relative standard deviation of volume drops below this value.  Relative standard deviation is defined as (Standard_Deviation/Mean)*100%.  */
+  char * max_rsd_volume_orig;	/**< @brief Take interior samples until the relative standard deviation of volume drops below this value.  Relative standard deviation is defined as (Standard_Deviation/Mean)*100% original value given at command line.  */
+  const char *max_rsd_volume_help; /**< @brief Take interior samples until the relative standard deviation of volume drops below this value.  Relative standard deviation is defined as (Standard_Deviation/Mean)*100% help description.  */
   #if defined(HAVE_LONG_LONG) || defined(HAVE_LONG_LONG_INT)
   long long int min_num_walks_arg;	/**< @brief Minimum number of walk-on-spheres walks to perform when using max-rsd stopping conditions (default=1000).  */
   #else
@@ -80,6 +80,7 @@ struct gengetopt_args_info
   #endif
   char * min_num_interior_samples_orig;	/**< @brief Minimum number of interior samples to take when using max-rsd stopping conditions original value given at command line.  */
   const char *min_num_interior_samples_help; /**< @brief Minimum number of interior samples to take when using max-rsd stopping conditions help description.  */
+  const char *compute_form_help; /**< @brief Compute form factor help description.  */
   int num_threads_arg;	/**< @brief Number of threads to use  (default=Number of logical cores).  */
   char * num_threads_orig;	/**< @brief Number of threads to use  (default=Number of logical cores) original value given at command line.  */
   const char *num_threads_help; /**< @brief Number of threads to use  (default=Number of logical cores) help description.  */
@@ -109,6 +110,7 @@ struct gengetopt_args_info
   unsigned int max_rsd_volume_given ;	/**< @brief Whether max-rsd-volume was given.  */
   unsigned int min_num_walks_given ;	/**< @brief Whether min-num-walks was given.  */
   unsigned int min_num_interior_samples_given ;	/**< @brief Whether min-num-interior-samples was given.  */
+  unsigned int compute_form_given ;	/**< @brief Whether compute-form was given.  */
   unsigned int num_threads_given ;	/**< @brief Whether num-threads was given.  */
   unsigned int seed_given ;	/**< @brief Whether seed was given.  */
   unsigned int frac_error_bound_given ;	/**< @brief Whether frac-error-bound was given.  */
