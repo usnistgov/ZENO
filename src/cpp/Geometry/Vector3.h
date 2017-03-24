@@ -21,7 +21,7 @@
 // Authors: Derek Juba <derek.juba@nist.gov>
 // Date:    Tue Apr 16 12:20:59 2013 EDT
 //
-// Time-stamp: <2016-09-19 15:25:34 dcj>
+// Time-stamp: <2017-03-24 12:54:38 dcj>
 //
 // ================================================================
 
@@ -97,6 +97,8 @@ class Vector3
   //in [col][row] format
   void leftMatrixMult3x3(eleT matrix[4][4]);
 
+  void sort();
+
   Vector3<eleT> roundDown() const;
   Vector3<eleT> roundUp() const;
 
@@ -134,6 +136,8 @@ class Vector3
   Vector3<eleT> & operator=(const Vector3<otherEleT> & rhs);
 
  private:
+  void swap(eleT & a, eleT & b);
+  
   eleT invSqrt(eleT x);
 
   eleT components[3];
@@ -638,6 +642,27 @@ void Vector3<eleT>::leftMatrixMult3x3(eleT matrix[4][4])
     setY(_x * matrix[1][0] + _y * matrix[1][1] + _z * matrix[1][2]);
     setZ(_x * matrix[2][0] + _y * matrix[2][1] + _z * matrix[2][2]);
   */
+}
+
+template <class eleT>
+void Vector3<eleT>::sort()
+{
+  if(components[1]<components[0]) 
+    swap(components[0],components[1]);
+  
+  if(components[2]<components[0]) 
+    swap(components[0],components[2]);
+  
+  if(components[2]<components[1]) 
+    swap(components[1],components[2]);
+}
+
+template <class eleT>
+void Vector3<eleT>::swap(eleT & a, eleT & b)
+{
+  eleT temp = a;
+  a = b;
+  b = temp;
 }
 
 template <class eleT>

@@ -21,7 +21,7 @@
 // Authors: Derek Juba <derek.juba@nist.gov>
 // Date:    Tue Apr 16 12:20:59 2013 EDT
 //
-// Time-stamp: <2016-09-19 15:24:35 dcj>
+// Time-stamp: <2017-03-24 18:05:28 dcj>
 //
 // ================================================================
 
@@ -99,9 +99,6 @@ class Matrix3x3
   Matrix3x3<eleT> & operator=(const Matrix3x3<otherEleT> & rhs);
 
  private:
-  void cubicsolver(eleT coeff[4], 
-		   eleT roots[3]) const;
-
   eleT components[3*3];
 };
 
@@ -217,60 +214,110 @@ void Matrix3x3<eleT>::symmetrize()
 template <class eleT>
 void Matrix3x3<eleT>::getEigenValues(Vector3<eleT> & eigenValues) const
 {
-  eleT coeffs[4];
-  eleT roots[3];
-
+  // Jacobi
+  
+  // Joachim Kopp
+  // Efficient numerical diagonalization of hermitian 3x3 matrices
+  // Int. J. Mod. Phys. C 19 (2008) 523-548
+  // arXiv.org: physics/0610206
+  
   assert(get(1, 0) == get(0, 1));
   assert(get(2, 0) == get(0, 2));
   assert(get(2, 1) == get(1, 2));
 
-  // compute Rg tensor
-  eleT Sxx=get(0, 0);
-  eleT Syy=get(1, 1);
-  eleT Szz=get(2, 2);
-  eleT Sxy=get(0, 1);
-  eleT Sxz=get(0, 2);
-  eleT Syz=get(1, 2);
+  const int dim = 3;
 
-  // Compute coefficents
-  coeffs[0]=1.;
-  coeffs[1]=-1.*(Sxx+Syy+Szz);
-  coeffs[2]=Sxx*Syy+Sxx*Szz+Syy*Szz-Sxy*Sxy-Sxz*Sxz-Syz*Syz;
-  coeffs[3]=Sxz*Sxz*Syy+Sxy*Sxy*Szz+Syz*Syz*Sxx-2.*Sxy*Sxz*Syz-Sxx*Syy*Szz;
+  const int maxJacobiIter = 1000;
 
-  // Find eigenvalues
-  cubicsolver(coeffs,roots);
+  eleT workEigenVals[3];
 
-  eigenValues.setXYZ(roots[0], roots[1], roots[2]);
-}
+  eleT workMatrix[3][3];
 
-template <class eleT>
-void Matrix3x3<eleT>::cubicsolver(eleT coeff[4], 
-				  eleT roots[3]) const
-{
-// solve the cubic equation and sort roots
+  for (int i = 0; i < dim; i++)
+    for (int j = 0; j < dim; j++)
+      workMatrix[i][j] = get(i, j);
+  
+  for (int i = 0; i < dim; i++)
+    workEigenVals[i] = workMatrix[i][i];
 
-  eleT delta0 = coeff[1]*coeff[1]-3.*coeff[0]*coeff[2];
-  eleT delta1 = 2.*pow(coeff[1],3.)-9.*coeff[0]*coeff[1]*coeff[2]+27.*coeff[0]*coeff[0]*coeff[3];
+  int numJacobiIter = 0;
 
-  eleT ththeta = pow(delta0,3.)-pow(delta1,2.)/4.;
-  if(ththeta < 1e-15) {ththeta=0;}
-  ththeta = atan2(sqrt(ththeta),delta1/2.)/3.;
+  // Do Jacobi iterations
+  while ((workMatrix[0][1] != 0.) ||
+         (workMatrix[0][2] != 0.) ||
+	 (workMatrix[1][2] != 0.)) {
 
-  eleT cosv = cos(ththeta);
-  eleT sinv = sin(ththeta);
+    // Do sweep
+    for (int row = 0; row < dim; row++) {
+      for (int col = row + 1; col < dim; col++) {
+	
+	if ((fabs(workEigenVals[row]) + fabs(workMatrix[row][col]) ==
+	     fabs(workEigenVals[row])) &&
+	    
+	    (fabs(workEigenVals[col]) + fabs(workMatrix[row][col]) ==
+	     fabs(workEigenVals[col]))) {
+	  
+	  workMatrix[row][col] = 0.;
+	}
+	else {  
+	  // Calculate Jacobi transformation
 
-  roots[0] = -1./(3.*coeff[0])*(coeff[1]+2.*sqrt(delta0)*cosv);
-  roots[1] = -1./(3.*coeff[0])*(coeff[1]+sqrt(delta0)*(-1.*cosv-sqrt(3.)*sinv));
-  roots[2] = -1./(3.*coeff[0])*(coeff[1]+sqrt(delta0)*(-1.*cosv+sqrt(3.)*sinv));
+	  eleT tan_phi = eleT();
+	  
+	  eleT h = workEigenVals[col] - workEigenVals[row];
+	  
+	  if (fabs(h) + fabs(workMatrix[row][col]) ==
+	      fabs(h)) {
+	    
+	    tan_phi = workMatrix[row][col] / h;
+	  }
+	  else {
+	    eleT phi = 0.5 * h / workMatrix[row][col];
+	    
+	    if (phi < 0.)
+	      tan_phi = -1. / (sqrt(1. + (phi*phi)) - phi);
+	    else
+	      tan_phi = 1. / (sqrt(1. + (phi*phi)) + phi);
+	  }
+	    
+	  eleT cos_phi = 1. / sqrt(1. + (tan_phi*tan_phi));
+	  eleT sin_phi = tan_phi * cos_phi;
 
-  // sort the roots
-  if(roots[1]<roots[0]) 
-    std::swap(roots[0],roots[1]);
-  if(roots[2]<roots[0]) 
-    std::swap(roots[0],roots[2]);
-  if(roots[2]<roots[1]) 
-    std::swap(roots[1],roots[2]);
+	  // Apply Jacobi transformation
+
+	  workEigenVals[row] -= tan_phi * workMatrix[row][col];
+	  workEigenVals[col] += tan_phi * workMatrix[row][col];
+	  
+	  workMatrix[row][col] = 0.;
+	    
+	  for (int i = 0; i < row; i++) {
+	    tan_phi = workMatrix[i][row];
+	    workMatrix[i][row] = cos_phi*tan_phi - sin_phi*workMatrix[i][col];
+	    workMatrix[i][col] = sin_phi*tan_phi + cos_phi*workMatrix[i][col];
+	  }
+	    
+	  for (int i = row + 1; i < col; i++) {
+	    tan_phi = workMatrix[row][i];
+	    workMatrix[row][i] = cos_phi*tan_phi - sin_phi*workMatrix[i][col];
+	    workMatrix[i][col] = sin_phi*tan_phi + cos_phi*workMatrix[i][col];
+	  }
+	    
+	  for (int i = col + 1; i < dim; i++) {
+	    tan_phi = workMatrix[row][i];
+	    workMatrix[row][i] = cos_phi*tan_phi - sin_phi*workMatrix[col][i];
+	    workMatrix[col][i] = sin_phi*tan_phi + cos_phi*workMatrix[col][i];
+	  }
+	}
+      }
+    }
+
+    ++ numJacobiIter;
+
+    assert(numJacobiIter < maxJacobiIter);
+  }
+
+  eigenValues.setXYZ(workEigenVals[0], workEigenVals[1], workEigenVals[2]);
+  eigenValues.sort();
 }
 
 template <class eleT>

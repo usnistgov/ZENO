@@ -21,12 +21,12 @@
 # Author: Derek Juba <derek.juba@nist.gov>
 # Date:   Tue Apr 16 12:49:29 2013 EDT
 # 
-# Time-stamp: <2016-09-28 16:11:47 dcj>
+# Time-stamp: <2017-03-24 15:22:40 dcj>
 # 
 # ================================================================
 
 package "zeno"
-version "5.0"
+version "5.0.1"
 
 # ----------------------------------------------------------------
 
@@ -45,7 +45,7 @@ double optional
 option "max-rsd-polarizability" - "Perform walk-on-spheres walks until the relative standard deviation of the mean electric polarizability drops below this value.  Relative standard deviation is defined as (Standard_Deviation/Mean)*100%"
 double optional
 
-option "max-rsd-volume" - "Take interior samples until the relative standard deviation of the volume drops below this value.  Relative standard deviation is defined as (Standard_Deviation/Mean)*100%"
+option "max-rsd-volume" - "Take interior samples until the relative standard deviation of volume drops below this value.  Relative standard deviation is defined as (Standard_Deviation/Mean)*100%"
 double optional
 
 option "min-num-walks" - "Minimum number of walk-on-spheres walks to perform when using max-rsd stopping conditions"
@@ -53,6 +53,9 @@ longlong default="1000" optional
 
 option "min-num-interior-samples" - "Minimum number of interior samples to take when using max-rsd stopping conditions"
 longlong default="10000" optional
+
+option "compute-form" - "Compute form factor"
+optional
 
 option "num-threads" - "Number of threads to use  (default=Number of logical cores)"
 int optional

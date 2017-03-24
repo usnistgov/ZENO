@@ -21,7 +21,7 @@
 // Authors: Derek Juba <derek.juba@nist.gov>
 // Date:    Mon Nov 16 15:04:44 2015 EDT
 //
-// Time-stamp: <2016-08-30 15:16:56 dcj>
+// Time-stamp: <2017-03-24 15:16:11 dcj>
 //
 // ================================================================
 
@@ -43,6 +43,9 @@
 
 template <class T>
 class Uncertain;
+
+template <class T>
+Uncertain<T> fabs(const Uncertain<T> & A); 
 
 template <class T>
 Uncertain<T> log(const Uncertain<T> & A); 
@@ -99,6 +102,7 @@ public:
   Uncertain<T> & operator/=(const Uncertain<T> & rhs);
   Uncertain<T> & operator/=(const T & rhs);
 
+  friend Uncertain fabs<T>(const Uncertain & A); 
   friend Uncertain log<T>(const Uncertain & A); 
   friend Uncertain exp<T>(const Uncertain & A);
   friend Uncertain pow<T>(const Uncertain & A, const Uncertain & B);
@@ -779,6 +783,32 @@ updateSecondOrder(T varA, T d2f_dA2,
 }
 
 // ================================================================
+
+template <class T>
+Uncertain<T> fabs(const Uncertain<T> & A) 
+{
+  const T meanA = A.mean;
+  const T varA  = A.variance;
+
+  Uncertain<T> result;
+
+  result.mean     = fabs(meanA);
+  result.variance = 0;
+
+  if (Uncertain<T>::propagateUncertainty) {
+    T df_dA = (A.mean < 0) ? -1 : 1;
+
+    result.updateFirstOrder(A.id, varA, df_dA);
+
+    if (Uncertain<T>::useSecondOrder) {
+      T d2f_dA2 = 0;
+
+      result.updateSecondOrder(varA, d2f_dA2);
+    }
+  }
+
+  return result;
+}
 
 template <class T>
 Uncertain<T> log(const Uncertain<T> & A) 
