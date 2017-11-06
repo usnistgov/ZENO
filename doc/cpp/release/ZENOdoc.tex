@@ -71,7 +71,7 @@ The code is run using: \\
 
 \noindent For example, the command to run ZENO for 1e6 random walks and 1e5 interior samples on an object described in the file \texttt{obj.bod} is: \\
 
-\texttt{./zeno -i obj.bod --numwalks=1000000 --num-interior-samples=100000 >\& out.txt} \\
+\texttt{./zeno -i obj.bod --num-walks=1000000 --num-interior-samples=100000 >\& out.txt} \\
 
 \noindent Detailed descriptions of all options are below.
 
@@ -86,7 +86,7 @@ The input or \texttt{.bod} file must contain a list of spheres that define the s
 \subsubsection{Exterior calculation}
 Either the number of exterior walks, the maximum relative standard deviation of the capacitance, or the maximum relative standard deviation of the mean electric polarizability must be specified. If one of the relative standard deviations are specified, then the calculation will continue performing walks until the relative standard deviation is less than the specified value. One of the following options is required for running the exterior calculation. \\
 
-\indent \texttt{--numwalks=<number of walks>} \\
+\indent \texttt{--num-walks=<number of walks>} \\
 \indent \texttt{--max-rsd-capacitance=<maximum relative standard deviation of capacitance>} \\
 \indent \texttt{--max-rsd-polarizability=<maximum relative standard deviation of mean electric polarizability>}
 
@@ -119,11 +119,11 @@ Either the number of interior samples or the maximum relative standard deviation
                                   drops below this value.  Relative standard deviation is defined as
                                   \mbox{(Standard Deviation/Mean) $\times$ 100\%} \\
       & \texttt{--min-num-walks=int}       & \hangpara{1em}{1}Minimum number of exterior walks to
-                                  perform when using max-rsd stopping
+                                  perform when using max-relative standard deviation stopping
                                   conditions  \mbox{(default=1000)} \\
       & \texttt{--min-num-interior-samples=int}
                                 & \hangpara{1em}{1}Minimum number of interior samples to take when
-                                  using max-rsd stopping conditions
+                                  using max-relative standard deviation stopping conditions
                                   \mbox{(default=10000)} \\
       & \texttt{--num-threads=int}         & \hangpara{1em}{1}Number of threads to use  (default=Number of
                                   logical cores) \\
@@ -633,34 +633,37 @@ $[\sigma]$ & 8.8696 &  & 8.8743& 4.7e-3& 0.053\,\%& 1.61e-2& 2.3e-3& 4.6e-3& 0.0
 Property & \multicolumn{1}{c}{Ground Truth} & Units & \multicolumn{1}{c}{Mean} & Difference & Rel. & Std. & Std. & Expand & Rel. Exp. \\
  &  &  &  &  & Diff. & Dev. & Uncert. & Uncert. & Uncert. \\ \hline
  & & & \multicolumn{7}{c}{\textbf{number of walks = 1e6; number of interior samples = 1e6}} \\ \hline
-$C$ & 2.15962 & L & 2.15963& 1e-5& 0.000\%& 2.56e-3& 3.6e-4& 7.3e-4& 0.034\%\\ 
-Eigenvalue of $\mathbf{\alpha}$ & 65.42 & L$^{3}$ & 65.39& 3e-2& 0.049\%& 4.9e-1& 7e-2& 1.4e-1& 0.211\%\\ 
-Eigenvalue of $\mathbf{\alpha}$ & 84.09 & L$^{3}$ & 83.91& 1.8e-1& 0.215\%& 4.9e-1& 7e-2& 1.4e-1& 0.166\%\\ 
-Eigenvalue of $\mathbf{\alpha}$ & 270.51 & L$^{3}$ & 270.51& \textemdash & \textemdash& 1.2e0& 1.8e-1& 3.5e-1& 0.130\%\\ 
-$\langle\mathbf{\alpha}\rangle$ & 140.004 & L$^{3}$ & 139.936& 6.8e-2& 0.049\%& 4.64e-1& 6.6e-2& 1.32e-1& 0.094\%\\ 
-$R_{h}$ & 2.15962 & L & 2.15963& 1e-5& 0.000\%& 2.56e-3& 3.6e-4& 7.3e-4& 0.034\%\\ 
-$V$ & 17.102 & L$^{3}$ & 17.095& 7e-3& 0.043\%& 7.8e-2& 1.1e-2& 2.2e-2& 0.129\%\\ 
-$C_{0}$ & 1.59828 & L & 1.59805& 2.3e-4& 0.014\%& 2.42e-3& 3.4e-4& 6.9e-4& 0.043\%\\ 
-Eigenvalue of $\mathbf{S}$ & 0.41542 & L$^{2}$ & 0.41513& 2.9e-4& 0.070\%& 2.52e-3& 3.6e-4& 7.2e-4& 0.172\%\\ 
-Eigenvalue of $\mathbf{S}$ & 0.64271 & L$^{2}$ & 0.64342& 7.1e-4& 0.111\%& 3.80e-3& 5.4e-4& 1.08e-3& 0.168\%\\ 
-Eigenvalue of $\mathbf{S}$ & 3.6002 & L$^{2}$ & 3.6002& \textemdash & \textemdash& 2.02e-2& 2.9e-3& 5.7e-3& 0.159\%\\ 
-$[\sigma]$ & 8.1864 &  & 8.1861& 3e-4& 0.004\%& 4.88e-2& 6.9e-3& 1.39e-2& 0.170\%\\ 
-$[\eta]$ & 6.6823 &  & 6.6817& 6e-4& 0.009\%& 3.96e-2& 5.6e-3& 1.13e-2& 0.169\%\\ 
+$C$ & 2.15962 & L & 2.15963& 1e-05& 0.000\%& 2.56e-03& 3.6e-04& 7.3e-04& 0.034\%\\ 
+Eigenvalue of $\mathbf{\alpha}$ & 65.42 & L$^{3}$ & 65.39& 3e-02& 0.049\%& 4.9e-01& 7e-02& 1.4e-01& 0.211\%\\ 
+Eigenvalue of $\mathbf{\alpha}$ & 84.09 & L$^{3}$ & 83.91& 1.8e-01& 0.215\%& 4.9e-01& 7e-02& 1.4e-01& 0.166\%\\ 
+Eigenvalue of $\mathbf{\alpha}$ & 270.51 & L$^{3}$ & 270.51& \textemdash & \textemdash& 1.2e+00& 1.8e-01& 3.5e-01& 0.130\%\\ 
+$\langle\mathbf{\alpha}\rangle$ & 140.004 & L$^{3}$ & 139.936& 6.8e-02& 0.049\%& 4.64e-01& 6.6e-02& 1.32e-01& 0.094\%\\ 
+$R_{h}$ & 2.15962 & L & 2.15963& 1e-05& 0.000\%& 2.56e-03& 3.6e-04& 7.3e-04& 0.034\%\\ 
+$V$ & 17.1020 & L$^{3}$ & 17.0947& 7.3e-03& 0.043\%& 7.76e-02& 1.10e-02& 2.21e-02& 0.129\%\\ 
+$C_{0}$ & 1.59828 & L & 1.59805& 2.3e-04& 0.014\%& 2.42e-03& 3.4e-04& 6.9e-04& 0.043\%\\ 
+Eigenvalue of $\mathbf{S}$ & 0.41542 & L$^{2}$ & 0.41513& 2.9e-04& 0.070\%& 2.52e-03& 3.6e-04& 7.2e-04& 0.172\%\\ 
+Eigenvalue of $\mathbf{S}$ & 0.64271 & L$^{2}$ & 0.64342& 7.1e-04& 0.111\%& 3.80e-03& 5.4e-04& 1.08e-03& 0.168\%\\ 
+Eigenvalue of $\mathbf{S}$ & 3.6002 & L$^{2}$ & 3.6002& \textemdash & \textemdash& 2.02e-02& 2.9e-03& 5.7e-03& 0.159\%\\ 
+$[\sigma]$ & 8.1864 &  & 8.1861& 3e-04& 0.004\%& 4.88e-02& 6.9e-03& 1.39e-02& 0.170\%\\ 
+$[\eta]$ & 6.6823 &  & 6.6817& 6e-04& 0.009\%& 3.96e-02& 5.6e-03& 1.13e-02& 0.169\%\\ 
+
+
 \hline 
  & & & \multicolumn{7}{c}{\textbf{number of walks = 1e7; number of interior samples = 1e7}} \\ \hline
-$C$ & 2.15962 & L & 2.15963& 1e-5& 0.000\%& 2.56e-3& 3.6e-4& 7.3e-4& 0.034\%\\ 
-Eigenvalue of $\mathbf{\alpha}$ & 65.42 & L$^{3}$ & 65.39& 3e-2& 0.049\%& 4.9e-1& 7e-2& 1.4e-1& 0.211\%\\ 
-Eigenvalue of $\mathbf{\alpha}$ & 84.09 & L$^{3}$ & 83.91& 1.8e-1& 0.215\%& 4.9e-1& 7e-2& 1.4e-1& 0.166\%\\ 
-Eigenvalue of $\mathbf{\alpha}$ & 270.51 & L$^{3}$ & 270.51& \textemdash & \textemdash& 1.2e0& 1.8e-1& 3.5e-1& 0.130\%\\ 
-$\langle\mathbf{\alpha}\rangle$ & 140.004 & L$^{3}$ & 139.991& 1.3e-2& 0.009\%& 1.82e-1& 2.6e-2& 5.2e-2& 0.037\%\\
-$R_{h}$ & 2.15962 & L & 2.15963& 1e-5& 0.000\%& 2.56e-3& 3.6e-4& 7.3e-4& 0.034\%\\ 
-$V$ & 17.102 & L$^{3}$ & 17.095& 7e-3& 0.043\%& 7.8e-2& 1.1e-2& 2.2e-2& 0.129\%\\ 
-$C_{0}$ & 1.59828 & L & 1.59805& 2.3e-4& 0.014\%& 2.42e-3& 3.4e-4& 6.9e-4& 0.043\%\\ 
-Eigenvalue of $\mathbf{S}$ & 0.41542 & L$^{2}$ & 0.41513& 2.9e-4& 0.070\%& 2.52e-3& 3.6e-4& 7.2e-4& 0.172\%\\ 
-Eigenvalue of $\mathbf{S}$ & 0.64271 & L$^{2}$ & 0.64342& 7.1e-4& 0.111\%& 3.80e-3& 5.4e-4& 1.08e-3& 0.168\%\\ 
-Eigenvalue of $\mathbf{S}$ & 3.6002 & L$^{2}$ & 3.6002& \textemdash & \textemdash& 2.02e-2& 2.9e-3& 5.7e-3& 0.159\%\\ 
-$[\sigma]$ & 8.1864 &  & 8.1861& 3e-4& 0.004\%& 4.88e-2& 6.9e-3& 1.39e-2& 0.170\%\\ 
-$[\eta]$ & 6.6823 &  & 6.6817& 6e-4& 0.009\%& 3.96e-2& 5.6e-3& 1.13e-2& 0.169\%\\ 
+$C$ & 2.15962 & L & 2.15959& 3e-05& 0.002\%& 7.1e-04& 1.0e-04& 2.0e-04& 0.009\%\\ 
+Eigenvalue of $\mathbf{\alpha}$ & 65.42 & L$^{3}$ & 65.42& \textemdash & \textemdash& 1.4e-01& 2e-02& 4e-02& 0.059\%\\ 
+Eigenvalue of $\mathbf{\alpha}$ & 84.09 & L$^{3}$ & 84.04& 5e-02& 0.056\%& 2.0e-01& 3e-02& 6e-02& 0.069\%\\ 
+Eigenvalue of $\mathbf{\alpha}$ & 270.51 & L$^{3}$ & 270.51& \textemdash & \textemdash& 4.5e-01& 6e-02& 1.3e-01& 0.048\%\\ 
+$\langle\mathbf{\alpha}\rangle$ & 140.004 & L$^{3}$ & 139.991& 1.3e-02& 0.009\%& 1.82e-01& 2.6e-02& 5.2e-02& 0.037\%\\ 
+$R_{h}$ & 2.15962 & L & 2.15959& 3e-05& 0.002\%& 7.1e-04& 1.0e-04& 2.0e-04& 0.009\%\\ 
+$V$ & 17.1020 & L$^{3}$ & 17.1040& 2.0e-03& 0.012\%& 2.74e-02& 3.9e-03& 7.8e-03& 0.046\%\\ 
+$C_{0}$ & 1.59828 & L & 1.59834& 6e-05& 0.004\%& 8.5e-04& 1.2e-04& 2.4e-04& 0.015\%\\ 
+Eigenvalue of $\mathbf{S}$ & 0.41542 & L$^{2}$ & 0.41564& 2.2e-04& 0.053\%& 7.8e-04& 1.1e-04& 2.2e-04& 0.053\%\\ 
+Eigenvalue of $\mathbf{S}$ & 0.64271 & L$^{2}$ & 0.64278& 7e-05& 0.011\%& 1.12e-03& 1.6e-04& 3.2e-04& 0.050\%\\ 
+Eigenvalue of $\mathbf{S}$ & 3.6002 & L$^{2}$ & 3.6014& 1.2e-03& 0.034\%& 5.7e-03& 8e-04& 1.6e-03& 0.045\%\\ 
+$[\sigma]$ & 8.1864 &  & 8.1847& 1.7e-03& 0.020\%& 1.79e-02& 2.5e-03& 5.1e-03& 0.062\%\\ 
+$[\eta]$ & 6.6823 &  & 6.6809& 1.4e-03& 0.021\%& 1.46e-02& 2.1e-03& 4.1e-03& 0.062\%\\ 
+
 \end{tabular}
 \end{center}
 
@@ -710,22 +713,6 @@ $[\eta]$ & 3.2907 &  & 3.2901& 6e-4& 0.017\%& 4.9e-3& 7e-4& 1.4e-3& 0.042\%\\
 \end{landscape}
 
 \restoregeometry
-
-\section{License}
-
-This software was developed at the
-National Institute of Standards and Technology by employees of the
-Federal Government in the course of their official duties.
-Pursuant to title 17 Section 105 of the United States Code this
-software is not subject to copyright protection and is in the
-public domain.  This is an experimental system.  NIST assumes no
-responsibility whatsoever for its use by other parties, and makes
-no guarantees, expressed or implied, about its quality,
-reliability, or any other characteristic.  We would appreciate
-acknowledgement if the software is used.  This software can be
-redistributed and/or modified freely provided that any derivative
-works bear some notice that they are derived from it, and any
-modified versions bear some notice that they have been modified.
 
 \bibliography{ZENO}
 \bibliographystyle{abbrv}
