@@ -158,7 +158,7 @@ Units::getName(Viscosity unit) {
 ///
 Uncertain<double> 
 Units::kB() {
-  return Uncertain<double>(1.38065*pow(10, -23), pow(10, -28));
+  return Uncertain<double>(1.38065*pow(10, -23), pow(10, -28 * 2));
 }
 
 // ================================================================
