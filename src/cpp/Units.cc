@@ -21,7 +21,7 @@
 // Author:  Derek Juba <derek.juba@nist.gov>
 // Date:    Tue Jan 12 17:37:19 2016 EDT
 // 
-// Time-stamp: <2016-08-30 16:34:34 dcj>
+// Time-stamp: <2017-12-05 16:37:03 dcj>
 // 
 // ================================================================
 
@@ -56,9 +56,9 @@ Units::getFactor(Mass fromUnit, Mass toUnit) {
 
   switch(fromUnit) {
   case Mass::Da:
-    return Uncertain<double>(6.02214*pow(10, 23), pow(10, 18));
+    return Uncertain<double>(6.02214*pow(10, 23), pow(10, 18 * 2));
   case Mass::kDa:
-    return Uncertain<double>(6.02214*pow(10, 20), pow(10, 15));
+    return Uncertain<double>(6.02214*pow(10, 20), pow(10, 15 * 2));
   case Mass::g:
     return 1;
   case Mass::kg:
