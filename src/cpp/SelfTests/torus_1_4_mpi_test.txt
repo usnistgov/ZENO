@@ -1,4 +1,4 @@
-Start time: 2016-09-22 11:58:18
+Start time: 2018-02-13 09:56:13
 
 Parameters
 ----------
@@ -23,15 +23,15 @@ Number of interior samples taken: 10000
 
 Capacitance (L): 3.695689e+00 +/- 3.569007e-02
 
-Electrostatic polarizability tensor (L^3): 
+Electric polarizability tensor (L^3): 
 [ 9.737876e+02 +/- 4.226878e+01 , 5.148100e+00 +/- 3.045155e+01 , 2.867389e+01 +/- 2.195103e+01 ,
   5.148100e+00 +/- 3.045155e+01 , 9.705849e+02 +/- 4.276201e+01 , -3.728182e+01 +/- 2.218810e+01 ,
   2.867389e+01 +/- 2.195103e+01 , -3.728182e+01 +/- 2.218810e+01 , 1.648463e+02 +/- 9.585935e+00 ]
 
-Eigenvalues of electrostatic polarizability tensor (L^3): 
+Eigenvalues of electric polarizability tensor (L^3): 
 < 1.620973e+02 +/- 9.895086e+00 , 9.695422e+02 +/- 4.277470e+01 , 9.775793e+02 +/- 4.268689e+01 >
 
-Mean electrostatic polarizability (L^3): 7.030730e+02 +/- 2.029540e+01
+Mean electric polarizability (L^3): 7.030730e+02 +/- 2.029540e+01
 
 Hydrodynamic radius (L): 3.695689e+00 +/- 5.137697e-02
 
@@ -73,6 +73,6 @@ w:
 
 Interior hits: 5.310000e+02 +/- 2.242848e+01
 
-Total Time (s): 1.214411
+Total Time (s): 0.084030
 
-End time: 2016-09-22 11:58:18
+End time: 2018-02-13 09:56:13

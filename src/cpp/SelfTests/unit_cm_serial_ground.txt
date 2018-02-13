@@ -1,4 +1,4 @@
-Start time: 2016-09-22 11:29:07
+Start time: 2018-02-13 09:54:52
 
 Parameters
 ----------
@@ -27,15 +27,15 @@ Number of interior samples taken: 10000
 
 Capacitance (cm): 2.165850e+00 +/- 2.248538e-02
 
-Electrostatic polarizability tensor (cm^3): 
+Electric polarizability tensor (cm^3): 
 [ 1.867945e+02 +/- 9.459073e+00 , -3.459943e+00 +/- 5.581817e+00 , 8.902740e+00 +/- 5.563431e+00 ,
   -3.459943e+00 +/- 5.581817e+00 , 1.135857e+02 +/- 5.729166e+00 , 1.477716e+00 +/- 4.064500e+00 ,
   8.902740e+00 +/- 5.563431e+00 , 1.477716e+00 +/- 4.064500e+00 , 1.060611e+02 +/- 5.660038e+00 ]
 
-Eigenvalues of electrostatic polarizability tensor (cm^3): 
+Eigenvalues of electric polarizability tensor (cm^3): 
 < 1.047027e+02 +/- 5.735450e+00 , 1.138293e+02 +/- 5.732311e+00 , 1.879094e+02 +/- 9.420197e+00 >
 
-Mean electrostatic polarizability (cm^3): 1.354804e+02 +/- 4.141034e+00
+Mean electric polarizability (cm^3): 1.354804e+02 +/- 4.141034e+00
 
 Hydrodynamic radius (cm): 2.165850e+00 +/- 3.121991e-02
 
@@ -47,7 +47,7 @@ Intrinsic viscosity with mass units (cm^3/g): 3.744148e+01 +/- 1.274800e+00
 
 Friction coefficient (d.s/cm): 2.041266e+00 +/- 2.942408e-02
 
-Diffusion coefficient (cm^2/s): 2.049400e-14 +/- 1.484373e-05
+Diffusion coefficient (cm^2/s): 2.049400e-14 +/- 2.954133e-16
 
 Sedimentation coefficient (Sved): 1.028774e+14 +/- 1.482938e+12
 
@@ -85,6 +85,6 @@ w:
 
 Interior hits: 1.011000e+03 +/- 3.014762e+01
 
-Total Time (s): 0.127974
+Total Time (s): 0.090834
 
-End time: 2016-09-22 11:29:07
+End time: 2018-02-13 09:54:52

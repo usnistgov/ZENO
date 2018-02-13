@@ -1,4 +1,4 @@
-Start time: 2016-09-29 11:12:42
+Start time: 2018-02-13 09:56:12
 
 Parameters
 ----------
@@ -47,7 +47,7 @@ Intrinsic viscosity with mass units (cm^3/g): 3.812112e+01 +/- 1.297505e+00
 
 Friction coefficient (d.s/cm): 2.089191e+00 +/- 2.975618e-02
 
-Diffusion coefficient (cm^2/s): 2.002388e-14 +/- 1.450322e-05
+Diffusion coefficient (cm^2/s): 2.002388e-14 +/- 2.851985e-16
 
 Sedimentation coefficient (Sved): 1.005174e+14 +/- 1.431661e+12
 
@@ -85,6 +85,6 @@ w:
 
 Interior hits: 1.012000e+03 +/- 3.016055e+01
 
-Total Time (s): 0.037321
+Total Time (s): 0.053904
 
-End time: 2016-09-29 11:12:42
+End time: 2018-02-13 09:56:12
