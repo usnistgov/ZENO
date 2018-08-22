@@ -1,0 +1,9 @@
+{% extends "!layout.html" %}
+
+{% block extrahead %} 
+	<script type="text/javascript">
+		if (top !=self) {
+			top.location=self.location;
+		}
+	</script>      
+{% endblock %}
