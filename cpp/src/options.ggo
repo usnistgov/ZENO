@@ -1,0 +1,94 @@
+# ================================================================
+#
+# This software was developed by employees of the National Institute of
+# Standards and Technology (NIST), an agency of the Federal Government.
+# Pursuant to title 17 United States Code Section 105, works of NIST employees
+# are not subject to copyright protection in the United States and are
+# considered to be in the public domain. Permission to freely use, copy,
+# modify, and distribute this software and its documentation without fee is
+# hereby granted, provided that this notice and disclaimer of warranty appears
+# in all copies.
+#
+# THE SOFTWARE IS PROVIDED 'AS IS' WITHOUT ANY WARRANTY OF ANY KIND, EITHER
+# EXPRESSED, IMPLIED, OR STATUTORY, INCLUDING, BUT NOT LIMITED TO, ANY
+# WARRANTY THAT THE SOFTWARE WILL CONFORM TO SPECIFICATIONS, ANY IMPLIED
+# WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND FREEDOM
+# FROM INFRINGEMENT, AND ANY WARRANTY THAT THE DOCUMENTATION WILL CONFORM TO
+# THE SOFTWARE, OR ANY WARRANTY THAT THE SOFTWARE WILL BE ERROR FREE. IN NO
+# EVENT SHALL NIST BE LIABLE FOR ANY DAMAGES, INCLUDING, BUT NOT LIMITED TO,
+# DIRECT, INDIRECT, SPECIAL OR CONSEQUENTIAL DAMAGES, ARISING OUT OF,
+# RESULTING FROM, OR IN ANY WAY CONNECTED WITH THIS SOFTWARE, WHETHER OR NOT
+# BASED UPON WARRANTY, CONTRACT, TORT, OR OTHERWISE, WHETHER OR NOT INJURY WAS
+# SUSTAINED BY PERSONS OR PROPERTY OR OTHERWISE, AND WHETHER OR NOT LOSS WAS
+# SUSTAINED FROM, OR AROSE OUT OF THE RESULTS OF, OR USE OF, THE SOFTWARE OR
+# SERVICES PROVIDED HEREUNDER.
+#
+# Distributions of NIST software should also include copyright and licensing
+# statements of any third-party software that are legally bundled with the
+# code in compliance with the conditions of those licenses.
+# 
+# ================================================================
+
+# ================================================================
+# 
+# Authors: Derek Juba <derek.juba@nist.gov>
+# Created: Tue Apr 16 12:49:29 2013 EDT
+# 
+# ================================================================
+
+package "zeno"
+version "5.1"
+
+# ----------------------------------------------------------------
+
+option "config-file" c "Config file name"
+string optional
+
+option "input-file" i "Input file name"
+string required
+
+option "csv-output-file" - "Write output in CSV format to the specified file in addition to displaying the regular output"
+string optional
+
+option "num-walks" - "Number of walk-on-spheres walks to perform.  Fewer walks may be performed if another stopping condition is reached first"
+longlong optional
+
+option "num-interior-samples" - "Number of interior samples to take.  Fewer samples may be taken if another stopping condition is reached first"
+longlong optional
+
+option "max-rsd-capacitance" - "Perform walk-on-spheres walks until the relative standard deviation of the capacitance drops below this value.  This value may not be reached if another stopping condition is reached first.  Relative standard deviation is defined as (Standard_Deviation/Mean)*100%"
+double optional
+
+option "max-rsd-polarizability" - "Perform walk-on-spheres walks until the relative standard deviation of the mean electric polarizability drops below this value. This value may not be reached if another stopping condition is reached first. Relative standard deviation is defined as (Standard_Deviation/Mean)*100%"
+double optional
+
+option "max-rsd-volume" - "Take interior samples until the relative standard deviation of volume drops below this value.  This value may not be reached if another stopping condition is reached first.  Relative standard deviation is defined as (Standard_Deviation/Mean)*100%"
+double optional
+
+option "min-num-walks" - "Minimum number of walk-on-spheres walks to perform when using max-rsd stopping conditions"
+longlong default="1000" optional
+
+option "min-num-interior-samples" - "Minimum number of interior samples to take when using max-rsd stopping conditions"
+longlong default="10000" optional
+
+option "max-run-time" - "Max time (in seconds) that the program is allowed to run.  If this time is reached, the computation will be stopped and the results computed so far will be displayed"
+double optional
+
+option "num-threads" - "Number of threads to use  (default=Number of logical cores)"
+int optional
+
+option "seed" - "Seed for the random number generator  (default=Randomly set)"
+int optional
+
+option "surface-points-file" - "Name of file for writing the surface points from Walk-on-Spheres"
+string optional
+
+option "interior-points-file" - "Name of file for writing the interior sample points"
+string optional
+
+option "print-counts" - "Print statistics related to counts of hit points"
+optional
+
+option "print-benchmarks" - "Print detailed RAM and timing information"
+optional
+

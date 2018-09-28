@@ -1,0 +1,136 @@
+%scanner                Scanner.h
+%scanner-token-function d_scanner.lex()
+
+%token INT FLOAT SPHERE CUBE CUBOID ATOM VOXELS ST RLAUNCH HUNITS UNITS TEMP MASS VISCOSITY BF STRING
+%polymorphic FLOAT_TYPE: double; STRING_TYPE: std::string;
+%type <FLOAT_TYPE> real
+%type <STRING_TYPE> string
+
+%%
+
+lines:
+  // empty
+|
+  line
+  lines
+;
+
+line:
+  sphereDef
+|
+  cubeDef
+|
+  cuboidDef
+|
+  atomDef
+|
+  voxelsFile
+|
+  parameter
+;
+
+sphereDef:
+  //     X    Y    Z    R
+  SPHERE real real real real
+  {
+    addSphere($2, $3, $4, $5);
+  }
+;
+
+cubeDef:
+  //   X    Y    Z    S
+  CUBE real real real real
+  {
+    addCube($2, $3, $4, $5);
+  }
+;
+
+cuboidDef:
+  //     X1   Y1   Z1   X2   Y2   Z2
+  CUBOID real real real real real real
+  {
+    addCuboid($2, $3, $4, $5, $6, $7);
+  }
+;
+
+atomDef:
+  //   atmNum atmName resName chainID resNum X    Y    Z    Q    R
+  ATOM INT    STRING  STRING  STRING  INT    real real real real real
+  {
+    addSphere($7, $8, $9, $11);
+  }
+|
+  //   atmNum atmName resName resNum X    Y    Z    Q    R
+  ATOM INT    STRING  STRING  INT    real real real real real
+  {
+    addSphere($6, $7, $8, $10);
+  }
+;
+
+voxelsFile:
+  VOXELS string
+  {
+    addVoxels($2);
+  }
+;
+
+parameter:
+  ST real
+  {
+    setST($2);
+  }
+|
+  RLAUNCH real
+  {
+    setRLAUNCH($2);
+  }
+|
+  HUNITS real string
+  {
+    setHUNITS($2, $3);
+  }
+|
+  UNITS string
+  {
+    setUNITS($2);
+  }
+|
+  TEMP real string
+  {
+    setTEMP($2, $3);
+  }
+|
+  MASS real string
+  {
+    setMASS($2, $3);
+  }
+|
+  VISCOSITY real string
+  {
+    setVISCOSITY($2, $3);
+  }
+|
+  BF real
+  {
+    setBF($2);
+  }
+;
+
+real:
+  FLOAT
+  {
+    $$ = stod(d_scanner.matched());
+  }
+|
+  INT
+  {
+    $$ = stod(d_scanner.matched());
+  }
+;
+
+string:
+  STRING
+  {
+    $$ = d_scanner.matched();
+  }
+;

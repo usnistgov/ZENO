@@ -1,0 +1,5 @@
+sphere 1 1 1 1
+hunits 45 A
+temp 25 C
+mass 1 kDa
+viscosity .2 p

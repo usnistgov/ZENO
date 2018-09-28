@@ -1,0 +1,6 @@
+sphere 1 1 1 1
+hunits 3 nm
+temp 20 C
+mass 140 Da
+viscosity 10 cp
+bf 5
