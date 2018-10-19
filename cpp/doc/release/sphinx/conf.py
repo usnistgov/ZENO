@@ -108,8 +108,13 @@ html_context = {
 #
 # html_sidebars = {}
 
+html_favicon = 'favicon.ico'
+
 def setup(app):
+	app.add_javascript('https://pages.nist.gov/nist-header-footer/js/jquery-1.9.0.min.js')
 	app.add_javascript('redirectalert.js')
+	app.add_javascript('leavenotice.js') 
+	return
 
 # -- Options for HTMLHelp output ---------------------------------------------
 
