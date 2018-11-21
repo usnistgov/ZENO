@@ -108,7 +108,7 @@ html_context = {
 #
 # html_sidebars = {}
 
-html_favicon = 'favicon.ico'
+html_favicon = '_static/favicon.ico'
 
 def setup(app):
 	app.add_javascript('https://pages.nist.gov/nist-header-footer/js/jquery-1.9.0.min.js')
