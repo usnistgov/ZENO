@@ -240,8 +240,8 @@ printExactScalar(std::string const & prettyName,
 	         std::ofstream * csvOutputFile);
 
 void
-savePointFiles(ResultsInterior & resultsInterior,
-	       ResultsZeno & resultsZeno,
+savePointFiles(ResultsInterior * resultsInterior,
+	       ResultsZeno * resultsZeno,
 	       Parameters const & parameters);
 
 void
@@ -409,8 +409,8 @@ int main(int argc, char **argv) {
 	      volumeReduceTime,
 	      &csvOutputFile);
 
-  savePointFiles(*resultsInterior,
-		 *resultsZeno,
+  savePointFiles(resultsInterior,
+		 resultsZeno,
 		 parameters);
 
   delete resultsZeno;
@@ -1274,24 +1274,42 @@ printExactScalar(std::string const & prettyName,
 /// Writes Walk-on-Spheres and Interior Sampling hit points to disk.
 /// 
 void
-savePointFiles(ResultsInterior & resultsInterior,
-	       ResultsZeno & resultsZeno,
+savePointFiles(ResultsInterior * resultsInterior,
+	       ResultsZeno * resultsZeno,
 	       Parameters const & parameters) {
 
   if (!parameters.getSurfacePointsFileName().empty()) {
-    resultsZeno.gatherHitPoints();
-
-    writePoints(parameters.getSurfacePointsFileName(), 
-		resultsZeno.getPoints(), 
-		resultsZeno.getCharges());
+    if (resultsZeno == NULL) {
+      std::cerr << "*** Warning ***" << std::endl	
+		<< "A surface points file was requested but walks were not "	
+		<< "performed.  Surface points file will not be written."
+		<< std::endl
+		<< std::endl;
+    }
+    else {
+      resultsZeno->gatherHitPoints();
+    }
+    writePoints(parameters.getSurfacePointsFileName(),
+		resultsZeno->getPoints(), 
+		resultsZeno->getCharges());
   }
 
   if (!parameters.getInteriorPointsFileName().empty()) {
-    resultsInterior.gatherHitPoints();
+    if (resultsInterior == NULL) {
+      std::cerr << "*** Warning ***" << std::endl
+		<< "An interior points file was requested but interior "
+		<< "samples were not performed.  Interior points file will "
+		<< "not be written."
+		<< std::endl
+		<< std::endl;
+    }
+    else {
+      resultsInterior->gatherHitPoints();
 
-    writePoints(parameters.getInteriorPointsFileName(), 
-		resultsInterior.getPoints(), 
-		NULL);
+      writePoints(parameters.getInteriorPointsFileName(),
+		  resultsInterior->getPoints(),
+		  NULL);
+    }
   }
 }
 
