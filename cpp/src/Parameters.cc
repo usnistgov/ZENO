@@ -44,10 +44,17 @@
 #include <cassert>
 #include <iostream>
 #include <fstream>
-
-#include "cmdline.h"
+#include <string>
+#include <vector>
 
 #include "Parameters.h"
+
+#include <boost/program_options.hpp>
+
+using std::string;
+using std::vector;
+
+namespace po = boost::program_options;
 
 // ================================================================
 
@@ -112,140 +119,127 @@ Parameters::~Parameters() {
 ///
 void 
 Parameters::parseCommandLine(int argc, char **argv) {
-  gengetopt_args_info args_info;
-  cmdline_parser_params *parser_params;
+	
+	// argument descriptions
+	string configFileDesc = "Config file name";
+	string inputFileDesc = "Input file name";
+	string csvOutputFileDesc = "Write output in CSV format to the specified file in addition to displaying the regular output";
+	string totalNumWalksDesc = "Number of walk-on-spheres walks to perform.  Fewer walks may be performed if another stopping condition is reached first";
+	string totalNumSamplesDesc = "Number of interior samples to take.  Fewer samples may be taken if another stopping condition is reached first";
+	string maxErrorCapacitanceDesc = "Perform walk-on-spheres walks until the relative standard deviation of the capacitance drops below this value.  This value may not be reached if another stopping condition is reached first.  Relative standard deviation is defined as (Standard_Deviation/Mean)*100%";
+	string maxErrorPolarizabilityDesc = "Perform walk-on-spheres walks until the relative standard deviation of the mean electric polarizability drops below this value. This value may not be reached if another stopping condition is reached first. Relative standard deviation is defined as (Standard_Deviation/Mean)*100%";
+	string maxErrorVolumeDesc = "Take interior samples until the relative standard deviation of volume drops below this value.  This value may not be reached if another stopping condition is reached first.  Relative standard deviation is defined as (Standard_Deviation/Mean)*100%";
+	string minTotalNumWalksDesc = "Minimum number of walk-on-spheres walks to perform when using max-rsd stopping conditions";
+	string minTotalNumSamplesDesc = "Minimum number of interior samples to take when using max-rsd stopping conditions";
+	string maxRunTimeDesc = "Max time (in seconds) that the program is allowed to run.  If this time is reached, the computation will be stopped and the results computed so far will be displayed";
+	string numThreadsDesc = "Number of threads to use  (default=Number of logical cores)";
+	string seedDesc = "Seed for the random number generator  (default=Randomly set)";
+	string surfacePointsFileDesc = "Name of file for writing the surface points from Walk-on-Spheres";
+	string interiorPointsFileDesc = "Name of file for writing the interior sample points";
+	string printCountsDesc = "Print statistics related to counts of hit points";
+	string printBenchmarksDesc = "Print detailed RAM and timing information";
+	
+	po::options_description opts("zeno v5.1");
+	opts.add_options()
+		("help,h", "Print help and exit")
+		("version,V", "Print version and exit")
+		("config-file,c", po::value<string>(), configFileDesc.c_str())
+		("input-file,i", po::value<string>(&inputFileName), inputFileDesc.c_str())
+		("csv-output-file", po::value<string>(&csvOutputFileName), csvOutputFileDesc.c_str())
+		("num-walks", po::value<long long>(&totalNumWalks), totalNumWalksDesc.c_str())
+		("num-interior-samples", po::value<long long>(&totalNumSamples), totalNumSamplesDesc.c_str())
+		("max-rsd-capacitance", po::value<double>(&maxErrorCapacitance), maxErrorCapacitanceDesc.c_str())
+		("max-rsd-polarizability", po::value<double>(&maxErrorPolarizability), maxErrorPolarizabilityDesc.c_str())
+		("max-rsd-volume", po::value<double>(&maxErrorVolume), maxErrorVolumeDesc.c_str())
+		("min-num-walks", po::value<long long>(&minTotalNumWalks)->default_value(1000), minTotalNumWalksDesc.c_str())
+		("min-num-interior-samples", po::value<long long>(&minTotalNumSamples)->default_value(1000), minTotalNumSamplesDesc.c_str())
+		("max-run-time", po::value<double>(&maxRunTime), maxRunTimeDesc.c_str())
+		("num-threads", po::value<int>(&numThreads), numThreadsDesc.c_str())
+		("seed", po::value<int>(&seed), seedDesc.c_str())
+		("surface-points-file", po::value<string>(&surfacePointsFileName), surfacePointsFileDesc.c_str())
+		("interior-points-file", po::value<string>(&interiorPointsFileName), interiorPointsFileDesc.c_str())
+		("print-counts", printCountsDesc.c_str())
+		("print-benchmarks", printBenchmarksDesc.c_str());
 
-  parser_params = cmdline_parser_params_create();
+	// argument map
+	po::variables_map arg_map;
+	// attempt to parse/store and exit on fail
+	try {
+		po::store(po::command_line_parser(argc, argv).options(opts).allow_unregistered().run(), arg_map);
+		po::notify(arg_map);
+	}
+	catch(const std::exception& e) {
+		std::cerr << e.what() << "\n";
+		exit(EXIT_FAILURE);
+	}
+	
+	// check for config file and parse if true
+	if (arg_map.count("config-file")) {
+		try {
+			string configFileName = arg_map["config-file"].as<string>();
+			po::store(po::parse_config_file<char>(configFileName.c_str(), opts), arg_map);
+			po::notify(arg_map);
+		}
+		catch(const std::exception& e) {
+			std::cerr << e.what() << "\n";
+			exit(EXIT_FAILURE);
+		}
+	}
+	
+	// csv output file name
+	if (arg_map.count("csv-output-file"))
+		csvOutputFileNameWasSet = true;
+	// number of walks
+	if (arg_map.count("num-walks"))
+		totalNumWalksWasSet = true;
+	// number of interior samples
+	if (arg_map.count("num-interior-samples"))
+		totalNumSamplesWasSet = true;
+	// max error capacitance
+	if (arg_map.count("max-rsd-capacitance"))
+		maxErrorCapacitanceWasSet = true;
+	// max error polarizability
+	if (arg_map.count("max-rsd-polarizability"))
+		maxErrorPolarizabilityWasSet = true;
+	// max error volume
+	if (arg_map.count("max-rsd-volume"))
+		maxErrorVolumeWasSet = true;
+	// max run time
+	if (arg_map.count("max-run-time"))
+		maxRunTimeWasSet = true;
+	// number of threads
+	if (!arg_map.count("num-threads")) {
+		numThreads = std::thread::hardware_concurrency();
 
-  //command line parse
-  
-  parser_params->initialize      = 1;
-  parser_params->override        = 0;
-  parser_params->check_required  = 0;
-  parser_params->check_ambiguity = 0;
+		if (numThreads == 0)
+			numThreads = 1;
+	}
+	// seed
+	if (!arg_map.count("seed")) {
+		std::ifstream urandom("/dev/urandom");
 
-  int cmdlineParseResult =
-    cmdline_parser_ext(argc, argv, &args_info, parser_params);
-  
-  if (cmdlineParseResult != 0) {
-    exit(EXIT_FAILURE);
-  }
+		urandom.read((char *)&seed, sizeof(seed));
 
-  //config file parse
+		if (!urandom.good())
+		  std::cerr << "Error randomly setting seed for random number generator" << std::endl;
 
-  if (args_info.config_file_given) {
-    parser_params->initialize      = 0;
-    parser_params->override        = 0;
-    parser_params->check_required  = 0;
-    parser_params->check_ambiguity = 0;
-  
-    int configParseResult =
-      cmdline_parser_config_file(args_info.config_file_arg,
-				 &args_info, parser_params);
-
-    if (configParseResult != 0) {
-      exit(EXIT_FAILURE);
-    }
-  }
-
-  //check if required options are present
-
-  int cmdlineCheckResult =
-    cmdline_parser_required(&args_info, argv[0]);
-
-  if (cmdlineCheckResult != 0) {
-    exit(EXIT_FAILURE);
-  }
-
-  //copy arg values
-  
-  inputFileName = args_info.input_file_arg;
-
-  if (args_info.csv_output_file_given) {
-    csvOutputFileName = args_info.csv_output_file_arg;
-    csvOutputFileNameWasSet = true;
-  }
-  
-  minTotalNumWalks   = args_info.min_num_walks_arg;
-  minTotalNumSamples = args_info.min_num_interior_samples_arg;
-
-  if (args_info.num_walks_given) {
-    totalNumWalks = args_info.num_walks_arg;
-    totalNumWalksWasSet = true;
-  }
-
-  if (args_info.num_interior_samples_given) {
-    totalNumSamples = args_info.num_interior_samples_arg;
-    totalNumSamplesWasSet = true;
-  }
-
-  if (args_info.max_rsd_capacitance_given) {
-    maxErrorCapacitance = args_info.max_rsd_capacitance_arg;
-    maxErrorCapacitanceWasSet = true;
-  }
-
-  if (args_info.max_rsd_polarizability_given) {
-    maxErrorPolarizability = args_info.max_rsd_polarizability_arg;
-    maxErrorPolarizabilityWasSet = true;
-  }
-
-  if (args_info.max_rsd_volume_given) {
-    maxErrorVolume = args_info.max_rsd_volume_arg;
-    maxErrorVolumeWasSet = true;
-  }
-
-  if (args_info.max_run_time_given) {
-    maxRunTime = args_info.max_run_time_arg;
-    maxRunTimeWasSet = true;
-  }
-
-  if (args_info.num_threads_given) {
-    numThreads = args_info.num_threads_arg;
-  }
-  else {
-    numThreads = std::thread::hardware_concurrency();
-
-    if (numThreads == 0) {
-      numThreads = 1;
-    }
-  }
-
-  if (args_info.seed_given) {
-    seed = args_info.seed_arg;
-  }
-  else {
-    std::ifstream urandom("/dev/urandom");
-
-    urandom.read((char *)&seed, sizeof(seed));
-
-    if (!urandom.good()) {
-      std::cerr << "Error randomly setting seed for random number generator"
-		<< std::endl;
-    }
-
-    urandom.close();
-
-    seed = abs(seed);
-  }
-
-  if (args_info.surface_points_file_given) {
-    surfacePointsFileName = args_info.surface_points_file_arg;
-  }
-  else {
-    surfacePointsFileName = "";
-  }
-
-  if (args_info.interior_points_file_given) {
-    interiorPointsFileName = args_info.interior_points_file_arg;
-  }
-  else {
-    interiorPointsFileName = "";
-  }
-
-  printCounts     = args_info.print_counts_given;
-  printBenchmarks = args_info.print_benchmarks_given;
-
-  free(parser_params);
+		urandom.close();
+		seed = abs(seed);
+	}
+	// surface points file
+	if (!arg_map.count("surface-points-file"))
+		surfacePointsFileName = "";
+	// interior points file
+	if (!arg_map.count("interior-points-file"))
+		interiorPointsFileName = "";
+	// print counts
+	printCounts = false;
+	if (arg_map.count("print-counts"))
+		printCounts = true;
+	// print benchmarks
+	printBenchmarks = false;
+	if (arg_map.count("print-benchmarks"))
+		printBenchmarks = true;
 }
 
 /// Prints the parameters.  Most parameters are not printed if they have not
