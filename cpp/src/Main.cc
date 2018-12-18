@@ -83,6 +83,9 @@ using RandomNumberGenerator = Rand;
 #elif defined USE_SPRNG_RNG
 #include "RandomNumber/SPRNG.h"
 using RandomNumberGenerator = SPRNG;
+#elif defined USE_LEAP_FROG_RNG
+#include "RandomNumber/LeapFrog.h"
+using RandomNumberGenerator = LeapFrog;
 #else
 #error "No RandomNumber class selected"
 #endif

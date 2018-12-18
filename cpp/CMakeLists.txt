@@ -73,11 +73,9 @@ if (USE_SPRNG)
     target_sources(zeno PUBLIC ${SRC_DIR}/RandomNumber/SPRNG.cc)
   endif()
 else()
-  message(WARNING "USE_SPRNG is OFF.  This will result in low-quality random numbers!")
+  add_definitions(-DUSE_LEAP_FROG_RNG)
 
-  add_definitions(-DUSE_RAND_RNG)
-
-  target_sources(zeno PUBLIC ${SRC_DIR}/RandomNumber/Rand.cc)
+  target_sources(zeno PUBLIC ${SRC_DIR}/RandomNumber/LeapFrog.cc)
 endif()
 
 #setup mpi
