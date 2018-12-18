@@ -103,47 +103,65 @@ endif()
 
 #setup gengetopt
 
-find_program(GENGETOPT_BIN gengetopt)
+option (GEN_CMD_PARSER "Generate command line parser" OFF)
+mark_as_advanced(GEN_CMD_PARSER)
 
-mark_as_advanced(GENGETOPT_BIN)
+if (GEN_CMD_PARSER)
+  find_program(GENGETOPT_BIN gengetopt)
 
-if (GENGETOPT_BIN)
-  set(OPTIONS_GGO ${CMDLINE_DIR}/options.ggo)
-  
-  add_custom_command(OUTPUT  ${CMDLINE_C} ${CMDLINE_H}
-                     COMMAND ${GENGETOPT_BIN} -i ${OPTIONS_GGO} --conf-parser --output-dir=${CMDLINE_DIR}
-                     DEPENDS ${OPTIONS_GGO}
-                     VERBATIM)
+  mark_as_advanced(GENGETOPT_BIN)
+
+  if (GENGETOPT_BIN)
+    set(OPTIONS_GGO ${CMDLINE_DIR}/options.ggo)
+    
+    add_custom_command(OUTPUT  ${CMDLINE_C} ${CMDLINE_H}
+      COMMAND ${GENGETOPT_BIN} -i ${OPTIONS_GGO} --conf-parser --output-dir=${CMDLINE_DIR}
+      DEPENDS ${OPTIONS_GGO}
+      VERBATIM)
+  else()
+    message(SEND_ERROR "gengetopt not found!")
+  endif()
 endif()
 
 #setup bisonc++
 
-find_program(BISONCXX_BIN bisonc++)
+option (GEN_BOD_PARSER "Generate bod file parser" OFF)
+mark_as_advanced(GEN_BOD_PARSER)
 
-mark_as_advanced(BISONCXX_BIN)
+if (GEN_BOD_PARSER)
+  find_program(BISONCXX_BIN bisonc++)
 
-if (BISONCXX_BIN)
-  set(GRAMMAR ${PARSER_DIR}/grammar)
-  
-  add_custom_command(OUTPUT  ${PARSE_CC} ${PARSERBASE_H}
-                     COMMAND ${BISONCXX_BIN} --target-directory ${PARSER_DIR} ${GRAMMAR}
-                     DEPENDS ${GRAMMAR}
-                     VERBATIM)
+  mark_as_advanced(BISONCXX_BIN)
+
+  if (BISONCXX_BIN)
+    set(GRAMMAR ${PARSER_DIR}/grammar)
+    
+    add_custom_command(OUTPUT  ${PARSE_CC} ${PARSERBASE_H}
+      COMMAND ${BISONCXX_BIN} --target-directory ${PARSER_DIR} ${GRAMMAR}
+      DEPENDS ${GRAMMAR}
+      VERBATIM)
+  else()
+    message(SEND_ERROR "bisonc++ not found!")
+  endif()
 endif()
 
 #setup flexc++
 
-find_program(FLEXCXX_BIN flexc++)
+if (GEN_BOD_PARSER)
+  find_program(FLEXCXX_BIN flexc++)
 
-mark_as_advanced(FLEXCXX_BIN)
+  mark_as_advanced(FLEXCXX_BIN)
 
-if (FLEXCXX_BIN)
-  set(LEXER ${SCANNER_DIR}/lexer)
-  
-  add_custom_command(OUTPUT  ${SCAN_CC} ${SCANNERBASE_H}
-                     COMMAND ${FLEXCXX_BIN} --target-directory ${SCANNER_DIR} ${LEXER}
-                     DEPENDS ${LEXER}
-                     VERBATIM)
+  if (FLEXCXX_BIN)
+    set(LEXER ${SCANNER_DIR}/lexer)
+    
+    add_custom_command(OUTPUT  ${SCAN_CC} ${SCANNERBASE_H}
+      COMMAND ${FLEXCXX_BIN} --target-directory ${SCANNER_DIR} ${LEXER}
+      DEPENDS ${LEXER}
+      VERBATIM)
+  else()
+    message(SEND_ERROR "flexc++ not found!")
+  endif()
 endif()
 
 #setup testing
