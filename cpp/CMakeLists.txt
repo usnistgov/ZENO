@@ -73,6 +73,8 @@ if (USE_SPRNG)
     target_sources(zeno PUBLIC ${SRC_DIR}/RandomNumber/SPRNG.cc)
   endif()
 else()
+  message(WARNING "USE_SPRNG is OFF.  Results have not been validated without the use of SPRNG!")
+  
   add_definitions(-DUSE_LEAP_FROG_RNG)
 
   target_sources(zeno PUBLIC ${SRC_DIR}/RandomNumber/LeapFrog.cc)
