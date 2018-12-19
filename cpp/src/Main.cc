@@ -1275,7 +1275,7 @@ printExactScalar(std::string const & prettyName,
 }
 
 /// Writes Walk-on-Spheres and Interior Sampling hit points to disk.
-/// 
+///
 void
 savePointFiles(ResultsInterior * resultsInterior,
 	       ResultsZeno * resultsZeno,
@@ -1283,18 +1283,19 @@ savePointFiles(ResultsInterior * resultsInterior,
 
   if (!parameters.getSurfacePointsFileName().empty()) {
     if (resultsZeno == NULL) {
-      std::cerr << "*** Warning ***" << std::endl	
-		<< "A surface points file was requested but walks were not "	
+      std::cerr << "*** Warning ***" << std::endl
+		<< "A surface points file was requested but walks were not "
 		<< "performed.  Surface points file will not be written."
 		<< std::endl
 		<< std::endl;
     }
     else {
       resultsZeno->gatherHitPoints();
+
+      writePoints(parameters.getSurfacePointsFileName(), 
+		  resultsZeno->getPoints(), 
+		  resultsZeno->getCharges());
     }
-    writePoints(parameters.getSurfacePointsFileName(),
-		resultsZeno->getPoints(), 
-		resultsZeno->getCharges());
   }
 
   if (!parameters.getInteriorPointsFileName().empty()) {
@@ -1309,8 +1310,8 @@ savePointFiles(ResultsInterior * resultsInterior,
     else {
       resultsInterior->gatherHitPoints();
 
-      writePoints(parameters.getInteriorPointsFileName(),
-		  resultsInterior->getPoints(),
+      writePoints(parameters.getInteriorPointsFileName(), 
+		  resultsInterior->getPoints(), 
 		  NULL);
     }
   }
