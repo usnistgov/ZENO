@@ -51,7 +51,7 @@ look_up_table = {'H': '1.20',
                  'N': '1.55',
                  'O':  '1.52',
                  'P':   '1.9',
-                 'S':  '1.85',
+                 'S':  '1.85'}
 
 
 def get_bod_seq(file,nohydrogenflag):
