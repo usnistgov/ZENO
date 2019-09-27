@@ -45,6 +45,8 @@
 #include "../Geometry/Sphere.h"
 #include "../Geometry/Vector3.h"
 
+namespace zeno {
+
 template <class T>
 class QuasiRandomSpherePointsRegularCube {
  public:
@@ -94,6 +96,8 @@ QuasiRandomSpherePointsRegularCube<T>::
     (*pointIt) *= sphere.getRadius();
     (*pointIt) += sphere.getCenter();
   }
+}
+
 }
 
 #endif

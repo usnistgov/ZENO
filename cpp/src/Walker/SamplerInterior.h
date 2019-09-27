@@ -44,6 +44,8 @@
 #include "../Geometry/Sphere.h"
 #include "../Geometry/Vector3.h"
 
+namespace zeno {
+
 /// Samples random points inside a bounding sphere and determines whether they
 /// hit an object, allowing for a given relative error in distance.
 ///
@@ -118,6 +120,8 @@ SamplerInterior<T,
     insideOutsideTester->contains(position);
 
   *hitPoint = position;
+}
+
 }
 
 #endif

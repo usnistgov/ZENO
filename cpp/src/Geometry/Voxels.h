@@ -45,6 +45,7 @@
 
 #include <iostream>
 #include <string>
+#include <vector>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -56,6 +57,8 @@
 
 // ================================================================
 
+namespace zeno {
+  
 /// Represents an axis-aligned box of voxels.  Voxels are represented as a data
 /// array and as cuboids.
 ///
@@ -411,6 +414,8 @@ Voxels<T>::mpiReceive() {
     voxelsLoaded = true;
   }
 #endif
+}
+
 }
 
 // ================================================================

@@ -43,6 +43,8 @@ class Sprng;
 
 // ================================================================
 
+namespace zeno {
+
 /// Generates random numbers using the SPRNG library.
 ///
 class SPRNG
@@ -57,6 +59,8 @@ public:
 private:
   Sprng *stream;
 };
+
+}
 
 // ================================================================
 

@@ -44,6 +44,8 @@
 #include "../Geometry/Sphere.h"
 #include "../Geometry/Vector3.h"
 
+namespace zeno {
+
 template <class T, 
           class RandomNumberGenerator, 
           class RandomSpherePointGenerator>
@@ -109,6 +111,8 @@ BiasedSpherePointRejection<T,
   return 
     (1 - pow(alpha, 2)) / 
     (4*M_PI*pow((1 - 2*alpha*cosTheta + pow(alpha, 2)), 1.5));
+}
+
 }
 
 #endif

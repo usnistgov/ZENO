@@ -48,6 +48,8 @@
 
 // ================================================================
 
+namespace zeno {
+  
 /// A covariance matrix.  Variables in the matrix are accessed by user-defined
 /// ID numbers.
 ///
@@ -338,6 +340,8 @@ setCovarianceFromIndexes(unsigned int indexA,
   }
 
   matrix.at(indexA).at(indexB) = covariance;
+}
+
 }
 
 #endif  // #ifndef COVARIANCE_MATRIX_H_

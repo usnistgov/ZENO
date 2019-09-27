@@ -98,9 +98,6 @@ class BodParser: public BodParserBase
 	void addCube(double x, double y, double z, double s);
 	void addCuboid(double x1, double y1, double z1,
 		       double x2, double y2, double z2);
-	void addTriangle(double x1, double y1, double z1,
-		         double x2, double y2, double z2,
-			 double x3, double y3, double z3);
 	void addVoxels(std::string voxelsFileName);
 	void setST(double skinThickness);
 	void setRLAUNCH(double launchRadius);

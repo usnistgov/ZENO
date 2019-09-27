@@ -42,6 +42,8 @@
 #include "../Geometry/Sphere.h"
 #include "../Geometry/Vector3.h"
 
+namespace zeno {
+
 template <class T, class RNG>
 class RandomSpherePointPolar {
  public:
@@ -70,6 +72,8 @@ RandomSpherePointPolar<T, RNG>::generate(RNG * rng,
   spherePoint += sphere.getCenter();
 
   return spherePoint;
+}
+
 }
 
 #endif

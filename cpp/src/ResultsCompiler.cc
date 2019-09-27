@@ -42,6 +42,7 @@
 
 #include <cassert>
 #include <cstdlib>
+#include <cmath>
 #include <iostream>
 #include <iomanip>
 #include <thread>
@@ -50,38 +51,11 @@
 
 // ================================================================
 
+using namespace zeno;
+
 ResultsCompiler::
-ResultsCompiler(Parameters const & parameters) 
-  : parameters(&parameters),
-    boundingSphereRadius(),
-    boundingSphereCenter(),
-    t(),
-    u(),
-    v(),
-    w(),
-    capacitance(),
-    polarizabilityTensor(),
-    meanPolarizability(),
-    polarizabilityEigenvalues(),
-    volume(),
-    intrinsicConductivity(),
-    capacitanceOfASphere(),
-    hydrodynamicRadius(),
-    q_eta(),
-    viscometricRadius(),
-    intrinsicViscosity(),
-    intrinsicViscosityConventional(),
-    frictionCoefficient(),
-    diffusionCoefficient(),
-    sedimentationCoefficient(),
-    gyrationTensor(),
-    gyrationEigenvalues(),
-    intrinsicViscosityConventionalComputed(false),
-    frictionCoefficientComputed(false),
-    diffusionCoefficientComputed(false),
-    sedimentationCoefficientComputed(false),
-    resultsZenoCompiled(false), 
-    resultsInteriorCompiled(false) {
+ResultsCompiler(ParametersResults const & parameters) 
+  : parameters(&parameters) {
 
 }
 
@@ -98,10 +72,8 @@ ResultsCompiler::
 void 
 ResultsCompiler::compile(ResultsZeno const * resultsZeno,
 			 ResultsInterior const * resultsInterior,
-			 Sphere<double> const & boundingSphere) {
-
-  boundingSphereRadius = boundingSphere.getRadius();
-  boundingSphereCenter = boundingSphere.getCenter();
+			 bool computeForm,
+			 Results * results) {
 
   if ((resultsZeno != NULL) &&
       (resultsZeno->getNumHits() == 0.)) {
@@ -131,6 +103,11 @@ ResultsCompiler::compile(ResultsZeno const * resultsZeno,
 
     double numWalks = resultsZeno->getNumWalks();
 
+    results->numWalks.set("Number of walks performed",
+			  "num_walks_performed",
+			  (long long)numWalks,
+			  "1");
+
     Uncertain<double> numZenoHits = resultsZeno->getNumHits();
 
     Vector3<Uncertain<double> > KPlus  = resultsZeno->getKPlus();
@@ -139,57 +116,79 @@ ResultsCompiler::compile(ResultsZeno const * resultsZeno,
     Matrix3x3<Uncertain<double> > VPlus  = resultsZeno->getVPlus();
     Matrix3x3<Uncertain<double> > VMinus = resultsZeno->getVMinus();
 
-    t = numZenoHits/numWalks;
-    u = (KPlus - KMinus)/numWalks;
-    v = (VPlus + VMinus)/numWalks;
-    w = (VPlus - VMinus)/numWalks;
+    Uncertain<double>             t = numZenoHits/numWalks;
+    Vector3<Uncertain<double> >   u = (KPlus - KMinus)/numWalks;
+    Matrix3x3<Uncertain<double> > v = (VPlus + VMinus)/numWalks;
+    Matrix3x3<Uncertain<double> > w = (VPlus - VMinus)/numWalks;
 
-    capacitance = computeCapacitance(t, boundingSphereRadius);
+    results->t.set("t", "t", t, "1");
+    results->u.set("u", "u", u, "1");
+    results->v.set("v", "v", v,
+		   Units::getName(parameters->getLengthScaleUnit()));
+    results->w.set("w", "w", w,
+		   Units::getName(parameters->getLengthScaleUnit()));
 
-    polarizabilityTensor = computePolarizability(t, u, v, w, 
-						 boundingSphereRadius);
+    results->capacitance =
+      computeCapacitance(t,
+			 resultsZeno->getBoundingSphere().getRadius());
 
-    meanPolarizability = computeMeanPolarizability(polarizabilityTensor);
+    results->polarizabilityTensor =
+      computePolarizability(t, u, v, w, 
+			    resultsZeno->getBoundingSphere().getRadius());
 
-    polarizabilityTensor.getEigenValues(polarizabilityEigenvalues);
+    results->meanPolarizability =
+      computeMeanPolarizability(results->polarizabilityTensor.value);
 
-    hydrodynamicRadius = computeHydrodynamicRadius(capacitance);
+    Vector3<Uncertain<double> > polarizabilityEigenvalues;
+    results->polarizabilityTensor.value.getEigenValues
+      (polarizabilityEigenvalues);
 
-    q_eta = computePadeApproximant(polarizabilityTensor);
+    results->polarizabilityEigenvalues.set
+      ("Eigenvalues of electric polarizability tensor",
+       "electric_polarizability_eigenvalues",
+       polarizabilityEigenvalues,
+       Units::getName(parameters->getLengthScaleUnit()) + "^3");
 
-    viscometricRadius = computeViscometricRadius(meanPolarizability,
-						 q_eta);
+    results->hydrodynamicRadius =
+      computeHydrodynamicRadius(results->capacitance.value);
+
+    results->q_eta =
+      computePadeApproximant(results->polarizabilityTensor.value);
+
+    results->viscometricRadius =
+      computeViscometricRadius(results->meanPolarizability.value,
+			       results->q_eta.value);
 
     if (parameters->getMassWasSet()) {
 
-      intrinsicViscosityConventional = 
-	computeIntrinsicViscosityConventional(q_eta,
-					      meanPolarizability,
+      results->intrinsicViscosityConventional = 
+	computeIntrinsicViscosityConventional(results->q_eta.value,
+					      results->meanPolarizability.value,
 					      parameters->getMassNumber());
 
-      intrinsicViscosityConventionalComputed = true;
+      results->intrinsicViscosityConventionalComputed = true;
     }
 
     if ((parameters->getLengthScaleUnit() != Units::Length::L) &&
 	parameters->getSolventViscosityWasSet()) {
 
-      frictionCoefficient = 
+      results->frictionCoefficient = 
 	computeFrictionCoefficient(parameters->getSolventViscosityNumber(),
-				   hydrodynamicRadius);
+				   results->hydrodynamicRadius.value);
 
-      frictionCoefficientComputed = true;
+      results->frictionCoefficientComputed = true;
     }
 
     if ((parameters->getLengthScaleUnit() != Units::Length::L) &&
 	parameters->getSolventViscosityWasSet() &&
 	parameters->getTemperatureWasSet()) {
 
-      diffusionCoefficient = 
+      results->diffusionCoefficient = 
 	computeDiffusionCoefficient(parameters->getTemperatureNumber(),
 				    parameters->getSolventViscosityNumber(),
-				    hydrodynamicRadius);
+				    results->hydrodynamicRadius.value);
 
-      diffusionCoefficientComputed = true;
+      results->diffusionCoefficientComputed = true;
     }
 
     if ((parameters->getLengthScaleUnit() != Units::Length::L) &&
@@ -197,30 +196,43 @@ ResultsCompiler::compile(ResultsZeno const * resultsZeno,
 	parameters->getBuoyancyFactorWasSet() &&
 	parameters->getMassWasSet()) {
 
-      sedimentationCoefficient = 
+      results->sedimentationCoefficient = 
 	computeSedimentationCoefficient(parameters->getMassNumber(),
 					parameters->getBuoyancyFactor(),
 					parameters->getSolventViscosityNumber(),
-					hydrodynamicRadius);
+					results->hydrodynamicRadius.value);
 
-      sedimentationCoefficientComputed = true;
+      results->sedimentationCoefficientComputed = true;
     }
 
-    resultsZenoCompiled = true;
+    results->resultsZenoCompiled = true;
   }
 
   if (resultsInterior != NULL) {
 
-    double boundingSphereVolume = boundingSphere.getVolume();
+    double boundingSphereVolume =
+      resultsInterior->getBoundingSphere().getVolume();
 
     double numInteriorSamples = resultsInterior->getNumSamples();
 
-    numInteriorHits = resultsInterior->getNumHits();
+    results->numInteriorSamples.set("Number of interior samples performed",
+				    "num_interior_samples_performed",
+				    (long long)numInteriorSamples,
+				    "1");
+    
+    Uncertain<double> numInteriorHits = resultsInterior->getNumHits();
 
-    volume = computeVolume(numInteriorHits, numInteriorSamples,
-			   boundingSphereVolume);
+    results->numInteriorHits.set("Interior hits",
+				 "interior_hits",
+				 numInteriorHits,
+				 "1");
 
-    capacitanceOfASphere = computeCapacitanceOfASphere(volume);
+    results->volume = computeVolume(numInteriorHits,
+				    numInteriorSamples,
+				    boundingSphereVolume);
+
+    results->capacitanceOfASphere =
+      computeCapacitanceOfASphere(results->volume.value);
 
     Matrix3x3<Uncertain<double> > hitPointsSqrSum = 
       resultsInterior->getHitPointsSqrSum();
@@ -228,27 +240,36 @@ ResultsCompiler::compile(ResultsZeno const * resultsZeno,
     Vector3<Uncertain<double> > hitPointsSum = 
       resultsInterior->getHitPointsSum();
 
-    gyrationTensor = computeGyrationTensor(hitPointsSqrSum, 
-					   hitPointsSum,
-					   numInteriorHits);
+    results->gyrationTensor = computeGyrationTensor(hitPointsSqrSum, 
+						    hitPointsSum,
+						    numInteriorHits);
 
-    gyrationTensor.getEigenValues(gyrationEigenvalues);
+    Vector3<Uncertain<double> > gyrationEigenvalues;
+    results->gyrationTensor.value.getEigenValues(gyrationEigenvalues);
 
-    resultsInteriorCompiled = true;
+    results->gyrationEigenvalues.set
+      ("Eigenvalues of gyration tensor",
+       "gyration_eigenvalues",
+       gyrationEigenvalues,
+       Units::getName(parameters->getLengthScaleUnit()) + "^2");
+    
+    results->resultsInteriorCompiled = true;
   }
 
   if (resultsZeno != NULL &&
       resultsInterior != NULL) {
 
-    intrinsicConductivity = computeIntrinsicConductivity(meanPolarizability,
-							 volume);
+    results->intrinsicConductivity =
+      computeIntrinsicConductivity(results->meanPolarizability.value,
+				   results->volume.value);
 
-    intrinsicViscosity = 
-      computeIntrinsicViscosity(q_eta, intrinsicConductivity);
+    results->intrinsicViscosity = 
+      computeIntrinsicViscosity(results->q_eta.value,
+				results->intrinsicConductivity.value);
   }
 }
 
-Uncertain<double> 
+Result<Uncertain<double> > 
 ResultsCompiler::
 computeCapacitance(Uncertain<double> const & t, 
 		   double boundingSphereRadius) const {
@@ -259,10 +280,18 @@ computeCapacitance(Uncertain<double> const & t,
 
   capacitance *= l;
 
-  return capacitance;
+  std::string unit = Units::getName(parameters->getLengthScaleUnit());
+  
+  Result<Uncertain<double> >
+    result("Capacitance",
+	   "capacitance",
+	   capacitance,
+	   unit);
+  
+  return result;
 }
 
-Matrix3x3<Uncertain<double> >
+Result<Matrix3x3<Uncertain<double> > >
 ResultsCompiler::
 computePolarizability(Uncertain<double> const & t,
 		      Vector3<Uncertain<double> > const & u,
@@ -275,7 +304,7 @@ computePolarizability(Uncertain<double> const & t,
   for (int row = 0; row < 3; row++) {
     for (int col = 0; col < 3; col++) {
       Uncertain<double> element = 
-	12*M_PI*pow(boundingSphereRadius, 2)*
+	12 * M_PI * std::pow(boundingSphereRadius, 2)*
 	(w.get(row, col) - u.get(row)*v.get(row, col)/t);
 
       polarizabilityTensor.set(row, col, element);
@@ -286,12 +315,18 @@ computePolarizability(Uncertain<double> const & t,
 
   const double l = parameters->getLengthScaleNumber();
 
-  polarizabilityTensor *= pow(l, 3);
+  polarizabilityTensor *= std::pow(l, 3);
 
-  return polarizabilityTensor;
+  Result<Matrix3x3<Uncertain<double> > >
+    result("Electric polarizability tensor",
+	   "electric_polarizability",
+	   polarizabilityTensor,
+	   Units::getName(parameters->getLengthScaleUnit()) + "^3");
+
+  return result;
 }
 
-Uncertain<double>
+Result<Uncertain<double> >
 ResultsCompiler::
 computeMeanPolarizability(Matrix3x3<Uncertain<double> > const & 
 			  polarizabilityTensor) 
@@ -302,10 +337,16 @@ computeMeanPolarizability(Matrix3x3<Uncertain<double> > const &
      polarizabilityTensor.get(1, 1) +
      polarizabilityTensor.get(2, 2)) / 3.;
 
-  return meanPolarizability;
+  Result<Uncertain<double> >
+    result("Mean electric polarizability",
+	   "mean_electric_polarizability",
+	   meanPolarizability,
+	   Units::getName(parameters->getLengthScaleUnit()) + "^3");
+
+  return result;
 }
 
-Uncertain<double> 
+Result<Uncertain<double> > 
 ResultsCompiler::
 computePadeApproximant(Matrix3x3<Uncertain<double> > const & 
 		       polarizabilityTensor)
@@ -341,9 +382,15 @@ computePadeApproximant(Matrix3x3<Uncertain<double> > const &
   Uncertain<double> q_eta = computePadeApproximant(x1, x2);
 
   q_eta = Uncertain<double>(q_eta.getMean(),
-			    pow(q_eta.getMean() * 0.015, 2));
+			    std::pow(q_eta.getMean() * 0.015, 2));
 
-  return q_eta;
+  Result<Uncertain<double> >
+    result("Prefactor for computing intrinsic viscosity",
+	   "intrinsic_viscosity_prefactor",
+	   q_eta,
+	   "1");
+
+  return result;
 }
 
 Uncertain<double> 
@@ -385,7 +432,7 @@ computePadeApproximant(Uncertain<double> x1, Uncertain<double> x2) const {
   return q_eta;
 }
 
-Uncertain<double>
+Result<Uncertain<double> >
 ResultsCompiler::
 computeVolume(Uncertain<double> const & numInteriorHits, 
 	      double numInteriorSamples,
@@ -396,42 +443,67 @@ computeVolume(Uncertain<double> const & numInteriorHits,
 
   const double l = parameters->getLengthScaleNumber();
 
-  volume *= pow(l, 3);
+  volume *= std::pow(l, 3);
 
-  return volume;
+  Result<Uncertain<double> >
+    result("Volume",
+	   "volume",
+	   volume,
+	   Units::getName(parameters->getLengthScaleUnit()) + "^3");
+  
+  return result;
 }
 
-Uncertain<double>
+Result<Uncertain<double> >
 ResultsCompiler::
 computeIntrinsicConductivity(Uncertain<double> const & meanPolarizability,
 			     Uncertain<double> const & volume) const {
 
   Uncertain<double> intrinsicConductivity = meanPolarizability / volume;
 
-  return intrinsicConductivity;
+  Result<Uncertain<double> >
+    result("Intrinsic conductivity",
+	   "intrinsic_conductivity",
+	   intrinsicConductivity,
+	   "1");
+		
+  
+  return result;
 }
 
-Uncertain<double> 
+Result<Uncertain<double> > 
 ResultsCompiler::
 computeCapacitanceOfASphere(Uncertain<double> const & volume) const {
 
   Uncertain<double> capacitanceOfASphere = pow(3.*volume/(4.*M_PI), 1./3.);
 
-  return capacitanceOfASphere;
+  Result<Uncertain<double> >
+    result("Capacitance of a sphere of the same volume",
+	   "capacitance_sphere_same_volume",
+	   capacitanceOfASphere,
+	   Units::getName(parameters->getLengthScaleUnit()));
+  
+  return result;
 }
 
-Uncertain<double> 
+Result<Uncertain<double> > 
 ResultsCompiler::
 computeHydrodynamicRadius(Uncertain<double> const & capacitance) const {
 
-  Uncertain<double> q_Rh(1, pow(0.01, 2));
+  Uncertain<double> q_Rh(1, std::pow(0.01, 2));
 
   Uncertain<double> hydrodynamicRadius = q_Rh * capacitance;
 
-  return hydrodynamicRadius;
+  Result<Uncertain<double> >
+    result("Hydrodynamic radius",
+	   "hydrodynamic_radius",
+	   hydrodynamicRadius,
+	   Units::getName(parameters->getLengthScaleUnit()));
+
+  return result;
 }
 
-Uncertain<double> 
+Result<Uncertain<double> > 
 ResultsCompiler::
 computeViscometricRadius(Uncertain<double> const & meanPolarizability,
 			 Uncertain<double> const & padeApproximant) const {
@@ -441,10 +513,16 @@ computeViscometricRadius(Uncertain<double> const & meanPolarizability,
 
   Uncertain<double> viscometricRadius = pow((3.*q_eta*alpha)/(10.*M_PI), 1./3.);
 
-  return viscometricRadius;
+  Result<Uncertain<double> >
+    result("Viscometric radius",
+	   "viscometric_radius",
+	   viscometricRadius,
+	   Units::getName(parameters->getLengthScaleUnit()));
+  
+  return result;
 }
 
-Uncertain<double> 
+Result<Uncertain<double> > 
 ResultsCompiler::
 computeIntrinsicViscosity(Uncertain<double> const & padeApproximant,
 			  Uncertain<double> const & intrinsicConductivity) 
@@ -453,19 +531,30 @@ computeIntrinsicViscosity(Uncertain<double> const & padeApproximant,
   Uncertain<double> intrinsicViscosity = 
     padeApproximant * intrinsicConductivity;
 
-  return intrinsicViscosity;
+  Result<Uncertain<double> >
+    result("Intrinsic viscosity",
+	   "intrinsic_viscosity",
+	   intrinsicViscosity,
+	   "1");
+  
+  return result;
 }
 
-Uncertain<double>
+Result<Uncertain<double> >
 ResultsCompiler::
 computeIntrinsicViscosityConventional
 (Uncertain<double> const & padeApproximant,
  Uncertain<double> const & meanPolarizability,
  double mass) const {
-
+  
   Uncertain<double> intrinsicViscosityConventional =
     padeApproximant * meanPolarizability / mass;
 
+  std::string units =
+    Units::getName(parameters->getLengthScaleUnit()) +
+    "^3/" +
+    Units::getName(parameters->getMassUnit());
+  
   if (parameters->getLengthScaleUnit() != Units::Length::L) {
     const Uncertain<double> a_l = 
       Units::getFactor(parameters->getLengthScaleUnit(), 
@@ -475,13 +564,21 @@ computeIntrinsicViscosityConventional
       Units::getFactor(parameters->getMassUnit(), 
 		       Units::Mass::g);
 
-    intrinsicViscosityConventional *= pow(a_l, 3.) * a_m;	
+    intrinsicViscosityConventional *= pow(a_l, 3.) * a_m;
+
+    units = "cm^3/g";
   }
 
-  return intrinsicViscosityConventional;
+  Result<Uncertain<double> >
+    result("Intrinsic viscosity with mass units",
+	   "intrinsic_viscosity_mass_units",
+	   intrinsicViscosityConventional,
+	   units);
+
+  return result;
 }
 
-Uncertain<double>
+Result<Uncertain<double> >
 ResultsCompiler::
 computeFrictionCoefficient(double solventViscosity,
 			   Uncertain<double> const & hydrodynamicRadius) const {
@@ -497,12 +594,18 @@ computeFrictionCoefficient(double solventViscosity,
     Units::getFactor(parameters->getSolventViscosityUnit(),
 		     Units::Viscosity::cp);
 
-  frictionCoefficient *= pow(10, -2) * a_l * a_eta;
+  frictionCoefficient *= std::pow(10, -2) * a_l * a_eta;
 
-  return frictionCoefficient;
+  Result<Uncertain<double> >
+    result("Friction coefficient",
+	   "friction_coefficient",
+	   frictionCoefficient,
+	   "d.s/cm");
+  
+  return result;
 }
 
-Uncertain<double>
+Result<Uncertain<double> >
 ResultsCompiler::
 computeDiffusionCoefficient(double temperature,
 			    double solventViscosity,
@@ -528,12 +631,18 @@ computeDiffusionCoefficient(double temperature,
 		     Units::Viscosity::cp);
 
   diffusionCoefficient *= 
-    pow(10, 9) * pow(a_l, -1.) * pow(a_eta, -1.);
+    std::pow(10, 9) * pow(a_l, -1.) * pow(a_eta, -1.);
 
-  return diffusionCoefficient;
+  Result<Uncertain<double> >
+    result("Diffusion coefficient",
+	   "diffusion_coefficient",
+	   diffusionCoefficient,
+	   "cm^2/s");
+  
+  return result;
 }
 
-Uncertain<double>
+Result<Uncertain<double> >
 ResultsCompiler::
 computeSedimentationCoefficient(double mass,
 				double buoyancyFactor,
@@ -558,12 +667,19 @@ computeSedimentationCoefficient(double mass,
 		     Units::Mass::g);
 
   sedimentationCoefficient *= 
-    pow(10, 15) * pow(a_l, -1.) * pow(a_eta, -1.) * pow(a_m, -1.);
+    std::pow(10, 15) *
+    pow(a_l, -1.) * pow(a_eta, -1.) * pow(a_m, -1.);
 
-  return sedimentationCoefficient;
+  Result<Uncertain<double> >
+    result("Sedimentation coefficient",
+	   "sedimentation_coefficient",
+	   sedimentationCoefficient,
+	   "Sved");
+  
+  return result;
 }
 
-Matrix3x3<Uncertain<double> >
+Result<Matrix3x3<Uncertain<double> > >
 ResultsCompiler::
 computeGyrationTensor(Matrix3x3<Uncertain<double> > const & hitPointsSqrSum,
 		      Vector3<Uncertain<double> > const & hitPointsSum,
@@ -586,9 +702,15 @@ computeGyrationTensor(Matrix3x3<Uncertain<double> > const & hitPointsSqrSum,
 
   const double l = parameters->getLengthScaleNumber();
 
-  gyrationTensor *= pow(l, 2);
+  gyrationTensor *= std::pow(l, 2);
 
-  return gyrationTensor;
+  Result<Matrix3x3<Uncertain<double> > >
+    result("Gyration tensor",
+	   "gyration",
+	   gyrationTensor,
+	   Units::getName(parameters->getLengthScaleUnit()) + "^2");
+  
+  return result;
 }
 
 /// Inverts the formula: 
@@ -598,191 +720,10 @@ void
 ResultsCompiler::
 indexToIJ(BigUInt index, BigUInt * i, BigUInt * j) const {
 
-  (*j) = round(sqrt(2*index + 1)) - 1;
+  (*j) = round(std::sqrt(2*index + 1)) - 1;
   (*i) = index - ((*j)*(*j) + (*j))/2;
 
   ++(*j);
-}
-
-/// Print the computed physical quantities.  Optionally also print the raw
-/// hit counts.
-///
-void 
-ResultsCompiler::
-print(bool printCounts,
-      std::ofstream * csvOutputFile) const {
-
-  if (resultsZenoCompiled) {
-
-    printScalar("Capacitance",
-		"capacitance",
-		Units::getName(parameters->getLengthScaleUnit()),
-		capacitance,
-	        csvOutputFile);
-
-    printMatrix3x3("Electric polarizability tensor",
-		   "electric_polarizability",
-		   Units::getName(parameters->getLengthScaleUnit()) + "^3",
-		   polarizabilityTensor,
-		   csvOutputFile);
-
-    printVector3("Eigenvalues of electric polarizability tensor",
-		 "electric_polarizability_eigenvalues",
-	         Units::getName(parameters->getLengthScaleUnit()) + "^3",
-	         polarizabilityEigenvalues,
-		 csvOutputFile);
-
-    printScalar("Mean electric polarizability",
-		"mean_electric_polarizability",
-		Units::getName(parameters->getLengthScaleUnit()) + "^3",
-		meanPolarizability,
-		csvOutputFile);
-
-    printScalar("Hydrodynamic radius",
-		"hydrodynamic_radius",
-		Units::getName(parameters->getLengthScaleUnit()),
-		hydrodynamicRadius,
-		csvOutputFile);
-
-    printScalar("Prefactor for computing intrinsic viscosity",
-                "intrinsic_viscosity_prefactor",
-		"1",
-		q_eta,
-		csvOutputFile);
-
-    printScalar("Viscometric radius",
-		"viscometric_radius",
-		Units::getName(parameters->getLengthScaleUnit()),
-		viscometricRadius,
-		csvOutputFile);
-
-    if (intrinsicViscosityConventionalComputed) {
-
-      std::string units;
-
-      if (parameters->getLengthScaleUnit() == Units::Length::L) {
-
-	units = Units::getName(parameters->getLengthScaleUnit()) +
-		"^3/" +
-		Units::getName(parameters->getMassUnit());
-      }
-      else {
-
-	units = "cm^3/g";
-      }
-      
-      printScalar("Intrinsic viscosity with mass units",
-		  "intrinsic_viscosity_mass_units",
-		  units,
-		  intrinsicViscosityConventional,
-		  csvOutputFile);
-    }
-
-    if (frictionCoefficientComputed) {
-
-      printScalar("Friction coefficient",
-		  "friction_coefficient",
-		  "d.s/cm",
-		  frictionCoefficient,
-		  csvOutputFile);
-    }
-
-    if (diffusionCoefficientComputed) {
-
-      printScalar("Diffusion coefficient",
-		  "diffusion_coefficient",
-		  "cm^2/s",
-		  diffusionCoefficient,
-		  csvOutputFile);
-    }
-
-    if (sedimentationCoefficientComputed) {
-
-      printScalar("Sedimentation coefficient",
-		  "sedimentation_coefficient",
-		  "Sved",
-		  sedimentationCoefficient,
-		  csvOutputFile);
-    }
-  }
-
-  if (resultsInteriorCompiled) {
-
-    printScalar("Volume",
-		"volume",
-		Units::getName(parameters->getLengthScaleUnit()) + "^3",
-		volume,
-		csvOutputFile);
-
-    printScalar("Capacitance of a sphere of the same volume",
-		"capacitance_sphere_same_volume",
-		Units::getName(parameters->getLengthScaleUnit()),
-		capacitanceOfASphere,
-		csvOutputFile);
-
-    printMatrix3x3("Gyration tensor",
-		   "gyration",
-		   Units::getName(parameters->getLengthScaleUnit()) + "^2",
-		   gyrationTensor,
-		   csvOutputFile);
-
-    printVector3("Eigenvalues of gyration tensor",
-		 "gyration_eigenvalues",
-		 Units::getName(parameters->getLengthScaleUnit()) + "^2",
-		 gyrationEigenvalues,
-		 csvOutputFile);
-  }
-
-  if (resultsZenoCompiled && resultsInteriorCompiled) {
-
-    printScalar("Intrinsic conductivity",
-		"intrinsic_conductivity",
-		"1",
-		intrinsicConductivity,
-		csvOutputFile);
-
-    printScalar("Intrinsic viscosity",
-		"intrinsic_viscosity",
-		"1",
-		intrinsicViscosity,
-		csvOutputFile);
-  }
-
-  if (printCounts) {
-
-    std::cout << "Counts:" << std::endl
-	      << std::endl;
-
-    printScalar("t",
-		"t",
-		"1",
-		t,
-		csvOutputFile);
-
-    printVector3("u",
-		 "u",
-		 "1",
-		 u,
-		 csvOutputFile);
-
-    printMatrix3x3("v",
-		   "v",
-		   Units::getName(parameters->getLengthScaleUnit()),
-		   v,
-		   csvOutputFile);
-
-    printMatrix3x3("w",
-		   "w",
-		   Units::getName(parameters->getLengthScaleUnit()),
-		   w,
-		   csvOutputFile);
-
-    printScalar("Interior hits",
-		"interior_hits",
-		"1",
-		numInteriorHits,
-		csvOutputFile);
-  }
 }
 
 void
@@ -867,31 +808,3 @@ printMatrix3x3(std::string const & prettyName,
     }
   }
 }
-
-Uncertain<double> 
-ResultsCompiler::
-getCapacitance() const {
-
-  assert(resultsZenoCompiled);
-
-  return capacitance;
-}
-
-Uncertain<double> 
-ResultsCompiler::
-getMeanPolarizability() const {
-
-  assert(resultsZenoCompiled);
-
-  return meanPolarizability;
-}
-
-Uncertain<double> 
-ResultsCompiler::
-getVolume() const {
-
-  assert(resultsInteriorCompiled);
-
-  return volume;
-}
-

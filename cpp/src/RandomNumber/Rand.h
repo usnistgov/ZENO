@@ -41,6 +41,8 @@
 
 // ================================================================
 
+namespace zeno {
+  
 class Rand
 {
 public:
@@ -50,6 +52,9 @@ public:
   double getRandIn01();
   double getRandInRange(double min, double max);
 };
+
+}
+
 // ================================================================
 
 #endif  // #ifndef RAND_H_

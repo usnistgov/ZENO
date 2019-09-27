@@ -106,18 +106,6 @@ void bod_parser::BodParser::addCuboid(double x1, double y1, double z1,
   model->addCuboid(cuboid);
 }
 
-void bod_parser::BodParser::addTriangle(double x1, double y1, double z1,
-					double x2, double y2, double z2,
-					double x3, double y3, double z3) {
-  Vector3<double> v1(x1, y1, z1);
-  Vector3<double> v2(x2, y2, z2);
-  Vector3<double> v3(x3, y3, z3);
-  
-  Triangle<double> triangle(v1, v2, v3);
-  
-  model->addTriangle(triangle);
-}
-
 void bod_parser::BodParser::addVoxels(std::string voxelsFileName) {
   const std::string inputFilePath = parametersLocal->getInputFileName();
 

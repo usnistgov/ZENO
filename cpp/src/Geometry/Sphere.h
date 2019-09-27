@@ -46,6 +46,8 @@
 
 // ================================================================
 
+namespace zeno {
+  
 /// Represents a sphere.
 ///
 template <class T>
@@ -222,6 +224,8 @@ template <class T>
 bool
 Sphere<T>::contains(Sphere<T> const & sphere) const {
   return (sphere.center - center).getMagnitude() + sphere.radius <= radius;
+}
+
 }
 
 // ================================================================

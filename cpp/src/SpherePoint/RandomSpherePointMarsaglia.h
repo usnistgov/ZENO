@@ -42,6 +42,8 @@
 #include "../Geometry/Sphere.h"
 #include "../Geometry/Vector3.h"
 
+namespace zeno {
+  
 /// Generates random sample points on a sphere from a uniform
 /// distribution using the Marsaglia method. 
 ///
@@ -72,7 +74,7 @@ RandomSpherePointMarsaglia<T, RNG>::generate(RNG * rng,
   } 
   while (lengthSqr > 1);
 
-  T scale = 2*sqrt(1 - lengthSqr);
+  T scale = 2 * std::sqrt(1 - lengthSqr);
 
   Vector3<T> spherePoint(scale*x,
 			 scale*y,
@@ -85,6 +87,8 @@ RandomSpherePointMarsaglia<T, RNG>::generate(RNG * rng,
   spherePoint += sphere.getCenter();
 
   return spherePoint;
+}
+
 }
 
 #endif

@@ -45,6 +45,8 @@
 
 using namespace std::chrono;
 
+using namespace zeno;
+
 // ================================================================
 
 /// Construct a Timer with 0s on the clock.

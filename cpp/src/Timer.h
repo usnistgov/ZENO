@@ -45,6 +45,8 @@
 
 // ================================================================
 
+namespace zeno {
+
 /// A stopwatch for benchmarking.
 ///
 class Timer
@@ -66,6 +68,9 @@ private:
 
   double elapsedTime;
 };
+
+}
+
 // ================================================================
 
 #endif  // #ifndef TIMER_H_

@@ -42,25 +42,27 @@
 #include "Geometry/Vector3.h"
 #include "Geometry/Sphere.h"
 #include "Geometry/Cuboid.h"
-#include "Geometry/MixedModel.h"
+#include "Geometry/MixedModelProcessed.h"
 
+namespace zeno {
+  
 /// Generates a tight bounding sphere around the given object.
 ///
 template <class T>
 class BoundingSphereGenerator {
  public:
   
-  static Sphere<T> generate(MixedModel<T> const & model);
+  static Sphere<T> generate(MixedModelProcessed<T> const & model);
 
  private:
   
   static Vector3<T> getCenterFromAABB(Cuboid<T> const & aabb);
 
-  static Vector3<T> getCenterRitter(MixedModel<T> const & model);
+  static Vector3<T> getCenterRitter(MixedModelProcessed<T> const & model);
   
   static T getRadiusFromAABB(Cuboid<T> const & aabb);
 
-  static T getRadiusFromCenter(MixedModel<T> const & model,
+  static T getRadiusFromCenter(MixedModelProcessed<T> const & model,
 			       Vector3<T> const & center);
 };
 
@@ -68,7 +70,7 @@ class BoundingSphereGenerator {
 ///
 template <class T>
 Sphere<T> 
-BoundingSphereGenerator<T>::generate(MixedModel<T> const & model) {
+BoundingSphereGenerator<T>::generate(MixedModelProcessed<T> const & model) {
 
   Vector3<T> center = getCenterRitter(model);
 
@@ -99,7 +101,8 @@ BoundingSphereGenerator<T>::getCenterFromAABB(Cuboid<T> const & aabb) {
 ///
 template <class T>
 Vector3<T>
-BoundingSphereGenerator<T>::getCenterRitter(MixedModel<T> const & model) {
+BoundingSphereGenerator<T>::getCenterRitter
+(MixedModelProcessed<T> const & model) {
 
   Cuboid<T> aabb = model.generateAABB();
   
@@ -128,14 +131,17 @@ BoundingSphereGenerator<T>::getRadiusFromAABB(Cuboid<T> const & aabb) {
 
 template <class T>
 T
-BoundingSphereGenerator<T>::getRadiusFromCenter(MixedModel<T> const & model,
-			                        Vector3<T> const & center) {
+BoundingSphereGenerator<T>::getRadiusFromCenter
+(MixedModelProcessed<T> const & model,
+ Vector3<T> const & center) {
 
   Vector3<T> edgePoint = model.findFarthestPoint(center);
 
   T radius = (edgePoint - center).getMagnitude();
 
   return radius;
+}
+
 }
 
 #endif

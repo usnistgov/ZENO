@@ -10,7 +10,6 @@
 (SPHERE)|(S)                      return BodParser::SPHERE;
 CUBE                              return BodParser::CUBE;
 CUBOID                            return BodParser::CUBOID;
-TRIANGLE                          return BodParser::TRIANGLE;
 (ATOM)|(HETATM)                   return BodParser::ATOM;
 VOXELS                            return BodParser::VOXELS;
 ST                                return BodParser::ST;

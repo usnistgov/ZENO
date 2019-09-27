@@ -47,13 +47,17 @@
 
 // ================================================================
 
+using namespace zeno;
+
 /// Constructs the class to collect results from the given number of threads,
 /// and optionally save the hit point locations.
 ///
 ResultsInterior::
-ResultsInterior(int numThreads,
+ResultsInterior(Sphere<double> const & boundingSphere,
+		int numThreads,
 		bool saveHitPoints)
-  : numThreads(numThreads),
+  : boundingSphere(boundingSphere),
+    numThreads(numThreads),
     saveHitPoints(saveHitPoints),
     numSamples(NULL),
     hitMissMean(NULL),
@@ -405,6 +409,12 @@ ResultsInterior::
 getSaveHitPoints() const {
 
   return saveHitPoints;
+}
+
+Sphere<double>
+ResultsInterior::
+getBoundingSphere() const {
+  return boundingSphere;
 }
 
 std::vector<Vector3<double> > const * 

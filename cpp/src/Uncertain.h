@@ -52,6 +52,8 @@
 
 // ================================================================
 
+namespace zeno {
+
 template <class T>
 class Uncertain;
 
@@ -285,7 +287,7 @@ T
 Uncertain<T>::
 getStdDev() const 
 {
-  return sqrt(variance);
+  return std::sqrt(variance);
 }
 
 template <class T>
@@ -441,8 +443,8 @@ operator*=(const Uncertain<T> & rhs)
     }
     else {
       result.variance = 
-	pow(meanA, 2) * varB +
-	pow(meanB, 2) * varA +
+	std::pow(meanA, 2) * varB +
+	std::pow(meanB, 2) * varA +
 	varA * varB;
     }
   }
@@ -478,16 +480,16 @@ operator/=(const Uncertain<T> & rhs)
   result.mean = meanA / meanB;
 
   if (propagateUncertainty) {
-    T df_dA = pow(meanB, -1);
-    T df_dB = meanA * -1 * pow(meanB, -2);
+    T df_dA = std::pow(meanB, -1);
+    T df_dB = meanA * -1 * std::pow(meanB, -2);
 
     result.updateFirstOrder(this->id, varA, df_dA,
 			    rhs.id, varB, df_dB);
 
     if (useSecondOrder) {
       T d2f_dA2  = 0;
-      T d2f_dB2  = meanA * 2 * pow(meanB, -3);
-      T d2f_dAdB = -1 * pow(meanB, -2);
+      T d2f_dB2  = meanA * 2 * std::pow(meanB, -3);
+      T d2f_dAdB = -1 * std::pow(meanB, -2);
 
       result.updateSecondOrder(varA, d2f_dA2,
 			       d2f_dAdB,
@@ -557,7 +559,7 @@ T
 Uncertain<T>::
 firstOrderVariance(T varA, T df_dA)
 {
-  T varX = varA * pow(df_dA, 2);
+  T varX = varA * std::pow(df_dA, 2);
 
   return varX;
 }
@@ -574,8 +576,8 @@ firstOrderVariance(T varA, T df_dA,
 		   T varB, T df_dB)
 {
   T varX = 
-    varA * pow(df_dA, 2) +
-    varB * pow(df_dB, 2);
+    varA * std::pow(df_dA, 2) +
+    varB * std::pow(df_dB, 2);
 
   return varX;
 }
@@ -593,9 +595,9 @@ firstOrderVariance(T varA, T df_dA,
 		   T varB, T df_dB)
 {
   T varX = 
-    varA * pow(df_dA, 2) +
+    varA * std::pow(df_dA, 2) +
     2 * covAB * df_dA * df_dB +
-    varB * pow(df_dB, 2);
+    varB * std::pow(df_dB, 2);
 
   return varX;
 }
@@ -671,7 +673,7 @@ Uncertain<T>::
 secondOrderVariance(T firstOrderVariance, 
 		    T varA, T d2f_dA2)
 {
-  T varX = firstOrderVariance + 0.5 * pow(varA, 2) * pow(d2f_dA2, 2);
+  T varX = firstOrderVariance + 0.5 * std::pow(varA, 2) * std::pow(d2f_dA2, 2);
 
   return varX;
 }
@@ -693,9 +695,9 @@ secondOrderVariance(T firstOrderVariance,
 {
   T varX =
     firstOrderVariance +
-    0.5 * pow(varA, 2) * pow(d2f_dA2, 2) +
-    (varA * varB) * pow(d2f_dAdB, 2) +
-    0.5 * pow(varB, 2) * pow(d2f_dB2, 2);
+    0.5 * std::pow(varA, 2) * std::pow(d2f_dA2, 2) +
+    (varA * varB) * std::pow(d2f_dAdB, 2) +
+    0.5 * std::pow(varB, 2) * std::pow(d2f_dB2, 2);
 
   return varX;
 }
@@ -717,12 +719,12 @@ secondOrderVariance(T firstOrderVariance,
 {
   T varX =
     firstOrderVariance +
-    0.5 * pow(varA, 2) * pow(d2f_dA2, 2) +
+    0.5 * std::pow(varA, 2) * std::pow(d2f_dA2, 2) +
     2 * varA * covAB * d2f_dA2 * d2f_dAdB +
-    pow(covAB, 2) * d2f_dA2 * d2f_dB2 +
-    (varA * varB + pow(covAB, 2)) * pow(d2f_dAdB, 2) +
+    std::pow(covAB, 2) * d2f_dA2 * d2f_dB2 +
+    (varA * varB + std::pow(covAB, 2)) * std::pow(d2f_dAdB, 2) +
     2 * covAB * varB * d2f_dB2 * d2f_dAdB +
-    0.5 * pow(varB, 2) * pow(d2f_dB2, 2);
+    0.5 * std::pow(varB, 2) * std::pow(d2f_dB2, 2);
 
   return varX;
 }
@@ -803,7 +805,7 @@ Uncertain<T> fabs(const Uncertain<T> & A)
 
   Uncertain<T> result;
 
-  result.mean     = fabs(meanA);
+  result.mean     = std::fabs(meanA);
   result.variance = 0;
 
   if (Uncertain<T>::propagateUncertainty) {
@@ -829,7 +831,7 @@ Uncertain<T> log(const Uncertain<T> & A)
 
   Uncertain<T> result;
 
-  result.mean     = log(meanA);
+  result.mean     = std::log(meanA);
   result.variance = 0;
 
   if (Uncertain<T>::propagateUncertainty) {
@@ -838,7 +840,7 @@ Uncertain<T> log(const Uncertain<T> & A)
     result.updateFirstOrder(A.id, varA, df_dA);
 
     if (Uncertain<T>::useSecondOrder) {
-      T d2f_dA2 = -pow(meanA, -2);
+      T d2f_dA2 = -std::pow(meanA, -2);
 
       result.updateSecondOrder(varA, d2f_dA2);
     }
@@ -855,16 +857,16 @@ Uncertain<T> exp(const Uncertain<T> & A)
 
   Uncertain<T> result;
 
-  result.mean     = exp(meanA);
+  result.mean     = std::exp(meanA);
   result.variance = 0;
 
   if (Uncertain<T>::propagateUncertainty) {
-    T df_dA = exp(meanA);
+    T df_dA = std::exp(meanA);
 
     result.updateFirstOrder(A.id, varA, df_dA);
 
     if (Uncertain<T>::useSecondOrder) {
-      T d2f_dA2 = exp(meanA);
+      T d2f_dA2 = std::exp(meanA);
 
       result.updateSecondOrder(varA, d2f_dA2);
     }
@@ -896,12 +898,12 @@ Uncertain<T> pow(const Uncertain<T> & A, const Uncertain<T> & B)
   else {
     Uncertain<T> result;
 
-    result.mean      = pow(meanA, meanB);
+    result.mean      = std::pow(meanA, meanB);
     result.variance  = 0;
 
     if (Uncertain<T>::propagateUncertainty) {
-      T df_dA = meanB * pow(meanA, meanB - 1);
-      T df_dB = log(meanA) * pow(meanA, meanB);
+      T df_dA = meanB * std::pow(meanA, meanB - 1);
+      T df_dB = std::log(meanA) * std::pow(meanA, meanB);
 
       if (meanA == 0) {
 	df_dB = 0;
@@ -911,10 +913,11 @@ Uncertain<T> pow(const Uncertain<T> & A, const Uncertain<T> & B)
 			      B.id, varB, df_dB);
 
       if (Uncertain<T>::useSecondOrder) {
-	T d2f_dA2  = meanB * (meanB - 1) * pow(meanA, meanB - 2);
-	T d2f_dB2  = pow(log(meanA), 2) * pow(meanA, meanB);
-	T d2f_dAdB = 
-	  pow(meanA, meanB - 1) + meanB * log(meanA) * pow(meanA, meanB - 1);
+	T d2f_dA2  = meanB * (meanB - 1) * std::pow(meanA, meanB - 2);
+	T d2f_dB2  = std::pow(std::log(meanA), 2) * std::pow(meanA, meanB);
+	T d2f_dAdB =
+	  std::pow(meanA, meanB - 1) +
+	  meanB * std::log(meanA) * std::pow(meanA, meanB - 1);
 
 	if (meanA == 0) {
 	  d2f_dB2  = 0;
@@ -951,7 +954,7 @@ Uncertain<T> sqrt(const Uncertain<T> & A)
 
   Uncertain<T> result;
 
-  result.mean     = sqrt(meanA);
+  result.mean     = std::sqrt(meanA);
   result.variance = 0;
 
   //can only take sqrt with mean == 0 if variance == 0, since otherwise 
@@ -961,12 +964,12 @@ Uncertain<T> sqrt(const Uncertain<T> & A)
   }
   else {
     if (Uncertain<T>::propagateUncertainty) {
-      T df_dA = 0.5 * pow(meanA, -0.5);
+      T df_dA = 0.5 * std::pow(meanA, -0.5);
 
       result.updateFirstOrder(A.id, varA, df_dA);
 
       if (Uncertain<T>::useSecondOrder) {
-	T d2f_dA2 = -0.25 * pow(meanA, -1.5);
+	T d2f_dA2 = -0.25 * std::pow(meanA, -1.5);
 
 	result.updateSecondOrder(varA, d2f_dA2);
       }
@@ -1043,7 +1046,7 @@ Uncertain<T> atan2(const Uncertain<T> & A, const Uncertain<T> & B)
   result.variance  = 0;
 
   if (Uncertain<T>::propagateUncertainty) {
-    const T B2A2 = pow(meanB, 2) + pow(meanA, 2);
+    const T B2A2 = std::pow(meanB, 2) + std::pow(meanA, 2);
 
     T df_dA = meanB / B2A2;
     T df_dB = -meanA / B2A2;
@@ -1052,9 +1055,10 @@ Uncertain<T> atan2(const Uncertain<T> & A, const Uncertain<T> & B)
 			    B.id, varB, df_dB);
 
     if (Uncertain<T>::useSecondOrder) {
-      T d2f_dA2  = meanB * -1 * pow(B2A2, -2) * 2 * meanA;
-      T d2f_dB2  = -meanA * -1 * pow(B2A2, -2) * 2 * meanB;
-      T d2f_dAdB = pow(B2A2, -1) + meanB * -1 * pow(B2A2, -2) * 2 * meanB;
+      T d2f_dA2  = meanB * -1 * std::pow(B2A2, -2) * 2 * meanA;
+      T d2f_dB2  = -meanA * -1 * std::pow(B2A2, -2) * 2 * meanB;
+      T d2f_dAdB =
+	std::pow(B2A2, -1) + meanB * -1 * std::pow(B2A2, -2) * 2 * meanB;
 
       result.updateSecondOrder(varA, d2f_dA2,
 			       d2f_dAdB,
@@ -1289,6 +1293,8 @@ inline Uncertain<T> operator/(const T & lhs, const Uncertain<T> & rhs)
   uncertainLHS /= rhs;
 
   return uncertainLHS;
+}
+
 }
 
 // ================================================================

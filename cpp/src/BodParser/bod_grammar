@@ -1,7 +1,7 @@
 %scanner                BodScanner.h
 %scanner-token-function d_scanner.lex()
 
-%token INT FLOAT SPHERE CUBE CUBOID TRIANGLE ATOM VOXELS ST RLAUNCH HUNITS UNITS TEMP MASS VISCOSITY BF STRING
+%token INT FLOAT SPHERE CUBE CUBOID ATOM VOXELS ST RLAUNCH HUNITS UNITS TEMP MASS VISCOSITY BF STRING
 %polymorphic FLOAT_TYPE: double; STRING_TYPE: std::string;
 %type <FLOAT_TYPE> real
 %type <STRING_TYPE> string
@@ -21,8 +21,6 @@ line:
   cubeDef
 |
   cuboidDef
-|
-  triangleDef
 |
   atomDef
 |
@@ -52,14 +50,6 @@ cuboidDef:
   CUBOID real real real real real real
   {
     addCuboid($2, $3, $4, $5, $6, $7);
-  }
-;
-
-triangleDef:
-  //       X1   Y1   Z1   X2   Y2   Z2   X3   Y3   Z3
-  TRIANGLE real real real real real real real real real
-  {
-    addTriangle($2, $3, $4, $5, $6, $7, $8, $9, $10);
   }
 ;
 

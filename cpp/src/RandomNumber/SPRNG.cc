@@ -43,6 +43,8 @@
 
 // ================================================================
 
+using namespace zeno;
+
 /// Constructs a random number generator with the given stream number (out of
 /// the given total number of streams) and the given seed.
 ///

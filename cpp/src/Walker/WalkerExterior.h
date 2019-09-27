@@ -40,9 +40,12 @@
 #define WALKER_EXTERIOR_H
 
 #include <vector>
+#include <cmath>
 
 #include "../Geometry/Sphere.h"
 #include "../Geometry/Vector3.h"
+
+namespace zeno {
 
 /// Performs random walks starting on a bounding sphere and determines whether 
 /// they hit an object, allowing for a given relative error in distance.
@@ -140,7 +143,7 @@ WalkerExterior<T,
     nearestSurfacePointFinder->findNearestPoint(position,
 						&minDistanceSqr);
 
-    T minDistance = sqrt(minDistanceSqr);
+    T minDistance = std::sqrt(minDistanceSqr);
 
     if (minDistance < shellThickness) {
       //walker is absorbed
@@ -164,7 +167,7 @@ WalkerExterior<T,
     if (centerDistSqr > boundingSphere->getRadiusSqr()) {
       //walker left bounding sphere
 
-      T alpha = boundingSphere->getRadius() / sqrt(centerDistSqr);
+      T alpha = boundingSphere->getRadius() / std::sqrt(centerDistSqr);
 
       if (randomNumberGenerator->getRandInRange(0, 1) > (1 - alpha)) {
 	//walker is replaced
@@ -182,6 +185,8 @@ WalkerExterior<T,
       }
     }
   }
+}
+
 }
 
 #endif

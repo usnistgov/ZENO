@@ -47,6 +47,8 @@
 
 // ================================================================
 
+namespace zeno {
+  
 /// Spatial data structure for nearest-object queries based on an
 /// Axis Aligned Bounding Box (AABB) tree.  The data structure can store any
 /// objects which themselves can be enclosed in an AABB and which can compute
@@ -427,6 +429,8 @@ AABBTree<ObjectT>::printDataStructureStats() const {
 template <class ObjectT>
 void
 AABBTree<ObjectT>::printSearchStats() const {
+
+}
 
 }
 

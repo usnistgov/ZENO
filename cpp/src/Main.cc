@@ -50,180 +50,49 @@
 #include <cmath>
 #include <ctime>
 
-#include "Parameters.h"
+#include "cmdline.h"
+
+#include "ParametersWalkOnSpheres.h"
+#include "ParametersInteriorSampling.h"
+#include "ParametersResults.h"
+#include "ParametersLocal.h"
+
 #include "Units.h"
 #include "Uncertain.h"
 
-#include "BoundingSphereGenerator.h"
+#include "BodParser/BodParser.h"
 
-#include "Parser.h"
+#include "Results.h"
 
-#include "ResultsZeno.h"
-#include "ResultsInterior.h"
-#include "ResultsCompiler.h"
-
-#include "Geometry/Sphere.h"
 #include "Geometry/Vector3.h"
 #include "Geometry/MixedModel.h"
 
-#include "Walker/WalkerExterior.h"
-#include "Walker/SamplerInterior.h"
-
 #include "Timer.h"
 
-// ================================================================
+#include "Zeno.h"
 
-using Model = MixedModel<double>;
+using namespace zeno;
 
-using BoundingSphere = Sphere<double>;
-
-#if defined USE_RAND_RNG
-#include "RandomNumber/Rand.h"
-using RandomNumberGenerator = Rand;
-#elif defined USE_SPRNG_RNG
-#include "RandomNumber/SPRNG.h"
-using RandomNumberGenerator = SPRNG;
-#elif defined USE_LEAP_FROG_RNG
-#include "RandomNumber/LeapFrog.h"
-using RandomNumberGenerator = LeapFrog;
-#else
-#error "No RandomNumber class selected"
-#endif
-
-#include "SpherePoint/RandomSpherePointMarsaglia.h"
-#include "SpherePoint/RandomSpherePointPolar.h"
-using RandomSpherePointGenerator = 
-  RandomSpherePointMarsaglia<double, 
-			     RandomNumberGenerator>;
-
-#include "SpherePoint/BiasedSpherePointRejection.h"
-#include "SpherePoint/BiasedSpherePointDirect.h"
-using BiasedSpherePointGenerator = 
-  BiasedSpherePointDirect<double, 
-			  RandomNumberGenerator, 
-			  RandomSpherePointGenerator>;
-
-#include "SpherePoint/RandomBallPointRejection.h"
-using RandomBallPointGenerator =
-  RandomBallPointRejection<double,
-			   RandomNumberGenerator>;
-
-// ================================================================
-
-int
-getInput(int argc, char **argv,
-	 Parameters * parameters,
-	 long long * numWalksInProcess,
-	 long long * numSamplesInProcess,
-	 Model * model,
-	 double * initializeTime,
-	 double * readTime,
-	 double * broadcastTime,
-	 std::ofstream * csvOutputFile);
-
-int
-preprocess(Parameters const & parameters,
-	   BoundingSphere * boundingSphere,
-	   Model * model,
-	   double * preprocessTime,
-	   std::ofstream * csvOutputFile);
+void 
+parseCommandLine(int argc, char **argv,
+		 ParametersWalkOnSpheres * parametersWalkOnSpheres,
+		 ParametersInteriorSampling * parametersInteriorSampling,
+		 ParametersResults * parametersResults,
+		 ParametersLocal * parametersLocal);
 
 void
-setupRNGs(Parameters const & parameters,
-	  std::vector<RandomNumberGenerator> * threadRNGs);
-
-int
-getWalkOnSpheresResults(long long numWalksInProcess,			
-			Parameters const & parameters,
-			BoundingSphere const & boundingSphere,
-			Model const & model,
-			Timer const & totalTimer,
-			std::vector<RandomNumberGenerator> * threadRNGs,
-			ResultsZeno * * resultsZeno,
-			double * walkTime,
-			double * reduceTime,
-			std::ofstream * csvOutputFile);
-
-int
-getInteriorResults(long long numSamplesInProcess,			
-		   Parameters const & parameters,
-		   BoundingSphere const & boundingSphere,
-		   Model const & model,
-		   Timer const & totalTimer,
-		   std::vector<RandomNumberGenerator> * threadRNGs,
-		   ResultsInterior * * resultsInterior,
-		   double * sampleTime,
-		   double * volumeReduceTime,
-		   std::ofstream * csvOutputFile);
-
-long long 
-computeNumInProcess(int mpiSize, int mpiRank,
-		    long long totalNumSamples);
+parseBodFile(ParametersLocal const & parametersLocal,
+	     ParametersWalkOnSpheres * parametersWalkOnSpheres,
+	     ParametersInteriorSampling * parametersInteriorSampling,
+	     ParametersResults * parametersResults,
+	     MixedModel<double> * model);
 
 void
-parseBodFile(Parameters * parameters,
-	     Model * model);
-
-void
-getBodData(Parameters * parameters,
-	   Model * model,
-	   double * readTime,
-	   double * broadcastTime);
-
-void
-computeDefaultParameters(Parameters * parameters,
-			 BoundingSphere * boundingSphere);
-
-long long 
-estimateTotalNum(double requestedError,
-		 long long numSoFar,
-		 Uncertain<double> const & currentValue);
-
-void
-doWalkOnSpheres(Parameters const & parameters,
-		long long numWalksInProcess,
-		BoundingSphere const & boundingSphere, 
-		Model const & nearestSurfacePointFinder,
-		Timer const & totalTimer,
-		std::vector<RandomNumberGenerator> * threadRNGs,
-		ResultsZeno * resultsZeno,
-		double * walkTime);
-
-void
-doWalkOnSpheresThread(Parameters const * parameters,
-		      BoundingSphere const * boundingSphere, 
-		      Model const * nearestSurfacePointFinder,
-		      int threadNum,
-		      long long numWalks,
-		      Timer const * totalTimer,
-		      RandomNumberGenerator * randomNumberGenerator,
-		      ResultsZeno * resultsZeno);
-
-void
-doInteriorSampling(Parameters const & parameters,
-		   long long numSamplesInProcess,
-		   BoundingSphere const & boundingSphere, 
-		   Model const & insideOutsideTester,
-		   Timer const & totalTimer,
-		   std::vector<RandomNumberGenerator> * threadRNGs,
-		   ResultsInterior * resultsInterior,
-		   double * sampleTime);
-
-void
-doInteriorSamplingThread(Parameters const * parameters,
-			 BoundingSphere const * boundingSphere, 
-			 Model const * insideOutsideTester,
-			 int threadNum,
-			 long long numSamples,
-			 Timer const * totalTimer,
-			 RandomNumberGenerator * randomNumberGenerators,
-			 ResultsInterior * resultsInterior);
-
-void
-printOutput(BoundingSphere const & boundingSphere,
-	    ResultsInterior const * resultsInterior,
-	    ResultsZeno const * resultsZeno,
-	    Parameters const & parameters, 
+printOutput(Results const & results,
+	    ParametersWalkOnSpheres const & parametersWalkOnSpheres,
+	    ParametersInteriorSampling const & parametersInteriorSampling,
+	    ParametersResults const & parametersResults,
+	    ParametersLocal const & parametersLocal,
 	    double initializeTime,
 	    double readTime,
 	    double broadcastTime,
@@ -234,18 +103,48 @@ printOutput(BoundingSphere const & boundingSphere,
 	    double volumeReduceTime,
 	    std::ofstream * csvOutputFile);
 
+void
+printParameters(ParametersWalkOnSpheres const & parametersWalkOnSpheres,
+	        ParametersInteriorSampling const & parametersInteriorSampling,
+	        ParametersResults const & parametersResults,
+		ParametersLocal const & parametersLocal,
+		std::ofstream * csvOutputFile);
+
+void
+printResults(Results const & results,
+	     std::ofstream * csvOutputFile);
+
 template <typename T>
 void
 printExactScalar(std::string const & prettyName,
-	         std::string const & csvName,
-	         std::string const & units,
-	         T property,
-	         std::ofstream * csvOutputFile);
+		 std::string const & csvName,
+		 std::string const & units,
+		 T property,
+		 std::ofstream * csvOutputFile);
+
+template <typename T>
+void
+printExactVector3(std::string const & prettyName,
+		  std::string const & csvName,
+		  std::string const & units,
+		  Vector3<T> const & property,
+		  std::ofstream * csvOutputFile);
 
 void
-savePointFiles(ResultsInterior * resultsInterior,
-	       ResultsZeno * resultsZeno,
-	       Parameters const & parameters);
+printScalar(Result<Uncertain<double> > const & result,
+	    std::ofstream * csvOutputFile);
+
+void
+printVector3(Result<Vector3<Uncertain<double> > > const & result,
+	     std::ofstream * csvOutputFile);
+
+void
+printMatrix3x3(Result<Matrix3x3<Uncertain<double> > > const & result,
+	       std::ofstream * csvOutputFile);
+
+void
+savePointFiles(Zeno * zeno,
+	       ParametersLocal const & parametersLocal);
 
 void
 printTime(std::string const & label);
@@ -259,17 +158,13 @@ writePoints(std::string const & fileName,
 	    std::vector<Vector3<double> > const * points,
 	    std::vector<Vector3<char> > const * charges);
 
+template <typename T>
+int
+getRandomNumberFromOS(T * randomNumber);
+
 // ================================================================
 
 int main(int argc, char **argv) {
-
-  Timer totalTimer;
-
-  totalTimer.start();
-
-  Timer initializeTimer;
-
-  initializeTimer.start();
 
   int mpiSize = 1, mpiRank = 0;
 
@@ -280,117 +175,150 @@ int main(int argc, char **argv) {
   MPI_Comm_rank(MPI_COMM_WORLD, &mpiRank);
 #endif
 
+  ParametersWalkOnSpheres parametersWalkOnSpheres;
+  ParametersInteriorSampling parametersInteriorSampling;
+  ParametersResults parametersResults;
+  ParametersLocal parametersLocal;
+
+  parametersLocal.setMpiSize(mpiSize);
+  parametersLocal.setMpiRank(mpiRank);
+
+  parseCommandLine(argc, argv,
+		   &parametersWalkOnSpheres,
+		   &parametersInteriorSampling,
+		   &parametersResults,
+		   &parametersLocal);
+
   if (mpiRank == 0) {
     printTime("Start time: ");
   }
 
-  Parameters parameters;
-
-  parameters.setMpiSize(mpiSize);
-  parameters.setMpiRank(mpiRank);
-
-  long long numWalksInProcess   = 0;
-  long long numSamplesInProcess = 0;
-
-  double initializeTime = 0;
-  double readTime       = 0;
-  double broadcastTime  = 0;
-
-  Model model;
-
   std::ofstream csvOutputFile;
 
-  initializeTimer.stop();
+  if (parametersLocal.getCsvOutputFileNameWasSet() &&
+      parametersLocal.getMpiRank() == 0) {
+    
+    csvOutputFile.open(parametersLocal.getCsvOutputFileName(),
+		       std::ios::out | std::ios::trunc);
 
-  int getInputSuccess = getInput(argc, argv,
-				 &parameters,
-				 &numWalksInProcess,
-				 &numSamplesInProcess,
-				 &model,
-				 &initializeTime,
-				 &readTime,
-				 &broadcastTime,
-				 &csvOutputFile);
-
-  if (getInputSuccess != 0) {
-    return getInputSuccess;
+    if (!csvOutputFile.is_open()) {
+      std::cerr << "*** Warning ***" << std::endl
+		<< "Could not open CSV output file "
+		<< parametersLocal.getCsvOutputFileName() << std::endl
+		<< std::endl;
+    }
   }
 
-  initializeTimer.start();
-
-  BoundingSphere boundingSphere;
-
-  double preprocessTime = 0;
-
-  initializeTimer.stop();
-
-  int preprocessSuccess = preprocess(parameters,
-				     &boundingSphere,
-				     &model,
-				     &preprocessTime,
-				     &csvOutputFile);
-
-  if (preprocessSuccess != 0) {
-    return preprocessSuccess;
+  if (parametersLocal.getMpiRank() == 0) {
+    printExactScalar("Version",
+		     "version",
+		     "",
+		     CMDLINE_PARSER_VERSION,
+		     &csvOutputFile);
   }
 
-  initializeTimer.start();
+  if (parametersLocal.getPrintBenchmarks() && 
+      parametersLocal.getMpiRank() == 0) {
 
-  computeDefaultParameters(&parameters, &boundingSphere);
-
-  std::vector<RandomNumberGenerator> threadRNGs;
-
-  setupRNGs(parameters,
-	    &threadRNGs);
-
-  ResultsZeno * resultsZeno = NULL;
-
-  double walkTime   = 0;
-  double reduceTime = 0;
-
-  initializeTimer.stop();
-
-  int getWalkOnSpheresResultsSuccess = 
-    getWalkOnSpheresResults(numWalksInProcess,			
-			    parameters,
-			    boundingSphere,
-			    model,
-			    totalTimer,
-			    &threadRNGs,
-			    &resultsZeno,
-			    &walkTime,
-			    &reduceTime,
-			    &csvOutputFile);
-
-  if (getWalkOnSpheresResultsSuccess != 0) {
-    return getWalkOnSpheresResultsSuccess;
+    printRAM("initialization",
+	     &csvOutputFile);
   }
 
-  ResultsInterior * resultsInterior = NULL;
+  MixedModel<double> model;
 
-  double sampleTime       = 0;
-  double volumeReduceTime = 0;
+  Timer readTimer;
 
-  int getInteriorResultsSuccess = 
-    getInteriorResults(numSamplesInProcess,			
-		       parameters,
-		       boundingSphere,
-		       model,
-		       totalTimer,
-		       &threadRNGs,
-		       &resultsInterior,
-		       &sampleTime,
-		       &volumeReduceTime,
-		       &csvOutputFile);
-
-  if (getInteriorResultsSuccess != 0) {
-    return getInteriorResultsSuccess;
+  if (parametersLocal.getMpiRank() == 0) {
+    readTimer.start();
+    parseBodFile(parametersLocal,
+		 &parametersWalkOnSpheres,
+		 &parametersInteriorSampling,
+		 &parametersResults,
+		 &model);
+    readTimer.stop();
   }
 
-  initializeTime += initializeTimer.getTime();
+  double readTime = readTimer.getTime();
+  
+  Timer broadcastTimer;
 
-  if (parameters.getMaxRunTimeWasSet() &&
-      (totalTimer.getTime() > parameters.getMaxRunTime())) {
+  broadcastTimer.start();
+
+  parametersWalkOnSpheres.mpiBroadcast(0);
+  parametersInteriorSampling.mpiBroadcast(0);
+  parametersResults.mpiBroadcast(0);
+  model.mpiBroadcast(0);
+
+  broadcastTimer.stop();
+
+  double broadcastTime = broadcastTimer.getTime();
+
+  if (parametersLocal.getPrintBenchmarks() && 
+      parametersLocal.getMpiRank() == 0) {
+
+    printRAM("loading input data",
+	     &csvOutputFile);
+  }
+
+  if (parametersResults.getComputeForm() &&
+      !(parametersInteriorSampling.getTotalNumSamplesWasSet() |
+	parametersInteriorSampling.getMaxErrorVolumeWasSet())) {
+
+    std::cerr << "Error: Must specify number of interior samples or volume "
+	      << "error if computing form factors" << std::endl;
+
+    return 1;
+  }
+
+  Zeno zeno(&model);
+
+  if (parametersLocal.getPrintBenchmarks() && 
+      parametersLocal.getMpiRank() == 0) {
+
+    printRAM("building spatial data structure",
+	     &csvOutputFile);
+  }
+
+  Zeno::Status doWalkOnSpheresStatus =
+    zeno.doWalkOnSpheres(&parametersWalkOnSpheres,
+			 &parametersResults);
+
+  if (doWalkOnSpheresStatus != Zeno::Status::Success) {
+    if (doWalkOnSpheresStatus == Zeno::Status::EmptyModel) {
+      std::cerr << "Error: no geometry loaded" << std::endl;
+    }
+    
+    return 1;
+  }
+
+  if (parametersLocal.getPrintBenchmarks() && 
+      parametersLocal.getMpiRank() == 0) {
+
+    printRAM("walk on spheres",
+	     &csvOutputFile);
+  }
+
+  Zeno::Status doInteriorSamplingStatus =
+    zeno.doInteriorSampling(&parametersInteriorSampling,
+			    &parametersResults);
+
+  if (doInteriorSamplingStatus != Zeno::Status::Success) {
+    if (doInteriorSamplingStatus == Zeno::Status::EmptyModel) {
+      std::cerr << "Error: no geometry loaded" << std::endl;
+    }
+    
+    return 1;
+  }
+
+  if (parametersLocal.getPrintBenchmarks() && 
+      parametersLocal.getMpiRank() == 0) {
+
+    printRAM("interior samples",
+	     &csvOutputFile);
+  }
+  
+  if (parametersWalkOnSpheres.getMaxRunTimeWasSet() &&
+      (zeno.getTotalTime() > parametersWalkOnSpheres.getMaxRunTime())) {
 
     std::cerr << std::endl
               << "*** Warning ***" << std::endl
@@ -398,36 +326,39 @@ int main(int argc, char **argv) {
 	      << "may have been performed." << std::endl;
   }
 
-  printOutput(boundingSphere,
-	      resultsInterior,
-	      resultsZeno,
-	      parameters,
-	      initializeTime,
+  Results results;
+
+  zeno.getResults(&parametersResults,
+		  &results);
+  
+  printOutput(results,
+	      parametersWalkOnSpheres,
+	      parametersInteriorSampling,
+	      parametersResults,
+	      parametersLocal,
+	      zeno.getInitializeTime(),
 	      readTime,
 	      broadcastTime,
-	      preprocessTime,
-	      walkTime,
-	      reduceTime,
-	      sampleTime,
-	      volumeReduceTime,
+	      zeno.getPreprocessTime(),
+	      zeno.getWalkOnSpheresTime(),
+	      zeno.getWalkOnSpheresReductionTime(),
+	      zeno.getInteriorSamplingTime(),
+	      zeno.getInteriorSamplingReductionTime(),
 	      &csvOutputFile);
 
-  savePointFiles(resultsInterior,
-		 resultsZeno,
-		 parameters);
-
-  delete resultsZeno;
-  delete resultsInterior;
+  savePointFiles(&zeno,
+		 parametersLocal);
 
 #ifdef USE_MPI
   MPI_Finalize();
 #endif
 
-  totalTimer.stop();
-
   if (mpiRank == 0) {
-    printExactScalar("Total Time", "total_time", "s",
-		     totalTimer.getTime(), &csvOutputFile);
+    printExactScalar("Total Time",
+		     "total_time",
+		     "s",
+		     zeno.getTotalTime(),
+		     &csvOutputFile);
     
     std::cout << std::endl;
 
@@ -439,412 +370,172 @@ int main(int argc, char **argv) {
   return 0;
 }
 
-/// Get all input to the program, including both parameters and data, from the
-/// command line and input files.
+/// Parses the command line and stores the values of the parameters it
+/// contains.  If a config file is specified on the command line, this will be
+/// parsed as well.
 ///
-int
-getInput(int argc, char **argv,
-	 Parameters * parameters,
-	 long long * numWalksInProcess,
-	 long long * numSamplesInProcess,
-	 Model * model,
-	 double * initializeTime,
-	 double * readTime,
-	 double * broadcastTime,
-	 std::ofstream * csvOutputFile) {
+/// Also computes default values for numThreads and seed if they were not set.
+///
+void 
+parseCommandLine(int argc, char **argv,
+		 ParametersWalkOnSpheres * parametersWalkOnSpheres,
+		 ParametersInteriorSampling * parametersInteriorSampling,
+		 ParametersResults * parametersResults,
+		 ParametersLocal * parametersLocal) {
+  
+  gengetopt_args_info args_info;
+  cmdline_parser_params *parser_params;
 
-  Timer initializeTimer;
-  initializeTimer.start();
+  parser_params = cmdline_parser_params_create();
 
-  parameters->parseCommandLine(argc, argv);
+  //command line parse
+  
+  parser_params->initialize      = 1;
+  parser_params->override        = 0;
+  parser_params->check_required  = 0;
+  parser_params->check_ambiguity = 0;
 
-  *numWalksInProcess = 
-    computeNumInProcess(parameters->getMpiSize(), 
-			parameters->getMpiRank(), 
-			parameters->getTotalNumWalks());
+  int cmdlineParseResult =
+    cmdline_parser_ext(argc, argv, &args_info, parser_params);
+  
+  if (cmdlineParseResult != 0) {
+    exit(EXIT_FAILURE);
+  }
 
-  *numSamplesInProcess = 
-    computeNumInProcess(parameters->getMpiSize(), 
-			parameters->getMpiRank(), 
-			parameters->getTotalNumSamples());
+  //config file parse
 
-  if (parameters->getCsvOutputFileNameWasSet() &&
-      parameters->getMpiRank() == 0) {
-    
-    csvOutputFile->open(parameters->getCsvOutputFileName(),
-		        std::ios::out | std::ios::trunc);
+  if (args_info.config_file_given) {
+    parser_params->initialize      = 0;
+    parser_params->override        = 0;
+    parser_params->check_required  = 0;
+    parser_params->check_ambiguity = 0;
+  
+    int configParseResult =
+      cmdline_parser_config_file(args_info.config_file_arg,
+				 &args_info, parser_params);
 
-    if (!csvOutputFile->is_open()) {
-      std::cerr << "*** Warning ***" << std::endl
-		<< "Could not open CSV output file "
-		<< parameters->getCsvOutputFileName() << std::endl
-		<< std::endl;
+    if (configParseResult != 0) {
+      exit(EXIT_FAILURE);
     }
   }
 
-  if (parameters->getPrintBenchmarks() && 
-      parameters->getMpiRank() == 0) {
+  //check if required options are present
 
-    printRAM("initialization",
-	     csvOutputFile);
+  int cmdlineCheckResult =
+    cmdline_parser_required(&args_info, argv[0]);
+
+  if (cmdlineCheckResult != 0) {
+    exit(EXIT_FAILURE);
   }
 
-  initializeTimer.stop();
+  //copy arg values
+  
+  parametersLocal->setInputFileName(args_info.input_file_arg);
 
-  getBodData(parameters,
-	     model,
-	     readTime,
-	     broadcastTime);
-
-  initializeTimer.start();
-
-  if (parameters->getPrintBenchmarks() && 
-      parameters->getMpiRank() == 0) {
-
-    printRAM("loading input data",
-	     csvOutputFile);
-  }
-
-  initializeTimer.stop();
-  *initializeTime += initializeTimer.getTime();
-
-  return 0;
-}
-
-/// Build the data structure used for the Walk-on-Spheres and Interior Sampling
-/// algorithms from geometric data.
-///
-int
-preprocess(Parameters const & parameters,
-	   BoundingSphere * boundingSphere,
-	   Model * model,
-	   double * preprocessTime,
-	   std::ofstream * csvOutputFile) {
-
-  Timer preprocessTimer;
-  preprocessTimer.start();
-
-  model->preprocess();
-
-  if (model->isEmpty()) {
-    std::cerr << "Error: No geometry loaded" << std::endl;
-
-    return 1;
+  if (args_info.csv_output_file_given) {
+    parametersLocal->setCsvOutputFileName(args_info.csv_output_file_arg);
   }
   
-  *boundingSphere = BoundingSphereGenerator<double>::generate(*model);
+  parametersWalkOnSpheres->setMinTotalNumWalks(args_info.min_num_walks_arg);
 
-  if (parameters.getPrintBenchmarks() && 
-      parameters.getMpiRank() == 0) {
+  parametersInteriorSampling->setMinTotalNumSamples
+    (args_info.min_num_interior_samples_arg);
 
-    printRAM("building spatial data structure",
-	     csvOutputFile);
+  if (args_info.num_walks_given) {
+    parametersWalkOnSpheres->setTotalNumWalks(args_info.num_walks_arg);
   }
 
-  preprocessTimer.stop();
-  *preprocessTime = preprocessTimer.getTime();
-
-  return 0;
-}
-
-/// Allocate a random number generator for each thread, ensuring that each has
-/// a unique stream ID across MPI processes.
-///
-void
-setupRNGs(Parameters const & parameters,
-	  std::vector<RandomNumberGenerator> * threadRNGs) {
-
-  int numStreams = 
-    parameters.getNumThreads() * 
-    parameters.getMpiSize();
-
-  threadRNGs->reserve(parameters.getNumThreads());
-
-  for (int threadNum = 0; threadNum < parameters.getNumThreads(); threadNum++) {
-    int streamNum = 
-      parameters.getMpiRank() * 
-      parameters.getNumThreads() + 
-      threadNum;
-
-    threadRNGs->emplace_back(streamNum, numStreams, parameters.getSeed());
+  if (args_info.num_interior_samples_given) {
+    parametersInteriorSampling->setTotalNumSamples
+      (args_info.num_interior_samples_arg);
   }
-}
 
-/// Perform Walk-on-Spheres walks until the stopping condition is achieved
-/// (either number of walks or error) and perform a parallel reduction on
-/// the results.
-///
-int
-getWalkOnSpheresResults(long long numWalksInProcess,			
-			Parameters const & parameters,
-			BoundingSphere const & boundingSphere,
-			Model const & model,
-			Timer const & totalTimer,
-			std::vector<RandomNumberGenerator> * threadRNGs,
-			ResultsZeno * * resultsZeno,
-			double * walkTime,
-			double * reduceTime,
-			std::ofstream * csvOutputFile) {
-
-  Timer reduceTimer;
-
-  bool saveHitPoints = !parameters.getSurfacePointsFileName().empty();
-
-  if (parameters.getTotalNumWalksWasSet() &&
-      !parameters.getMaxErrorCapacitanceWasSet() &&
-      !parameters.getMaxErrorPolarizabilityWasSet()) {
-
-    *resultsZeno = new ResultsZeno(boundingSphere,
-				   parameters.getNumThreads(),
-				   saveHitPoints);
-
-    doWalkOnSpheres(parameters,
-		    numWalksInProcess,
-		    boundingSphere, 
-		    model,
-		    totalTimer,
-		    threadRNGs,
-		    *resultsZeno,
-		    walkTime);
-
-    reduceTimer.start();
-    (*resultsZeno)->reduce();
-    reduceTimer.stop();
+  if (args_info.max_rsd_capacitance_given) {
+    parametersWalkOnSpheres->setMaxErrorCapacitance
+      (args_info.max_rsd_capacitance_arg);
   }
-  else if (parameters.getMaxErrorCapacitanceWasSet() ||
-	   parameters.getMaxErrorPolarizabilityWasSet()) {
 
-    *resultsZeno = new ResultsZeno(boundingSphere,
-				   parameters.getNumThreads(),
-				   saveHitPoints);
+  if (args_info.max_rsd_polarizability_given) {
+    parametersWalkOnSpheres->setMaxErrorPolarizability
+      (args_info.max_rsd_polarizability_arg);
+  }
 
-    ResultsCompiler resultsCompiler(parameters);
+  if (args_info.max_rsd_volume_given) {
+    parametersInteriorSampling->setMaxErrorVolume(args_info.max_rsd_volume_arg);
+  }
 
-    long long estimatedNumWalksRemaining = parameters.getMinTotalNumWalks();
+  if (args_info.max_run_time_given) {
+    parametersWalkOnSpheres->setMaxRunTime(args_info.max_run_time_arg);
+    
+    parametersInteriorSampling->setMaxRunTime(args_info.max_run_time_arg);
+  }
 
-    while (estimatedNumWalksRemaining > 0) {
+  parametersResults->setComputeForm(false);
 
-      long long estimatedNumWalksRemainingInProcess = 
-	computeNumInProcess(parameters.getMpiSize(), 
-			    parameters.getMpiRank(), 
-			    estimatedNumWalksRemaining);
+  if (args_info.num_threads_given) {
+    parametersWalkOnSpheres->setNumThreads(args_info.num_threads_arg);
 
-      doWalkOnSpheres(parameters,
-		      estimatedNumWalksRemainingInProcess,
-		      boundingSphere, 
-		      model,
-		      totalTimer,
-		      threadRNGs,
-		      *resultsZeno,
-		      walkTime);
-
-      reduceTimer.start();
-      (*resultsZeno)->reduce();
-      reduceTimer.stop();
-
-      resultsCompiler.compile(*resultsZeno,
-			      NULL,
-			      boundingSphere);
-
-      long long estimatedTotalNumWalks = 0;
-
-      long long capacitanceEstimatedTotalNumWalks = 
-  	estimateTotalNum(parameters.getMaxErrorCapacitance(),
-  			 (*resultsZeno)->getNumWalks(),
-  			 resultsCompiler.getCapacitance());
-
-      estimatedTotalNumWalks = std::max(estimatedTotalNumWalks,
-  					capacitanceEstimatedTotalNumWalks);
-
-      long long polarizabilityEstimatedTotalNumWalks = 
-  	estimateTotalNum(parameters.getMaxErrorPolarizability(),
-  			 (*resultsZeno)->getNumWalks(),
-  			 resultsCompiler.getMeanPolarizability());
-
-      estimatedTotalNumWalks = std::max(estimatedTotalNumWalks,
-  					polarizabilityEstimatedTotalNumWalks);
-
-      if (parameters.getTotalNumWalksWasSet()) {
-	estimatedTotalNumWalks = std::min(estimatedTotalNumWalks,
-					  parameters.getTotalNumWalks());
-      }
-
-      estimatedNumWalksRemaining = 
-	estimatedTotalNumWalks - (*resultsZeno)->getNumWalks();
-
-      // To avoid repeatedly undershooting, don't take a smaller step than
-      // MinTotalNumWalks unless the iterations are about to end
-      if (estimatedNumWalksRemaining > 0 &&
-	  !(parameters.getTotalNumWalksWasSet() &&
-	    estimatedTotalNumWalks == parameters.getTotalNumWalks())) {
-	
-	estimatedNumWalksRemaining = 
-	  std::max(estimatedNumWalksRemaining,
-		   parameters.getMinTotalNumWalks());
-      }
-
-      if (parameters.getMaxRunTimeWasSet() &&
-	  (totalTimer.getTime() > parameters.getMaxRunTime())) {
-
-        break;
-      }
+    parametersInteriorSampling->setNumThreads(args_info.num_threads_arg);
+  }
+  else {
+    int numThreads = std::thread::hardware_concurrency();
+    
+    if (numThreads == 0) {
+      numThreads = 1;
     }
+    
+    parametersWalkOnSpheres->setNumThreads(numThreads);
+
+    parametersInteriorSampling->setNumThreads(numThreads);
   }
 
-  if (parameters.getPrintBenchmarks() && 
-      parameters.getMpiRank() == 0) {
+  if (args_info.seed_given) {
+    parametersWalkOnSpheres->setSeed(args_info.seed_arg);
 
-    printRAM("walk on spheres",
-	     csvOutputFile);
+    parametersInteriorSampling->setSeed(args_info.seed_arg);
   }
-
-  *reduceTime = reduceTimer.getTime();
-
-  return 0;
-}
-
-/// Perform Interior samples until the stopping condition is achieved
-/// (either number of walks or error) and perform a parallel reduction on
-/// the results.
-///
-int
-getInteriorResults(long long numSamplesInProcess,			
-		   Parameters const & parameters,
-		   BoundingSphere const & boundingSphere,
-		   Model const & model,
-		   Timer const & totalTimer,
-		   std::vector<RandomNumberGenerator> * threadRNGs,
-		   ResultsInterior * * resultsInterior,
-		   double * sampleTime,
-		   double * volumeReduceTime,
-		   std::ofstream * csvOutputFile) {
-
-  bool saveInteriorPoints = 
-    !parameters.getInteriorPointsFileName().empty();
-
-  Timer volumeReduceTimer;
-
-  if (parameters.getTotalNumSamplesWasSet() &&
-      !parameters.getMaxErrorVolumeWasSet()) {
-
-    *resultsInterior = new ResultsInterior(parameters.getNumThreads(),
-					   saveInteriorPoints);
-
-    doInteriorSampling(parameters,
-		       numSamplesInProcess,
-		       boundingSphere, 
-		       model,
-		       totalTimer,
-		       threadRNGs,
-		       *resultsInterior,
-		       sampleTime);
-
-    volumeReduceTimer.start();
-    (*resultsInterior)->reduce();
-    volumeReduceTimer.stop();
-  }
-  else if (parameters.getMaxErrorVolumeWasSet()) {
-
-    *resultsInterior = new ResultsInterior(parameters.getNumThreads(),
-					   saveInteriorPoints);
-
-    ResultsCompiler resultsCompiler(parameters);
-
-    long long estimatedNumSamplesRemaining = parameters.getMinTotalNumSamples();
-
-    while (estimatedNumSamplesRemaining > 0) {
-
-      long long estimatedNumSamplesRemainingInProcess = 
-	computeNumInProcess(parameters.getMpiSize(), 
-			    parameters.getMpiRank(), 
-			    estimatedNumSamplesRemaining);
-
-      doInteriorSampling(parameters,
-			 estimatedNumSamplesRemainingInProcess,
-			 boundingSphere, 
-			 model,
-			 totalTimer,
-			 threadRNGs,
-			 *resultsInterior,
-			 sampleTime);
-
-      volumeReduceTimer.start();
-      (*resultsInterior)->reduce();
-      volumeReduceTimer.stop();
-
-      resultsCompiler.compile(NULL,
-			      *resultsInterior,
-			      boundingSphere);
-
-      long long estimatedTotalNumSamples = 
-	estimateTotalNum(parameters.getMaxErrorVolume(),
-			 (*resultsInterior)->getNumSamples(),
-			 resultsCompiler.getVolume());
-
-      if (parameters.getTotalNumSamplesWasSet()) {
-	estimatedTotalNumSamples = std::min(estimatedTotalNumSamples,
-					    parameters.getTotalNumSamples());
-      }
-
-      estimatedNumSamplesRemaining = 
-	estimatedTotalNumSamples - (*resultsInterior)->getNumSamples();
-
-      // To avoid repeatedly undershooting, don't take a smaller step than
-      // MinTotalNumSamples unless the iterations are about to end 
-      if (estimatedNumSamplesRemaining > 0 &&
-	  !(parameters.getTotalNumSamplesWasSet() &&
-	    estimatedTotalNumSamples == parameters.getTotalNumSamples())) {
-	
-	estimatedNumSamplesRemaining = 
-	  std::max(estimatedNumSamplesRemaining,
-		   parameters.getMinTotalNumSamples());
-      }
-
-      if (parameters.getMaxRunTimeWasSet() &&
-	  (totalTimer.getTime() > parameters.getMaxRunTime())) {
-
-        break;
-      }
+  else {
+    int seed{};
+    
+    int status = getRandomNumberFromOS(&seed);
+      
+    if (status != 0) {
+      std::cerr << "Error randomly setting seed for random number generator"
+		<< std::endl;
     }
+
+    parametersWalkOnSpheres->setSeed(seed);
+
+    parametersInteriorSampling->setSeed(seed);
   }
 
-  if (parameters.getPrintBenchmarks() && 
-      parameters.getMpiRank() == 0) {
-
-    printRAM("interior samples",
-	     csvOutputFile);
+  if (args_info.surface_points_file_given) {
+    parametersLocal->setSurfacePointsFileName
+      (args_info.surface_points_file_arg);
   }
 
-  *volumeReduceTime = volumeReduceTimer.getTime();
-
-  return 0;
-}
-
-/// Divides a total number of samples as evenly as possible between a set of
-/// MPI processes of a certain size, and returns how many samples the MPI
-/// process of the given rank is responsible for.
-/// 
-long long 
-computeNumInProcess(int mpiSize, int mpiRank,
-		    long long totalNumSamples) {
-
-  long long numSamplesInProcess = totalNumSamples / mpiSize;
-
-  if (mpiRank < totalNumSamples % mpiSize) {
-    numSamplesInProcess ++;
+  if (args_info.interior_points_file_given) {
+    parametersLocal->setInteriorPointsFileName
+      (args_info.interior_points_file_arg);
   }
 
-  return numSamplesInProcess;
+  parametersLocal->setPrintCounts(args_info.print_counts_given);
+  parametersLocal->setPrintBenchmarks(args_info.print_benchmarks_given);
+
+  free(parser_params);
 }
 
 /// Parses the bod file given as input and extracts sphere data, voxel data,
 /// and parameters.
 ///
 void
-parseBodFile(Parameters * parameters,
-	     Model * model) {
+parseBodFile(ParametersLocal const & parametersLocal,
+	     ParametersWalkOnSpheres * parametersWalkOnSpheres,
+	     ParametersInteriorSampling * parametersInteriorSampling,
+	     ParametersResults * parametersResults,
+	     MixedModel<double> * model) {
 
-  std::string fileName = parameters->getInputFileName();
+  std::string fileName = parametersLocal.getInputFileName();
 
   std::ifstream inputFile;
 
@@ -855,323 +546,27 @@ parseBodFile(Parameters * parameters,
     exit(1);
   }
 
-  Parser parser(inputFile, parameters, model);
+  bod_parser::BodParser parser(parametersLocal,
+			       inputFile,
+			       parametersWalkOnSpheres,
+			       parametersInteriorSampling,
+			       parametersResults,
+			       model);
 
   parser.parse();
 
   inputFile.close();
 }
 
-/// Gets the data from the bod file given as input either by parsing the file
-/// or by an MPI brodcast, depending on the MPI rank of the process.
-///
-void
-getBodData(Parameters * parameters,
-	   Model * model,
-	   double * readTime,
-	   double * broadcastTime) {
-
-  Timer readTimer;
-  Timer broadcastTimer;
-
-  if (parameters->getMpiRank() == 0) {
-    readTimer.start();
-    parseBodFile(parameters, model);
-    readTimer.stop();
-
-    if (parameters->getMpiSize() > 1) {
-      broadcastTimer.start();
-      model->mpiSend();
-      parameters->mpiSend();
-      broadcastTimer.stop();
-    }
-  }
-  else {
-    broadcastTimer.start();
-    model->mpiReceive();
-    parameters->mpiReceive();
-    broadcastTimer.stop();
-  }
-
-  *readTime      = readTimer.getTime();
-  *broadcastTime = broadcastTimer.getTime();
-}
-
-/// Sets the default values for parameters that have them if the parameters
-/// have not already been set.
-///
-void
-computeDefaultParameters(Parameters * parameters,
-			 BoundingSphere * boundingSphere) {
-
-  const double defaultSkinThicknessFactor = 0.000001;
-
-  BoundingSphere originalBoundingSphere(*boundingSphere);
-
-  if (parameters->getLaunchCenterWasSet()) {
-    boundingSphere->setCenter(parameters->getLaunchCenter());
-  }
-  else {
-    parameters->setLaunchCenter(boundingSphere->getCenter());
-  }
-
-  if (parameters->getLaunchRadiusWasSet()) {
-    boundingSphere->setRadius(parameters->getLaunchRadius());
-  }
-  else {
-    parameters->setLaunchRadius(boundingSphere->getRadius());
-  }
-
-  if (!parameters->getSkinThicknessWasSet()) {
-    parameters->setSkinThickness(boundingSphere->getRadius() * 
-				 defaultSkinThicknessFactor);
-  }
-
-  if (!parameters->getLengthScaleWasSet()) {
-    parameters->setLengthScale(1, Units::Length::L);
-  }
-
-  if (!boundingSphere->contains(originalBoundingSphere)) {
-    std::cerr << std::endl
-	      << "*** Warning ***" << std::endl
-	      << "User-specified launch sphere may not contain the entire model"
-	      << std::endl;
-  }
-}
-
-/// Estimates the total number of samples that will be required to acheive the
-/// requested error, given the number of samples taken so far and the current
-/// value and error.
-///
-long long 
-estimateTotalNum(double requestedError,
-		 long long numSoFar,
-		 Uncertain<double> const & currentValue) {
-
-  double requestedVariance = 
-    pow((requestedError / 100) * currentValue.getMean(), 2);
-
-  long long estimatedTotalNum = 
-    ceil(currentValue.getVariance() * numSoFar / requestedVariance);
-
-  return estimatedTotalNum;
-}
-
-/// Launches a set of Walk-on-Spheres walks in each of a set of parallel 
-/// threads.
-///
-void
-doWalkOnSpheres(Parameters const & parameters,
-		long long numWalksInProcess,
-		BoundingSphere const & boundingSphere, 
-		Model const & nearestSurfacePointFinder,
-		Timer const & totalTimer,
-		std::vector<RandomNumberGenerator> * threadRNGs,
-		ResultsZeno * resultsZeno,
-		double * walkTime) {
-
-  Timer walkTimer;
-  walkTimer.start();
-
-  const int numThreads = parameters.getNumThreads();
-
-  std::thread * * threads = new std::thread *[numThreads];
-
-  for (int threadNum = 0; threadNum < numThreads; threadNum++) {
-
-    long long numWalksInThread = numWalksInProcess / numThreads;
-
-    if (threadNum < numWalksInProcess % numThreads) {
-      numWalksInThread ++;
-    }
-
-    threads[threadNum] = 
-      new std::thread(doWalkOnSpheresThread,
-		      &parameters,
-		      &boundingSphere, 
-		      &nearestSurfacePointFinder,
-		      threadNum,
-		      numWalksInThread,
-		      &totalTimer,
-		      &(threadRNGs->at(threadNum)),
-		      resultsZeno);
-  }
-
-  for (int threadNum = 0; threadNum < numThreads; threadNum++) {
-    threads[threadNum]->join();
-  }
-
-  for (int threadNum = 0; threadNum < numThreads; threadNum++) {
-    delete threads[threadNum];
-  }
-
-  delete [] threads;
-
-  walkTimer.stop();
-  *walkTime += walkTimer.getTime();
-}
-
-/// Launches a given number of Walk-on-Spheres walks and records the results.
-/// Runs in a single thread.
-///
-void
-doWalkOnSpheresThread(Parameters const * parameters,
-		      BoundingSphere const * boundingSphere, 
-		      Model const * nearestSurfacePointFinder,
-		      int threadNum,
-		      long long numWalks,
-		      Timer const * totalTimer,
-		      RandomNumberGenerator * randomNumberGenerator,
-		      ResultsZeno * resultsZeno) {
-
-  const double shellThickness = parameters->getSkinThickness();
-  
-  WalkerExterior<double, 
-		 RandomNumberGenerator,
-		 Model,
-		 RandomSpherePointGenerator,
-		 BiasedSpherePointGenerator>
-    walker(randomNumberGenerator, 
-	   *boundingSphere, 
-           *nearestSurfacePointFinder,
-	   shellThickness);
-
-  for (long long walkNum = 0; walkNum < numWalks; walkNum++) {
-
-    bool hitObject = false;
-    int numSteps   = 0;
-
-    Vector3<double> startPoint;
-    Vector3<double> endPoint;
-
-    walker.walk(&hitObject, &numSteps,
-		&startPoint, &endPoint);
-
-    if (hitObject) {
-      resultsZeno->recordHit(threadNum, 
-			     startPoint, endPoint,
-			     randomNumberGenerator);
-    }
-    else {
-      resultsZeno->recordMiss(threadNum);
-    }
-
-    if (parameters->getMaxRunTimeWasSet() &&
-	(totalTimer->getTime() > parameters->getMaxRunTime())) {
-
-      break;
-    }
-  }
-}
-
-/// Launches a set of Interior samples in each of a set of parallel 
-/// threads.
-///
-void
-doInteriorSampling(Parameters const & parameters,
-		   long long numSamplesInProcess,
-		   BoundingSphere const & boundingSphere, 
-		   Model const & insideOutsideTester,
-		   Timer const & totalTimer,
-		   std::vector<RandomNumberGenerator> * threadRNGs,
-		   ResultsInterior * resultsInterior,
-		   double * sampleTime) {
-
-  Timer sampleTimer;
-  sampleTimer.start();
-
-  const int numThreads = parameters.getNumThreads();
-
-  std::thread * * threads = new std::thread *[numThreads];
-
-  for (int threadNum = 0; threadNum < numThreads; threadNum++) {
-
-    long long numSamplesInThread = numSamplesInProcess / numThreads;
-
-    if (threadNum < numSamplesInProcess % numThreads) {
-      numSamplesInThread ++;
-    }
-
-    threads[threadNum] = 
-      new std::thread(doInteriorSamplingThread,
-		      &parameters,
-		      &boundingSphere, 
-		      &insideOutsideTester,
-		      threadNum,
-		      numSamplesInThread,
-		      &totalTimer,
-		      &(threadRNGs->at(threadNum)),
-		      resultsInterior);
-  }
-
-  for (int threadNum = 0; threadNum < numThreads; threadNum++) {
-    threads[threadNum]->join();
-  }
-
-  for (int threadNum = 0; threadNum < numThreads; threadNum++) {
-    delete threads[threadNum];
-  }
-
-  delete [] threads;
-
-  sampleTimer.stop();
-  *sampleTime += sampleTimer.getTime();
-}
-
-/// Performs a given number of Interior samples and records the results.
-/// Runs in a single thread.
-///
-void
-doInteriorSamplingThread(Parameters const * parameters,
-			 BoundingSphere const * boundingSphere, 
-			 Model const * insideOutsideTester,
-			 int threadNum,
-			 long long numSamples,
-			 Timer const * totalTimer,
-			 RandomNumberGenerator * randomNumberGenerator,
-			 ResultsInterior * resultsInterior) {
-
-  SamplerInterior<double, 
-		 RandomNumberGenerator,
-		 Model,
-		 RandomBallPointGenerator>
-    sampler(randomNumberGenerator, 
-	    *boundingSphere, 
-	    *insideOutsideTester);
-
-  for (long long sampleNum = 0; sampleNum < numSamples; sampleNum++) {
-
-    bool hitObject = false;
-
-    Vector3<double> hitPoint;
-
-    sampler.sample(&hitObject,
-		   &hitPoint);
-
-    if (hitObject) {
-      resultsInterior->recordHit(threadNum,
-				 hitPoint);
-    }
-    else {
-      resultsInterior->recordMiss(threadNum);
-    }
-
-    if (parameters->getMaxRunTimeWasSet() &&
-	(totalTimer->getTime() > parameters->getMaxRunTime())) {
-
-      break;
-    }
-  }
-}
-
 /// Prints parameters, results, and (optionally) detailed running time
 /// benchmarks on MPI process 0.
 ///
 void
-printOutput(BoundingSphere const & boundingSphere,
-	    ResultsInterior const * resultsInterior,
-	    ResultsZeno const * resultsZeno,
-	    Parameters const & parameters, 
+printOutput(Results const & results,
+	    ParametersWalkOnSpheres const & parametersWalkOnSpheres,
+	    ParametersInteriorSampling const & parametersInteriorSampling,
+	    ParametersResults const & parametersResults,
+	    ParametersLocal const & parametersLocal,
 	    double initializeTime,
 	    double readTime,
 	    double broadcastTime,
@@ -1182,107 +577,500 @@ printOutput(BoundingSphere const & boundingSphere,
 	    double volumeReduceTime,
 	    std::ofstream * csvOutputFile) {
   
-  if (parameters.getMpiRank() == 0) {
+  if (parametersLocal.getMpiRank() == 0) {    
     std::cout << std::endl
 	      << "Parameters" << std::endl
 	      << "----------" << std::endl
 	      << std::endl;
 
-    parameters.print(csvOutputFile);
+    printParameters(parametersWalkOnSpheres,
+		    parametersInteriorSampling,
+		    parametersResults,
+		    parametersLocal,
+		    csvOutputFile);
 
     std::cout << std::endl
 	      << "Results" << std::endl
 	      << "-------" << std::endl
 	      << std::endl;
 
-    if (resultsZeno != NULL) {
-      printExactScalar("Number of walks performed",
-		       "num_walks_performed",
-		       "1",
-		       (long long)resultsZeno->getNumWalks(),
+    printResults(results,
+		 csvOutputFile);
+
+    if (parametersLocal.getPrintCounts()) {
+      std::cout << "Counts:" << std::endl
+		<< std::endl;
+
+      if (results.resultsZenoCompiled) {
+	printScalar(results.t,
+		    csvOutputFile);
+
+	printVector3(results.u,
+		     csvOutputFile);
+
+	printMatrix3x3(results.v,
 		       csvOutputFile);
 
-      std::cout << std::endl;
-    }
+	printMatrix3x3(results.w,
+		       csvOutputFile);
+      }
 
-    if (resultsInterior != NULL) {
-      printExactScalar("Number of interior samples performed",
-		       "num_interior_samples_performed",
-		       "1",
-		       (long long)resultsInterior->getNumSamples(),
+      if (results.resultsInteriorCompiled) {
+	printScalar(results.numInteriorHits,
+		    csvOutputFile);
+      }
+    } 
+
+    if (parametersLocal.getPrintBenchmarks()) {
+      printExactScalar("Initialize     ",
+		       "initialize_time",
+		       "s",
+		       initializeTime,	      
 		       csvOutputFile);
 
-      std::cout << std::endl;
-    }
+      printExactScalar("Read           ",
+		       "read_time",
+		       "s",
+		       readTime,
+		       csvOutputFile);
 
-    ResultsCompiler resultsCompiler(parameters);
-
-    resultsCompiler.compile(resultsZeno,
-			    resultsInterior,
-			    boundingSphere);
-
-    resultsCompiler.print(parameters.getPrintCounts(),
-			  csvOutputFile);
-
-    if (parameters.getPrintBenchmarks()) {
-      printExactScalar("Initialize     ", "initialize_time", "s",
-		       initializeTime, csvOutputFile);
-
-      printExactScalar("Read           ", "read_time", "s",
-		       readTime, csvOutputFile);
-
-      printExactScalar("Broadcast      ", "broadcast_time", "s",
-		       broadcastTime, csvOutputFile);
+      printExactScalar("Broadcast      ",
+		       "broadcast_time",
+		       "s",
+		       broadcastTime,
+		       csvOutputFile);
       
-      printExactScalar("Preprocess     ", "preprocess_time", "s",
-		       preprocessTime, csvOutputFile);
+      printExactScalar("Preprocess     ",
+		       "preprocess_time",
+		       "s",
+		       preprocessTime,
+		       csvOutputFile);
 
-      printExactScalar("Exterior Walk  ", "exterior_walk_time", "s",
-		       walkTime, csvOutputFile);
+      printExactScalar("Exterior Walk  ",
+		       "exterior_walk_time",
+		       "s",
+		       walkTime,
+		       csvOutputFile);
 
-      printExactScalar("Exterior Reduce", "exterior_reduce_time", "s",
-		       reduceTime, csvOutputFile);
+      printExactScalar("Exterior Reduce",
+		       "exterior_reduce_time",
+		       "s",
+		       reduceTime,
+		       csvOutputFile);
 
-      printExactScalar("Volume Sample  ", "volume_sample_time", "s",
-		       sampleTime, csvOutputFile);
+      printExactScalar("Volume Sample  ",
+		       "volume_sample_time",
+		       "s",
+		       sampleTime,
+		       csvOutputFile);
 
-      printExactScalar("Volume Reduce  ", "volume_reduce_time", "s",
-		       volumeReduceTime, csvOutputFile);
+      printExactScalar("Volume Reduce  ",
+		       "volume_reduce_time",
+		       "s",
+		       volumeReduceTime,
+		       csvOutputFile);
       
       std::cout << std::endl;
     }
   }
 }
 
+/// Prints the parameters.  Most parameters are not printed if they have not
+/// been set.
+/// 
+void
+printParameters(ParametersWalkOnSpheres const & parametersWalkOnSpheres,
+	        ParametersInteriorSampling const & parametersInteriorSampling,
+	        ParametersResults const & parametersResults,
+		ParametersLocal const & parametersLocal,
+		std::ofstream * csvOutputFile) {
+  
+  printExactScalar("Input file", "input_file", "",
+		   parametersLocal.getInputFileName(),
+		   csvOutputFile);
+
+  printExactScalar("Number of nodes", "num_nodes", "",
+		   parametersLocal.getMpiSize(),
+		   csvOutputFile);
+
+  printExactScalar("Number of threads", "num_threads", "",
+		   parametersWalkOnSpheres.getNumThreads(),
+		   csvOutputFile);
+
+  printExactScalar("Random number seed", "random_number_seed", "",
+		   parametersWalkOnSpheres.getSeed(),
+		   csvOutputFile);
+
+  if (parametersWalkOnSpheres.getTotalNumWalksWasSet()) {
+    printExactScalar("Number of walks requested", "num_walks_requested", "",
+		     parametersWalkOnSpheres.getTotalNumWalks(),
+		     csvOutputFile);
+  }
+
+  if (parametersInteriorSampling.getTotalNumSamplesWasSet()) {
+    printExactScalar("Number of interior samples requested",
+		     "num_interior_samples_requested", "",
+		     parametersInteriorSampling.getTotalNumSamples(),
+		     csvOutputFile);
+  }
+
+  if (parametersWalkOnSpheres.getMaxErrorCapacitanceWasSet()) {
+    printExactScalar("Max error in capacitance requested",
+		     "max_error_capacitance_requested", "%",
+	             parametersWalkOnSpheres.getMaxErrorCapacitance(),
+		     csvOutputFile);
+  }
+
+  if (parametersWalkOnSpheres.getMaxErrorPolarizabilityWasSet()) {
+    printExactScalar("Max error in mean polarizability requested",
+		     "max_error_mean_polarizability_requested", "%",
+	             parametersWalkOnSpheres.getMaxErrorPolarizability(),
+		     csvOutputFile);
+  }
+
+  if (parametersInteriorSampling.getMaxErrorVolumeWasSet()) {
+    printExactScalar("Max error in volume requested",
+		     "max_error_volume_requested", "%",
+	             parametersInteriorSampling.getMaxErrorVolume(),
+		     csvOutputFile);
+  }
+
+  if (parametersWalkOnSpheres.getMaxRunTimeWasSet()) {
+    printExactScalar("Max run time", "max_run_time", "s",
+		     parametersWalkOnSpheres.getMaxRunTime(),
+		     csvOutputFile);
+  }
+
+  if (parametersWalkOnSpheres.getSkinThicknessWasSet()) {
+    printExactScalar("Skin thickness", "skin_thickness", "",
+		     parametersWalkOnSpheres.getSkinThickness(),
+		     csvOutputFile);
+  }
+
+  if (parametersWalkOnSpheres.getLaunchCenterWasSet()) {
+    printExactVector3("Launch center", "launch_center", "",
+		      parametersWalkOnSpheres.getLaunchCenter(),
+		      csvOutputFile);
+  }
+
+  if (parametersWalkOnSpheres.getLaunchRadiusWasSet()) {
+    printExactScalar("Launch radius", "launch_radius", "",
+		     parametersWalkOnSpheres.getLaunchRadius(),
+		     csvOutputFile);
+  }
+
+  if (parametersResults.getLengthScaleWasSet()) {
+    printExactScalar("Length scale", "length_scale",
+		     Units::getName(parametersResults.getLengthScaleUnit()),
+		     parametersResults.getLengthScaleNumber(),
+		     csvOutputFile);
+  }
+
+  if (parametersResults.getTemperatureWasSet()) {
+    printExactScalar("Temperature", "temperature",
+		     Units::getName(parametersResults.getTemperatureUnit()),
+		     parametersResults.getTemperatureNumber(),
+		     csvOutputFile);
+  }
+
+  if (parametersResults.getMassWasSet()) {
+    printExactScalar("Mass", "mass",
+		     Units::getName(parametersResults.getMassUnit()),
+		     parametersResults.getMassNumber(),
+		     csvOutputFile);
+  }
+
+  if (parametersResults.getSolventViscosityWasSet()) {
+    printExactScalar("Solvent viscosity", "solvent_viscosity",
+		     Units::getName
+		     (parametersResults.getSolventViscosityUnit()),
+		     parametersResults.getSolventViscosityNumber(),
+		     csvOutputFile);
+  }
+
+  if (parametersResults.getBuoyancyFactorWasSet()) {
+    printExactScalar("Buoyancy factor", "buoyancy_factor", "",
+		     parametersResults.getBuoyancyFactor(),
+		     csvOutputFile);
+  }
+}
+
+/// Prints the results.  Results that were not computed are not printed.
+///
+void
+printResults(Results const & results,
+	     std::ofstream * csvOutputFile) {
+
+  if (results.resultsZenoCompiled) {
+    printExactScalar(results.numWalks.prettyName,
+		     results.numWalks.csvName,
+		     results.numWalks.unit,
+		     results.numWalks.value,
+		     csvOutputFile);
+
+    std::cout << std::endl;
+  }
+
+  if (results.resultsInteriorCompiled) {
+    printExactScalar(results.numInteriorSamples.prettyName,
+		     results.numInteriorSamples.csvName,
+		     results.numInteriorSamples.unit,
+		     results.numInteriorSamples.value,
+		     csvOutputFile);
+
+    std::cout << std::endl;
+  }
+  
+  if (results.resultsZenoCompiled) {
+
+    printScalar(results.capacitance,
+		csvOutputFile);
+
+    printMatrix3x3(results.polarizabilityTensor,
+		   csvOutputFile);
+
+    printVector3(results.polarizabilityEigenvalues,
+		 csvOutputFile);
+
+    printScalar(results.meanPolarizability,
+		csvOutputFile);
+
+    printScalar(results.hydrodynamicRadius,
+		csvOutputFile);
+
+    printScalar(results.q_eta,
+		csvOutputFile);
+
+    printScalar(results.viscometricRadius,
+		csvOutputFile);
+
+    if (results.intrinsicViscosityConventionalComputed) {
+      
+      printScalar(results.intrinsicViscosityConventional,
+		  csvOutputFile);
+    }
+
+    if (results.frictionCoefficientComputed) {
+
+      printScalar(results.frictionCoefficient,
+		  csvOutputFile);
+    }
+
+    if (results.diffusionCoefficientComputed) {
+
+      printScalar(results.diffusionCoefficient,
+		  csvOutputFile);
+    }
+
+    if (results.sedimentationCoefficientComputed) {
+
+      printScalar(results.sedimentationCoefficient,
+		  csvOutputFile);
+    }
+  }
+
+  if (results.resultsInteriorCompiled) {
+
+    printScalar(results.volume,
+		csvOutputFile);
+
+    printScalar(results.capacitanceOfASphere,
+		csvOutputFile);
+
+    printMatrix3x3(results.gyrationTensor,
+		   csvOutputFile);
+
+    printVector3(results.gyrationEigenvalues,
+		 csvOutputFile);
+  }
+
+  if (results.resultsZenoCompiled &&
+      results.resultsInteriorCompiled) {
+
+    printScalar(results.intrinsicConductivity,
+		csvOutputFile);
+
+    printScalar(results.intrinsicViscosity,
+		csvOutputFile);
+  }
+
+  // if (results.formResultsCompiled) {
+  //   if (!csvFormat) {
+  //     *out << "Form factor: " << std::endl;
+
+  //     for (unsigned int factorNum = 0; 
+  // 	   factorNum < numFormFactors;
+  // 	   ++factorNum) {
+
+  // 	*out << std::scientific
+  // 	     << formFactorQs.at(factorNum) << " ("
+  // 	     << Units::getName(parameters->getLengthScaleUnit())
+  // 	     << "^-1): "
+  // 	     << formFactors.at(factorNum) << std::endl;
+  //     }
+
+  //     *out << std::endl;
+  //   }
+  // }
+}
+
+/// Prints a scalar that does not have uncertainty
+///
 template <typename T>
 void
 printExactScalar(std::string const & prettyName,
-	         std::string const & csvName,
-	         std::string const & units,
-	         T property,
-	         std::ofstream * csvOutputFile) {
+		 std::string const & csvName,
+		 std::string const & units,
+		 T property,
+		 std::ofstream * csvOutputFile) {
 
-  std::cout << std::fixed
-	    << prettyName << " (" << units << "): " << property << std::endl;
+  std::cout << prettyName;
+
+  if (!units.empty()) {
+    std::cout << " (" << units << ")";
+  }
+
+  std::cout << std::fixed << ": " << property << std::endl;
+
+  if (!units.empty()) {
+    *csvOutputFile << csvName << ",units," << units
+		   << std::endl;
+  }
   
   *csvOutputFile << std::scientific
- 		 << csvName << ",units," << units
-		 << std::endl
-		 << csvName << ",mean," << property
-		 << std::endl
-		 << csvName << ",std_dev," << "0"
+		 << csvName << ",value," << property
 		 << std::endl;
 }
 
-/// Writes Walk-on-Spheres and Interior Sampling hit points to disk.
+/// Prints a Vector3 that does not have uncertainty
+///
+template <typename T>
+void
+printExactVector3(std::string const & prettyName,
+		  std::string const & csvName,
+		  std::string const & units,
+		  Vector3<T> const & property,
+		  std::ofstream * csvOutputFile) {
+
+  std::cout << prettyName;
+
+  if (!units.empty()) {
+    std::cout << " (" << units << ")";
+  }
+
+  std::cout << std::fixed << ": " << property << std::endl;
+  
+  for (int i = 0; i < 3; ++i) {
+    if (!units.empty()) {
+      *csvOutputFile << csvName << "[" << i << "],"
+		     << "units,"
+		     << units
+		     << std::endl;
+    }
+      
+    *csvOutputFile << std::scientific
+		   << csvName << "[" << i << "],"
+		   << "value,"
+		   << property.get(i)
+		   << std::endl;
+  }
+}
+
+/// Prints a scalar with uncertainty
 ///
 void
-savePointFiles(ResultsInterior * resultsInterior,
-	       ResultsZeno * resultsZeno,
-	       Parameters const & parameters) {
+printScalar(Result<Uncertain<double> > const & result,
+	    std::ofstream * csvOutputFile) {
 
-  if (!parameters.getSurfacePointsFileName().empty()) {
-    if (resultsZeno == NULL) {
+  std::cout << std::scientific
+	    << result.prettyName << " (" << result.unit << "): "
+	    << result.value << std::endl
+	    << std::endl;
+
+  *csvOutputFile << std::scientific
+		 << result.csvName << ",units," << result.unit
+		 << std::endl
+		 << result.csvName << ",value," << result.value.getMean()
+		 << std::endl
+		 << result.csvName << ",std_dev," << result.value.getStdDev()
+		 << std::endl;
+}
+
+/// Prints a Vector3 with uncertainty
+///
+void
+printVector3(Result<Vector3<Uncertain<double> > > const & result,
+	     std::ofstream * csvOutputFile) {
+
+  std::cout << std::scientific
+	    << result.prettyName << " (" << result.unit << "): "
+	    << std::endl
+	    << result.value << std::endl
+	    << std::endl;
+
+  for (int i = 0; i < 3; ++i) {
+    *csvOutputFile << std::scientific
+		   << result.csvName << "[" << i << "],"
+		   << "units,"
+		   << result.unit
+		   << std::endl
+		   << result.csvName << "[" << i << "],"
+		   << "value,"
+		   << result.value.get(i).getMean()
+		   << std::endl
+		   << result.csvName << "[" << i << "],"
+		   << "std_dev,"
+		   << result.value.get(i).getStdDev()
+		   << std::endl;
+  }
+}
+
+/// Prints a Matrix3x3 with uncertainty
+///
+void
+printMatrix3x3(Result<Matrix3x3<Uncertain<double> > > const & result,
+	       std::ofstream * csvOutputFile) {
+
+  std::cout << std::scientific
+	    << result.prettyName << " (" << result.unit << "): "
+	    << std::endl
+	    << result.value << std::endl
+	    << std::endl;
+
+  for (int row = 0; row < 3; ++row) {
+    for (int col = 0; col < 3; ++col) {
+      *csvOutputFile << std::scientific
+		     << result.csvName << "[" << row << "][" << col << "],"
+		     << "units,"
+		     << result.unit
+		     << std::endl
+		     << result.csvName << "[" << row << "][" << col << "],"
+		     << "value,"
+		     << result.value.get(row, col).getMean()
+		     << std::endl
+		     << result.csvName << "[" << row << "][" << col << "],"
+		     << "std_dev,"
+		     << result.value.get(row, col).getStdDev()
+		     << std::endl;
+    }
+  }
+}
+
+/// Writes Walk-on-Spheres and Interior Sampling hit points to disk.
+/// 
+void
+savePointFiles(Zeno * zeno,
+	       ParametersLocal const & parametersLocal) {
+
+  if (!parametersLocal.getSurfacePointsFileName().empty()) {
+    std::vector<Vector3<double> > const * points = nullptr;
+    std::vector<Vector3<char> > const * charges = nullptr;
+    
+    zeno->getWalkOnSpheresHitPoints(&points, &charges);
+    
+    if (points == nullptr ||
+	charges == nullptr) {
+      
       std::cerr << "*** Warning ***" << std::endl
 		<< "A surface points file was requested but walks were not "
 		<< "performed.  Surface points file will not be written."
@@ -1290,16 +1078,19 @@ savePointFiles(ResultsInterior * resultsInterior,
 		<< std::endl;
     }
     else {
-      resultsZeno->gatherHitPoints();
-
-      writePoints(parameters.getSurfacePointsFileName(), 
-		  resultsZeno->getPoints(), 
-		  resultsZeno->getCharges());
+      writePoints(parametersLocal.getSurfacePointsFileName(), 
+		  points, 
+		  charges);
     }
   }
 
-  if (!parameters.getInteriorPointsFileName().empty()) {
-    if (resultsInterior == NULL) {
+  if (!parametersLocal.getInteriorPointsFileName().empty()) {
+    std::vector<Vector3<double> > const * points = nullptr;
+
+    zeno->getInteriorSamplingHitPoints(&points);
+    
+    if (points == nullptr) {
+      
       std::cerr << "*** Warning ***" << std::endl
 		<< "An interior points file was requested but interior "
 		<< "samples were not performed.  Interior points file will "
@@ -1308,11 +1099,9 @@ savePointFiles(ResultsInterior * resultsInterior,
 		<< std::endl;
     }
     else {
-      resultsInterior->gatherHitPoints();
-
-      writePoints(parameters.getInteriorPointsFileName(), 
-		  resultsInterior->getPoints(), 
-		  NULL);
+      writePoints(parametersLocal.getInteriorPointsFileName(), 
+		  points, 
+		  nullptr);
     }
   }
 }
@@ -1379,8 +1168,11 @@ printRAM(std::string const & label,
   std::string csvName = label + "_ram";
   std::replace(csvName.begin(), csvName.end(), ' ', '_');
   
-  printExactScalar(prettyName, csvName, units,
-		   ram, csvOutputFile);
+  printExactScalar(prettyName,
+		   csvName,
+		   units,
+		   ram,	       
+		   csvOutputFile);
 }
 
 /// Writes the given set of points and (if not NULL) charges to disk.
@@ -1402,7 +1194,7 @@ writePoints(std::string const & fileName,
 
   for (unsigned int i = 0; i < points->size(); i++) {
 
-    if (charges != NULL) {
+    if (charges != nullptr) {
       outputFile << charges->at(i).get(0)
 		 << charges->at(i).get(1)
 		 << charges->at(i).get(2);
@@ -1414,4 +1206,27 @@ writePoints(std::string const & fileName,
   }
 
   outputFile.close();
+}
+
+/// Sets the variable pointed to by "randomNumber" to a random number obtained
+/// from the OS.
+///
+/// Returns 0 on success, and 1 otherwise.
+///
+template <class T>
+int
+getRandomNumberFromOS(T * randomNumber) {
+  int status = 0;
+    
+  std::ifstream urandom("/dev/urandom");
+
+  urandom.read((char *)randomNumber, sizeof(*randomNumber));
+
+  if (!urandom.good()) {
+    status = 1;
+  }
+
+  urandom.close();
+
+  return status;
 }

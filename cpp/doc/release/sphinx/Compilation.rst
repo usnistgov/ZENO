@@ -26,6 +26,13 @@ The only essential external library is the SPRNG random number library
 When configuring the SPRNG library, you will have the option to include
 support for Fortran and MPI.  Neither of these are required for ZENO (even
 if you plan to use MPI with ZENO), so you may build SPRNG without these.
+
+Since the core ZENO functionality is built as a shared library, SPRNG must be
+configured to be compiled with the ``-fPIC`` flag.  For example:
+
+::
+
+   CXXFLAGS=-fPIC ../sprng5/configure --with-fortran=no --with-mpi=no --prefix=/opt/spring5
    
 Other required libraries are zlib and a threading library.  These should
 be provided by your Operating System distribution.
@@ -52,9 +59,7 @@ MPI support
 
 MPI support is included, but is optional. If MPI libraries are installed
 on your system, you may be able to build zeno with MPI support by running
-cmake with
-
-``-DUSE_MPI=ON``
+cmake with ``-DUSE_MPI=ON``.
 
 Cmake will attempt to automatically find the MPI libraries on your system.
 If this does not work, you will need to manually set the various cmake MPI
@@ -65,14 +70,19 @@ Modifying the code
 
 If you modify the source code, some external utilities may be required.
 ``Gengetopt`` is required to modify command-line parameters, while
-``Bisonc++`` and ``Flexc++`` are required to modify the input file
+``Bisonc++`` and ``Flexc++`` are required to modify the input-file
 format. These can be obtained from the sources:
 
 -  https://www.gnu.org/software/gengetopt
 
--  https://fbb-git.github.io/bisoncpp
+-  https://gitlab.com/fbb-git/bisoncpp
 
--  https://fbb-git.github.io/flexcpp
+-  https://gitlab.com/fbb-git/flexcpp
+
+You will then need to enable regeneration of the comand-line parser and
+input-file parser with the cmake options ``-DGEN_CMD_PARSER=ON`` and
+``-DGEN_BOD_PARSER=ON``.
+
 
 Simple check
 ------------

@@ -42,6 +42,8 @@
 #include <mpi.h>
 #endif
 
+using namespace zeno;
+
 /// Constructs the class to collect results with the given bounding sphere 
 /// from the given number of threads,
 /// and optionally save the hit point locations.
@@ -50,8 +52,7 @@ ResultsZeno::
 ResultsZeno(Sphere<double> const & boundingSphere,
 	    int numThreads,
 	    bool saveHitPoints) 
-  : boundingSphereRadius(boundingSphere.getRadius()),
-    boundingSphereCenter(boundingSphere.getCenter()),
+  : boundingSphere(boundingSphere),
     numThreads(numThreads),
     saveHitPoints(saveHitPoints),
     numWalks(NULL),
@@ -516,6 +517,12 @@ ResultsZeno::
 getSaveHitPoints() const {
 
   return saveHitPoints;
+}
+
+Sphere<double>
+ResultsZeno::
+getBoundingSphere() const {
+  return boundingSphere;
 }
 
 std::vector<Vector3<double> > const * 

@@ -54,6 +54,8 @@
 
 // ================================================================
 
+namespace zeno {
+
 /// Collects results from the Walk-on-Spheres computation.
 ///
 class ResultsZeno {
@@ -88,6 +90,8 @@ public:
 
   bool getSaveHitPoints() const;
 
+  Sphere<double> getBoundingSphere() const;
+
   std::vector<Vector3<double> > const * getPoints() const;
   std::vector<Vector3<char> > const * getCharges() const;
 
@@ -105,8 +109,7 @@ private:
 			  T * mean,
 			  T * M2);
 
-  double const boundingSphereRadius;
-  Vector3<double> const boundingSphereCenter;
+  Sphere<double> const boundingSphere;
 
   int const numThreads;
 
@@ -178,6 +181,9 @@ recordHit(int threadNum,
 
   reduced = false;
 
+  double const boundingSphereRadius = boundingSphere.getRadius();
+  Vector3<double> const boundingSphereCenter = boundingSphere.getCenter();
+
   Vector3<double> normalizedStartPoint = startPoint - boundingSphereCenter;
   Vector3<double> normalizedEndPoint   = endPoint - boundingSphereCenter;
 
@@ -247,6 +253,8 @@ updateItemVariance(T const & data,
   T delta = data - (*mean);
   (*mean) += delta / num;
   (*M2) += delta * (data - (*mean));
+}
+
 }
 
 // ================================================================

@@ -2,9 +2,9 @@ cmake_minimum_required(VERSION 3.1)
 
 set(CMAKE_BUILD_TYPE_INIT "Release")
 
-project(Zeno)
+project(ZENO VERSION 5.2.0)
 
-#set(CMAKE_VERBOSE_MAKEFILE on)
+include(GNUInstallDirs)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED on)
@@ -16,40 +16,101 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 set(SRC_DIR ${CMAKE_SOURCE_DIR}/src)
 
 set(CMDLINE_DIR ${SRC_DIR})
-set(CMDLINE_C ${CMDLINE_DIR}/cmdline.c)
-set(CMDLINE_H ${CMDLINE_DIR}/cmdline.h)
+set(CMDLINE_C cmdline.c)
+set(CMDLINE_H cmdline.h)
 
-set(PARSER_DIR ${SRC_DIR})
-set(PARSE_CC ${PARSER_DIR}/parse.cc)
-set(PARSERBASE_H ${PARSER_DIR}/Parserbase.h)
+set(BOD_PARSER_DIR ${SRC_DIR}/BodParser)
+set(BOD_PARSE_CC bod_parse.cc)
+set(BOD_PARSERBASE_H BodParserbase.h)
 
-set(SCANNER_DIR ${SRC_DIR})
-set(SCAN_CC ${SCANNER_DIR}/lex.cc)
-set(SCANNERBASE_H ${SCANNER_DIR}/Scannerbase.h)
+set(BOD_SCANNER_DIR ${SRC_DIR}/BodParser)
+set(BOD_SCAN_CC bod_lex.cc)
+set(BOD_SCANNERBASE_H BodScannerbase.h)
 
-set(SOURCE_FILES
-  ${CMDLINE_C}
-  ${PARSE_CC}
-  ${SCAN_CC}
-  ${SRC_DIR}/Main.cc
-  ${SRC_DIR}/Parameters.cc
-  ${SRC_DIR}/Parser.cc
+set(SOURCE_FILES_LIB
+  ${SRC_DIR}/Zeno.cc
+  ${SRC_DIR}/ParametersWalkOnSpheres.cc
+  ${SRC_DIR}/ParametersInteriorSampling.cc
+  ${SRC_DIR}/ParametersResults.cc
+  ${SRC_DIR}/Results.cc
   ${SRC_DIR}/ResultsCompiler.cc
   ${SRC_DIR}/ResultsInterior.cc
   ${SRC_DIR}/ResultsZeno.cc
   ${SRC_DIR}/Timer.cc
   ${SRC_DIR}/Units.cc)
 
-add_executable(zeno ${SOURCE_FILES})
+set(HEADER_FILES_LIB
+  ${SRC_DIR}/BoundingSphereGenerator.h
+  ${SRC_DIR}/CovarianceMatrix.h
+  ${SRC_DIR}/ParametersInteriorSampling.h
+  ${SRC_DIR}/ParametersResults.h
+  ${SRC_DIR}/ParametersWalkOnSpheres.h
+  ${SRC_DIR}/Result.h
+  ${SRC_DIR}/ResultsCompiler.h
+  ${SRC_DIR}/Results.h
+  ${SRC_DIR}/ResultsInterior.h
+  ${SRC_DIR}/ResultsZeno.h
+  ${SRC_DIR}/Timer.h
+  ${SRC_DIR}/Uncertain.h
+  ${SRC_DIR}/Units.h
+  ${SRC_DIR}/Zeno.h
+  ${SRC_DIR}/Geometry/AABBTree.h
+  ${SRC_DIR}/Geometry/Cuboid.h
+  ${SRC_DIR}/Geometry/Matrix3x3.h
+  ${SRC_DIR}/Geometry/MixedModel.h
+  ${SRC_DIR}/Geometry/MixedModelProcessed.h
+  ${SRC_DIR}/Geometry/Sphere.h
+  ${SRC_DIR}/Geometry/Triangle.h
+  ${SRC_DIR}/Geometry/Vector3.h
+  ${SRC_DIR}/Geometry/Voxels.h
+  ${SRC_DIR}/RandomNumber/LeapFrog.h
+  ${SRC_DIR}/RandomNumber/Rand.h
+  ${SRC_DIR}/RandomNumber/SPRNG.h
+  ${SRC_DIR}/SpherePoint/BiasedSpherePointDirect.h
+  ${SRC_DIR}/SpherePoint/BiasedSpherePointRejection.h
+  ${SRC_DIR}/SpherePoint/QuasiRandomSpherePointsRegularCube.h
+  ${SRC_DIR}/SpherePoint/RandomBallPointRejection.h
+  ${SRC_DIR}/SpherePoint/RandomSpherePointMarsaglia.h
+  ${SRC_DIR}/SpherePoint/RandomSpherePointPolar.h
+  ${SRC_DIR}/Walker/SamplerInterior.h
+  ${SRC_DIR}/Walker/WalkerExterior.h)
 
-install(TARGETS zeno
-        RUNTIME DESTINATION bin)
+set(SOURCE_FILES_CLI
+  ${CMDLINE_DIR}/${CMDLINE_C}
+  ${BOD_PARSER_DIR}/${BOD_PARSE_CC}
+  ${BOD_PARSER_DIR}/BodParser.cc
+  ${BOD_SCANNER_DIR}/${BOD_SCAN_CC}
+  ${SRC_DIR}/Main.cc
+  ${SRC_DIR}/ParametersLocal.cc)
+
+set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR})
+
+add_library(libzeno SHARED ${SOURCE_FILES_LIB})
+
+set_target_properties(libzeno PROPERTIES
+  VERSION ${PROJECT_VERSION}
+  PUBLIC_HEADER "${HEADER_FILES_LIB}"
+  OUTPUT_NAME zeno)
+
+install(TARGETS libzeno
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
+add_executable(zeno-cli ${SOURCE_FILES_CLI})
+
+set_target_properties(zeno-cli PROPERTIES
+  OUTPUT_NAME zeno)
+
+target_link_libraries(zeno-cli LINK_PUBLIC libzeno)
+
+install(TARGETS zeno-cli
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 find_package(ZLIB REQUIRED)
-target_link_libraries(zeno ${ZLIB_LIBRARIES})
+target_link_libraries(libzeno ${ZLIB_LIBRARIES})
 
 find_package(Threads REQUIRED)
-target_link_libraries(zeno ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(libzeno ${CMAKE_THREAD_LIBS_INIT})
 
 #setup rng
 
@@ -66,18 +127,18 @@ if (USE_SPRNG)
     message(SEND_ERROR "SPRNG not found!")
   else()
     include_directories(${SPRNG_INCLUDE_DIRS})
-    target_link_libraries(zeno ${SPRNG_LIBRARIES})
+    target_link_libraries(libzeno ${SPRNG_LIBRARIES})
 
     add_definitions(-DUSE_SPRNG_RNG)
 
-    target_sources(zeno PUBLIC ${SRC_DIR}/RandomNumber/SPRNG.cc)
+    target_sources(libzeno PUBLIC ${SRC_DIR}/RandomNumber/SPRNG.cc)
   endif()
 else()
   message(WARNING "USE_SPRNG is OFF.  Results have not been validated without the use of SPRNG!")
   
   add_definitions(-DUSE_LEAP_FROG_RNG)
 
-  target_sources(zeno PUBLIC ${SRC_DIR}/RandomNumber/LeapFrog.cc)
+  target_sources(libzeno PUBLIC ${SRC_DIR}/RandomNumber/LeapFrog.cc)
 endif()
 
 #setup mpi
@@ -88,17 +149,17 @@ if (USE_MPI)
   find_package(MPI REQUIRED)
   
   include_directories(${MPI_INCLUDE_PATH})
-  target_link_libraries(zeno ${MPI_LIBRARIES})
+  target_link_libraries(libzeno ${MPI_LIBRARIES})
 
   add_definitions(-DUSE_MPI)
   
   if(MPI_COMPILE_FLAGS)
-    set_target_properties(zeno PROPERTIES
+    set_target_properties(libzeno PROPERTIES
       COMPILE_FLAGS "${MPI_COMPILE_FLAGS}")
   endif()
 
   if(MPI_LINK_FLAGS)
-    set_target_properties(zeno PROPERTIES
+    set_target_properties(libzeno PROPERTIES
       LINK_FLAGS "${MPI_LINK_FLAGS}")
   endif()
 endif()
@@ -116,8 +177,16 @@ if (GEN_CMD_PARSER)
   if (GENGETOPT_BIN)
     set(OPTIONS_GGO ${CMDLINE_DIR}/options.ggo)
     
-    add_custom_command(OUTPUT  ${CMDLINE_C} ${CMDLINE_H}
-      COMMAND ${GENGETOPT_BIN} -i ${OPTIONS_GGO} --conf-parser --output-dir=${CMDLINE_DIR}
+    add_custom_command(
+      OUTPUT
+      ${CMDLINE_DIR}/${CMDLINE_C}
+      ${CMDLINE_DIR}/${CMDLINE_H}
+      COMMAND
+      ${GENGETOPT_BIN}
+      -i ${OPTIONS_GGO}
+      --conf-parser
+      --output-dir=${CMDLINE_DIR}
+      --set-version=${PROJECT_VERSION}
       DEPENDS ${OPTIONS_GGO}
       VERBATIM)
   else()
@@ -125,46 +194,86 @@ if (GEN_CMD_PARSER)
   endif()
 endif()
 
-#setup bisonc++
+#setup file parsers
 
-option (GEN_BOD_PARSER "Generate bod file parser" OFF)
-mark_as_advanced(GEN_BOD_PARSER)
+macro(setup_file_parser
+    OPTION_NAME
+    OPTION_DESCRIPTION
+    NAMESPACE
+    PARSER_DIR
+    PARSE_CC
+    PARSERBASE_H
+    PARSER_CLASS
+    GRAMMAR
+    SCANNER_DIR
+    SCAN_CC
+    SCANNERBASE_H
+    SCANNER_CLASS
+    LEXER)
+  
+  option(${OPTION_NAME} ${OPTION_DESCRIPTION} OFF)
+  mark_as_advanced(${OPTION_NAME})
 
-if (GEN_BOD_PARSER)
-  find_program(BISONCXX_BIN bisonc++)
-
-  mark_as_advanced(BISONCXX_BIN)
-
-  if (BISONCXX_BIN)
-    set(GRAMMAR ${PARSER_DIR}/grammar)
+  if (${OPTION_NAME})
+    #setup bisonc++
     
-    add_custom_command(OUTPUT  ${PARSE_CC} ${PARSERBASE_H}
-      COMMAND ${BISONCXX_BIN} --target-directory ${PARSER_DIR} ${GRAMMAR}
-      DEPENDS ${GRAMMAR}
-      VERBATIM)
-  else()
-    message(SEND_ERROR "bisonc++ not found!")
-  endif()
-endif()
+    find_program(BISONCXX_BIN bisonc++)
 
-#setup flexc++
+    mark_as_advanced(BISONCXX_BIN)
 
-if (GEN_BOD_PARSER)
-  find_program(FLEXCXX_BIN flexc++)
+    if (BISONCXX_BIN)
+      add_custom_command(
+	OUTPUT ${PARSER_DIR}/${PARSE_CC} ${PARSER_DIR}/${PARSERBASE_H}
+	COMMAND ${BISONCXX_BIN}
+	--target-directory ${PARSER_DIR}
+	--class-name ${PARSER_CLASS}
+	--scanner-class-name ${SCANNER_CLASS}
+	--parsefun-source ${PARSE_CC}
+	--namespace ${NAMESPACE}
+	${PARSER_DIR}/${GRAMMAR}
+	DEPENDS ${PARSER_DIR}/${GRAMMAR}
+	VERBATIM)
+    else()
+      message(SEND_ERROR "bisonc++ not found!")
+    endif()
 
-  mark_as_advanced(FLEXCXX_BIN)
-
-  if (FLEXCXX_BIN)
-    set(LEXER ${SCANNER_DIR}/lexer)
+    #setup flexc++
     
-    add_custom_command(OUTPUT  ${SCAN_CC} ${SCANNERBASE_H}
-      COMMAND ${FLEXCXX_BIN} --target-directory ${SCANNER_DIR} ${LEXER}
-      DEPENDS ${LEXER}
-      VERBATIM)
-  else()
-    message(SEND_ERROR "flexc++ not found!")
+    find_program(FLEXCXX_BIN flexc++)
+
+    mark_as_advanced(FLEXCXX_BIN)
+
+    if (FLEXCXX_BIN)
+      add_custom_command(
+	OUTPUT ${SCANNER_DIR}/${SCAN_CC} ${SCANNER_DIR}/${SCANNERBASE_H}
+	COMMAND ${FLEXCXX_BIN}
+	--target-directory ${SCANNER_DIR}
+	--class-name ${SCANNER_CLASS}
+	--lex-source ${SCAN_CC}
+	--namespace ${NAMESPACE}
+	${SCANNER_DIR}/${LEXER}
+	DEPENDS ${SCANNER_DIR}/${LEXER}
+	VERBATIM)
+    else()
+      message(SEND_ERROR "flexc++ not found!")
+    endif()
   endif()
-endif()
+endmacro(setup_file_parser)
+
+setup_file_parser(
+  GEN_BOD_PARSER
+  "Generate bod file parser"
+  bod_parser
+  ${BOD_PARSER_DIR}
+  ${BOD_PARSE_CC}
+  ${BOD_PARSERBASE_H}
+  BodParser
+  bod_grammar
+  ${BOD_SCANNER_DIR}
+  ${BOD_SCAN_CC}
+  ${BOD_SCANNERBASE_H}
+  BodScanner
+  bod_lexer)
 
 #setup testing
 

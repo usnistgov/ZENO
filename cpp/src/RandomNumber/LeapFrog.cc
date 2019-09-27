@@ -42,6 +42,8 @@
 
 // ================================================================
 
+using namespace zeno;
+
 LeapFrog::LeapFrog(int streamNum, int numStreams, int seed)
   : numStreams(numStreams),
     generator(seed),

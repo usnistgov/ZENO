@@ -48,7 +48,8 @@ allowed_relative_error = 0.01
 
 absolute_error_to_ignore = 1E-15
 
-properties_to_ignore = ["input_file",
+properties_to_ignore = ["version",
+                        "input_file",
                         "initialization_ram",
                         "loading_input_data_ram",
                         "building_spatial_data_structure_ram",

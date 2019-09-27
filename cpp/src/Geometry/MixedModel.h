@@ -45,6 +45,7 @@
 
 #include "Sphere.h"
 #include "Cuboid.h"
+#include "Triangle.h"
 #include "Voxels.h"
 #include "Vector3.h"
 #include "AABBTree.h"
@@ -55,62 +56,44 @@
 
 // ================================================================
 
+namespace zeno {
+  
 /// Represents a geometric model consisting of a mixture of different types of
 /// geometric primitives.
 ///
 template <class T>
 class MixedModel {
-  using SphereT   = Sphere<T>;
-  using CuboidT   = Cuboid<T>;
-  using PointT    = Vector3<T>;
-  
  public:
   MixedModel();
   ~MixedModel();
 
-  void addSphere(SphereT const & sphere);
-  void addCuboid(CuboidT const & cuboid);
+  void addSphere(Sphere<T> const & sphere);
+  void addCuboid(Cuboid<T> const & cuboid);
 
   bool loadVoxels(std::string const & inputFileName);
 
-  void mpiSend() const;
-  void mpiReceive();
+  void mpiBroadcast(int root);
 
   bool isEmpty() const;
   
-  void preprocess();
+  std::vector<Sphere<T> > const * getSpheres() const;
+  std::vector<Cuboid<T> > const * getCuboids() const;
 
-  void findNearestPoint(PointT const & queryPoint,
-			T * minDistanceSqr) const;
-
-  bool contains(PointT const & queryPoint) const;
-
-  PointT findFarthestPoint(PointT const & queryPoint) const;
-
-  CuboidT generateAABB() const;
-  
-  std::vector<SphereT> const * getSpheres() const;
-  std::vector<CuboidT> const * getCuboids() const;
+  std::vector<Sphere<T> > * getAndLockSpheres();
+  std::vector<Cuboid<T> > * getAndLockCuboids();
   
  private:
-  template <class Primitive>
-  void getFarthestPoint(std::vector<Primitive> const & primitives,
-			PointT const & queryPoint,
-			PointT * farthestPoint) const;
+  bool spheresLocked;
+  bool cuboidsLocked;
+  
+  std::vector<Sphere<T> > spheres;
+  std::vector<Cuboid<T> > cuboids;
 
-  template <class Primitive>
-  void generateAABB(std::vector<Primitive> const & primitives,
-                    CuboidT * aabb) const;
-    
-  AABBTree<SphereT> aabbTreeSpheres;
-  AABBTree<CuboidT> aabbTreeCuboids;
+  void serializeMpiBroadcast(int root) const;
+  void mpiBroadcastDeserialize(int root);
 
-  std::vector<SphereT> spheres;
-  std::vector<CuboidT> cuboids;
-
-  bool preprocessed;
-
-  void mpiBcastLargeArray(long long int arraySize,
+  void mpiBcastLargeArray(int root,
+			  long long int arraySize,
 			  double * array) const;
 };
 
@@ -120,11 +103,10 @@ class MixedModel {
 ///
 template <class T>
 MixedModel<T>::MixedModel()
-: aabbTreeSpheres(),
-  aabbTreeCuboids(),
+: spheresLocked(false),
+  cuboidsLocked(false),
   spheres(),
-  cuboids(),
-  preprocessed(false) {
+  cuboids() {
 
 }
 
@@ -137,30 +119,38 @@ MixedModel<T>::~MixedModel() {
 ///
 template <class T>
 void
-MixedModel<T>::addSphere(SphereT const & sphere) {
+MixedModel<T>::addSphere(Sphere<T> const & sphere) {
+  assert(!spheresLocked);
+
+  if (spheresLocked) {
+    return;
+  }
+  
   if (sphere.getRadius() == 0) {
     std::cerr << "Warning: degenerate sphere" << std::endl
 	      << sphere << std::endl;
   }
   
   spheres.push_back(sphere);
-
-  preprocessed = false;
 }
 
 /// Add a cuboid to the model.
 ///
 template <class T>
 void
-MixedModel<T>::addCuboid(CuboidT const & cuboid) {
+MixedModel<T>::addCuboid(Cuboid<T> const & cuboid) {
+  assert(!cuboidsLocked);
+
+  if (cuboidsLocked) {
+    return;
+  }
+  
   if (cuboid.getMaxCoords() == cuboid.getMinCoords()) {
     std::cerr << "Warning: degenerate cuboid" << std::endl
 	      << cuboid << std::endl;
   }
   
   cuboids.push_back(cuboid);
-
-  preprocessed = false;
 }
 
 /// Add cuboids to the model representing voxels stored in a .fits.gz file.
@@ -168,6 +158,12 @@ MixedModel<T>::addCuboid(CuboidT const & cuboid) {
 template <class T>
 bool
 MixedModel<T>::loadVoxels(std::string const & inputFileName) {
+  assert(!cuboidsLocked);
+
+  if (cuboidsLocked) {
+    return false;
+  }
+  
   Voxels<T> voxels;
 
   bool loadSuccess = voxels.loadFitsGz(inputFileName);
@@ -177,24 +173,51 @@ MixedModel<T>::loadVoxels(std::string const & inputFileName) {
   }
   
   voxels.generateCuboids(&cuboids);
-
-  preprocessed = false;
   
   return loadSuccess;
+}
+
+template <class T>
+void
+MixedModel<T>::mpiBroadcast(int root) {
+#ifdef USE_MPI
+  int mpiSize = 1, mpiRank = 0;
+
+  MPI_Comm_size(MPI_COMM_WORLD, &mpiSize);
+  MPI_Comm_rank(MPI_COMM_WORLD, &mpiRank);
+
+  if (mpiSize > 1) {
+    if (mpiRank == root) {
+      serializeMpiBroadcast(root);
+    }
+    else {
+      mpiBroadcastDeserialize(root);
+    }
+  }
+#endif
 }
 
 /// Broadcasts the geometric primitives stored in the model over MPI.
 ///
 template <class T>
 void
-MixedModel<T>::mpiSend() const {
+MixedModel<T>::serializeMpiBroadcast(int root) const {
 #ifdef USE_MPI
-  long long int sizeArray[2];
+  assert(!spheresLocked &&
+	 !cuboidsLocked);
+
+  if (spheresLocked ||
+      cuboidsLocked) {
+    return;
+  }
+  
+  long long int sizeArray[3];
 
   sizeArray[0] = spheres.size();
   sizeArray[1] = cuboids.size();
+  sizeArray[2] = 0;
   
-  MPI_Bcast(sizeArray, 2, MPI_LONG_LONG_INT, 0, MPI_COMM_WORLD);
+  MPI_Bcast(sizeArray, 3, MPI_LONG_LONG_INT, root, MPI_COMM_WORLD);
 
   long long int geometryArraySize =
     spheres.size() * 4 +
@@ -205,34 +228,28 @@ MixedModel<T>::mpiSend() const {
   long long int geometryArrayIndex = 0;
 
   // spheres
-  for (typename std::vector<SphereT>::const_iterator it = spheres.begin();
-       it != spheres.end();
-       ++it) {
-
+  for (Sphere<T> const & sphere : spheres) {
     for (int dim = 0; dim < 3; ++ dim) {
-      geometryArray[geometryArrayIndex++] = it->getCenter().get(dim);
+      geometryArray[geometryArrayIndex++] = sphere.getCenter().get(dim);
     }
     
-    geometryArray[geometryArrayIndex++] = it->getRadius();
+    geometryArray[geometryArrayIndex++] = sphere.getRadius();
   }
 
   // cuboids
-  for (typename std::vector<CuboidT>::const_iterator it = cuboids.begin();
-       it != cuboids.end();
-       ++it) {
-
+  for (Cuboid<T> const & cuboid : cuboids) {
     for (int dim = 0; dim < 3; ++ dim) {
-      geometryArray[geometryArrayIndex++] = it->getMinCoords().get(dim);
+      geometryArray[geometryArrayIndex++] = cuboid.getMinCoords().get(dim);
     }
 
     for (int dim = 0; dim < 3; ++ dim) {
-      geometryArray[geometryArrayIndex++] = it->getMaxCoords().get(dim);
+      geometryArray[geometryArrayIndex++] = cuboid.getMaxCoords().get(dim);
     }
   }
   
   assert(geometryArrayIndex == geometryArraySize);
 
-  mpiBcastLargeArray(geometryArraySize, geometryArray);
+  mpiBcastLargeArray(root, geometryArraySize, geometryArray);
 
   delete [] geometryArray;
 #endif
@@ -243,11 +260,19 @@ MixedModel<T>::mpiSend() const {
 ///
 template <class T>
 void
-MixedModel<T>::mpiReceive() {
+MixedModel<T>::mpiBroadcastDeserialize(int root) {
 #ifdef USE_MPI
-  long long int sizeArray[2];
+  assert(!spheresLocked &&
+	 !cuboidsLocked);
 
-  MPI_Bcast(&sizeArray, 2, MPI_LONG_LONG_INT, 0, MPI_COMM_WORLD);
+  if (spheresLocked ||
+      cuboidsLocked) {
+    return;
+  }
+  
+  long long int sizeArray[3];
+
+  MPI_Bcast(&sizeArray, 3, MPI_LONG_LONG_INT, root, MPI_COMM_WORLD);
 
   long long int spheresSize   = sizeArray[0];
   long long int cuboidsSize   = sizeArray[1];
@@ -258,7 +283,7 @@ MixedModel<T>::mpiReceive() {
 
   double * geometryArray = new double[geometryArraySize];
 
-  mpiBcastLargeArray(geometryArraySize, geometryArray);
+  mpiBcastLargeArray(root, geometryArraySize, geometryArray);
 
   spheres.clear();
   cuboids.clear();
@@ -301,8 +326,6 @@ MixedModel<T>::mpiReceive() {
   assert(geometryArrayIndex == geometryArraySize);
 
   delete [] geometryArray;
-
-  preprocessed = false;
 #endif
 }
 
@@ -315,159 +338,43 @@ MixedModel<T>::isEmpty() const {
 	  cuboids.empty());
 }
 
-/// Preprocesses geometric primitives stored in the model for use with
-/// searching functions.
-///
 template <class T>
-void
-MixedModel<T>::preprocess() {
-  aabbTreeSpheres.preprocess(&spheres);
-  aabbTreeCuboids.preprocess(&cuboids);
-
-  preprocessed = true;
-}
-
-/// Finds the nearest point on the model to the query point.  Computes the
-/// distance squared to the point.
-///
-template <class T>
-void
-MixedModel<T>::findNearestPoint(PointT const & queryPoint,
-				T * minDistanceSqr) const {
-  assert(preprocessed);
-
-  *minDistanceSqr = std::numeric_limits<T>::infinity();
-  
-  SphereT const * nearestSphere = NULL;
-  
-  aabbTreeSpheres.findNearestObject(queryPoint,
- 				    &nearestSphere, 
-				    minDistanceSqr);
-
-  CuboidT const * nearestCuboid = NULL;
-
-  aabbTreeCuboids.findNearestObject(queryPoint,
-				    &nearestCuboid, 
-				    minDistanceSqr);
-}
-
-/// Returns whether the model contains the query point.
-///
-template <class T>
-bool
-MixedModel<T>::contains(PointT const & queryPoint) const {
-  assert(preprocessed);
-
-  return (aabbTreeSpheres.objectsContain(queryPoint) ||
-	  aabbTreeCuboids.objectsContain(queryPoint));
-}
-
-/// Returns the point on the surface of the model that is farthest from the
-/// query point.
-///
-template <class T>
-typename MixedModel<T>::PointT
-MixedModel<T>::findFarthestPoint(PointT const & queryPoint) const {
-
-  PointT farthestPoint = queryPoint;
-
-  getFarthestPoint(spheres,
-		   queryPoint,
-		   &farthestPoint);
-
-  getFarthestPoint(cuboids,
-		   queryPoint,
-		   &farthestPoint);
-
-  return farthestPoint;
-}
-
-/// Sets farthestPoint to the point on the surface of the given primitives that
-/// is farthest from the query point, unless that point is closer to the query
-/// point than the initial value of farthestPoint.
-///
-template <class T>
-template <class Primitive>
-void
-MixedModel<T>::getFarthestPoint(std::vector<Primitive> const & primitives,
-				PointT const & queryPoint,
-				PointT * farthestPoint) const {
-
-  for (typename std::vector<Primitive>::const_iterator it = primitives.begin();
-       it != primitives.end();
-       ++it) {
-
-    PointT primitiveFarthestPoint = it->getFarthestPoint(queryPoint);
-
-    if ((primitiveFarthestPoint - queryPoint).getMagnitudeSqr() >
-	(*farthestPoint - queryPoint).getMagnitudeSqr()) {
-
-      *farthestPoint = primitiveFarthestPoint;
-    }
-  }
-}
-
-/// Returns the tightest Axis Aligned Bounding Box of the model.
-///
-template <class T>
-typename MixedModel<T>::CuboidT
-MixedModel<T>::generateAABB() const {
-
-  CuboidT aabb(Vector3<T>(std::numeric_limits<T>::max(), 
-		 	  std::numeric_limits<T>::max(),
-			  std::numeric_limits<T>::max()),
-
-	       Vector3<T>(std::numeric_limits<T>::lowest(),
-			  std::numeric_limits<T>::lowest(),
-			  std::numeric_limits<T>::lowest()));
-
-  generateAABB(spheres,
-	       &aabb);
-
-  generateAABB(cuboids,
-	       &aabb);
-
-  return aabb;
-}
-
-/// Sets aabb to the tightest Axis Aligned Bounding Box of the given
-/// primitives and the given initial aabb.
-///
-template <class T>
-template <class Primitive>
-void 
-MixedModel<T>::generateAABB(std::vector<Primitive> const & primitives,
-                            CuboidT * aabb) const {
-
-  for (typename std::vector<Primitive>::const_iterator it = primitives.begin();
-       it != primitives.end();
-       ++it) {
-
-    for (int dim = 0; dim < 3; dim++) {
-
-      T minCoord = it->getMinCoord(dim);
-      T maxCoord = it->getMaxCoord(dim);
-
-      if (minCoord < aabb->getMinCoord(dim)) {
-	aabb->setMinCoord(dim, minCoord);
-      }
-
-      if (maxCoord > aabb->getMaxCoord(dim)) {
-	aabb->setMaxCoord(dim, maxCoord);
-      }
-    }
-  }
-}
-
-template <class T>
-std::vector<typename MixedModel<T>::SphereT> const *
+std::vector<Sphere<T> > const *
 MixedModel<T>::getSpheres() const {
   return &spheres;
 }
 
 template <class T>
-std::vector<typename MixedModel<T>::CuboidT> const *
+std::vector<Cuboid<T> > const *
 MixedModel<T>::getCuboids() const {
+  return &cuboids;
+}
+
+template <class T>
+std::vector<Sphere<T> > *
+MixedModel<T>::getAndLockSpheres() {
+  assert(!spheresLocked);
+
+  if (spheresLocked) {
+    return nullptr;
+  }
+
+  spheresLocked = true;
+  
+  return &spheres;
+}
+
+template <class T>
+std::vector<Cuboid<T> > *
+MixedModel<T>::getAndLockCuboids() {
+  assert(!cuboidsLocked);
+
+  if (cuboidsLocked) {
+    return nullptr;
+  }
+
+  cuboidsLocked = true;
+  
   return &cuboids;
 }
 
@@ -476,7 +383,8 @@ MixedModel<T>::getCuboids() const {
 ///
 template <class T>
 void
-MixedModel<T>::mpiBcastLargeArray(long long int arraySize,
+MixedModel<T>::mpiBcastLargeArray(int root,
+				  long long int arraySize,
 				  double * array) const {
 #ifdef USE_MPI
   const long long int maxBroadcastCount = std::numeric_limits<int>::max();
@@ -493,11 +401,13 @@ MixedModel<T>::mpiBcastLargeArray(long long int arraySize,
     double * arrayLeftToBroadcast = array + countBroadcastSoFar;
     
     MPI_Bcast(arrayLeftToBroadcast, countToBroadcast,
-	      MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	      MPI_DOUBLE, root, MPI_COMM_WORLD);
 
     countBroadcastSoFar += countToBroadcast;
   }
 #endif
+}
+
 }
 
 #endif

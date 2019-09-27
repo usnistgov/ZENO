@@ -46,9 +46,12 @@
 #include <cstring>
 #include <cassert>
 #include <ostream>
+#include <iostream>
 #include <algorithm>
 
 #include "Vector3.h"
+
+namespace zeno {
 
 /// Represents a 3x3 matrix.
 ///
@@ -572,6 +575,8 @@ Matrix3x3<eleT> & Matrix3x3<eleT>::operator=(const Matrix3x3<otherEleT> & rhs)
   }
 
   return *this;
+}
+
 }
 
 // ================================================================

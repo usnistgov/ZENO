@@ -41,6 +41,8 @@
 
 #include "Units.h"
 
+using namespace zeno;
+
 // ================================================================
 
 Uncertain<double> 
@@ -53,9 +55,9 @@ Units::getFactor(Length fromUnit, Length toUnit) {
   case Length::cm:
     return 1;
   case Length::nm:
-    return pow(10, -7);
+    return std::pow(10, -7);
   case Length::A:
-    return pow(10, -8);
+    return std::pow(10, -8);
   default:
     assert(0);
     exit(EXIT_FAILURE);
@@ -68,13 +70,13 @@ Units::getFactor(Mass fromUnit, Mass toUnit) {
 
   switch(fromUnit) {
   case Mass::Da:
-    return Uncertain<double>(6.02214*pow(10, 23), pow(10, 18 * 2));
+    return Uncertain<double>(6.02214*std::pow(10, 23), std::pow(10, 18 * 2));
   case Mass::kDa:
-    return Uncertain<double>(6.02214*pow(10, 20), pow(10, 15 * 2));
+    return Uncertain<double>(6.02214*std::pow(10, 20), std::pow(10, 15 * 2));
   case Mass::g:
     return 1;
   case Mass::kg:
-    return pow(10, -3);
+    return std::pow(10, -3);
   default:
     assert(0);
     exit(EXIT_FAILURE);
@@ -177,6 +179,6 @@ Units::getName(Viscosity unit) {
 ///
 Uncertain<double> 
 Units::kB() {
-  return Uncertain<double>(1.38065*pow(10, -23), pow(10, -28 * 2));
+  return Uncertain<double>(1.38065*std::pow(10, -23), std::pow(10, -28 * 2));
 }
 

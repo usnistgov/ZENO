@@ -42,6 +42,8 @@
 #include "../Geometry/Sphere.h"
 #include "../Geometry/Vector3.h"
 
+namespace zeno {
+
 /// Generates random sample points inside a sphere from a uniform
 /// distribution using a rejection (iterative) method. 
 ///
@@ -80,6 +82,8 @@ RandomBallPointRejection<T, RNG>::generate(RNG * rng,
   ballPoint += ball.getCenter();
 
   return ballPoint;
+}
+
 }
 
 #endif

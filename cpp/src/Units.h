@@ -49,6 +49,8 @@
 
 // ================================================================
 
+namespace zeno {
+
 /// Contains symbolic constants representing units.  Also contains functions 
 /// for getting conversion factors and offsets and human-readable names.
 ///
@@ -77,13 +79,9 @@ private:
   Units() {}
 };
 
+}
+
 // ================================================================
 
 #endif  // #ifndef UNITS_H_
 
-// ================================================================
-
-// Local Variables:
-// time-stamp-line-limit: 30
-// mode: c++
-// End:

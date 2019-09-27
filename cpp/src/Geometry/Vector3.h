@@ -48,6 +48,8 @@
 #include <ostream>
 //#include <xmmintrin.h>
 
+namespace zeno {
+
 /// Represents a 3-dimensional vector.
 ///
 template <class eleT>
@@ -759,6 +761,8 @@ eleT Vector3<eleT>::invSqrt(eleT x)
   //x = x * (1.5f - xhalf * x * x);
   //x = x * (1.5f - xhalf * x * x);
   //return x;
+}
+
 }
 
 // ================================================================

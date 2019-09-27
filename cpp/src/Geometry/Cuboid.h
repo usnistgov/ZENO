@@ -47,6 +47,8 @@
 
 // ================================================================
 
+namespace zeno {
+  
 /// Represents a cuboid.
 ///
 template <class T>
@@ -211,7 +213,7 @@ Cuboid<T>::getDistanceSqrTo(Vector3<T> const & point) const {
 
     coordDistance = std::max(coordDistance, (T)0);
 
-    distanceSqr += pow(coordDistance, 2);
+    distanceSqr += std::pow(coordDistance, 2);
   }
 
   return distanceSqr;
@@ -253,6 +255,8 @@ Cuboid<T>::contains(Vector3<T> const & point) const {
   }
 
   return true;
+}
+
 }
 
 // ================================================================

@@ -43,6 +43,8 @@
 
 // ================================================================
 
+namespace zeno {
+  
 class LeapFrog
 {
  public:
@@ -59,6 +61,9 @@ class LeapFrog
 
   std::uniform_real_distribution<double> distribution01;
 };
+
+}
+
 // ================================================================
 
 #endif  // #ifndef LEAP_FROG_H_

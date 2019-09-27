@@ -42,6 +42,8 @@
 
 // ================================================================
 
+using namespace zeno;
+
 Rand::Rand(int streamNum, int numStreams, int seed) {
   srand(seed);
 }

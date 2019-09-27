@@ -45,6 +45,8 @@
 #include "../Geometry/Sphere.h"
 #include "../Geometry/Vector3.h"
 
+namespace zeno {
+
 /// Generates random sample points on a sphere from a biased (non-uniform)
 /// distribution using a direct (non-iterative) method.  The distribution is
 /// suitable for reinserting random walkers that have left the launch sphere. 
@@ -84,12 +86,12 @@ BiasedSpherePointDirect<T,
 
   T cosTheta = computeCosTheta(alpha, R);
 
-  T sinTheta = sqrt(1 - pow(cosTheta, 2));
+  T sinTheta = std::sqrt(1 - std::pow(cosTheta, 2));
 
   T phi = rng->getRandInRange(0, 2*M_PI);
 
-  Vector3<T> point(sinTheta * cos(phi),
-		   sinTheta * sin(phi),
+  Vector3<T> point(sinTheta * std::cos(phi),
+		   sinTheta * std::sin(phi),
 		   cosTheta);
 
   //rotate point to be distributed around requested distribution center
@@ -128,25 +130,27 @@ BiasedSpherePointDirect<T,
   computeCosTheta(T alpha, T R) {
 
   
-    T num = (-pow(1 - alpha, 2) + 
-	     2*(1 - alpha)*(1 + pow(alpha, 2))*R + 
-	     2*alpha*(1 + pow(alpha, 2))*pow(R, 2));
+  T num = (-std::pow(1 - alpha, 2) + 
+	   2*(1 - alpha)*(1 + std::pow(alpha, 2))*R + 
+	   2*alpha*(1 + std::pow(alpha, 2))*std::pow(R, 2));
 
-    T den = pow(1 - alpha + 2*alpha*R, 2);
+  T den = std::pow(1 - alpha + 2*alpha*R, 2);
 
-    assert(den != 0);
+  assert(den != 0);
 
-    T cosTheta = num/den;
+  T cosTheta = num/den;
 
-    //correct for numerical errors
-    if (cosTheta > 1) {
-      // std::cerr << "Warning: cosTheta > 1 (cosTheta == " << cosTheta << ")" 
-      //           << std::endl;
+  //correct for numerical errors
+  if (cosTheta > 1) {
+    // std::cerr << "Warning: cosTheta > 1 (cosTheta == " << cosTheta << ")" 
+    //           << std::endl;
 
-      cosTheta = 1;
-    }
+    cosTheta = 1;
+  }
 
-    return cosTheta;
+  return cosTheta;
+}
+
 }
 
 #endif

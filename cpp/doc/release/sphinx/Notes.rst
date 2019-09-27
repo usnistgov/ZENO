@@ -30,4 +30,4 @@ as documented in Ref. :cite:`Juba2016`
 5.1.x : Replaces the k-d trees with axis-aligned bounding box data structure and includes 
 the ability to read voxels in addition to spheres as input
 
-
+5.2.x : Core functionality (that is, not involving input/output) was moved into a shared library

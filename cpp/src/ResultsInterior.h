@@ -42,18 +42,23 @@
 // ================================================================
 
 #include <vector>
+#include <cmath>
 
 #include "Geometry/Vector3.h"
+#include "Geometry/Sphere.h"
 
 #include "Uncertain.h"
 
 // ================================================================
 
+namespace zeno {
+  
 /// Collects results from the Interior Sampling computation.
 ///
 class ResultsInterior {
 public:
-  ResultsInterior(int numThreads,
+  ResultsInterior(Sphere<double> const & boundingSphere,
+		  int numThreads,
 		  bool saveHitPoints);
 
   ~ResultsInterior();
@@ -77,6 +82,8 @@ public:
 
   bool getSaveHitPoints() const;
 
+  Sphere<double> getBoundingSphere() const;
+
   std::vector<Vector3<double> > const * getPoints() const;
 
 private:
@@ -97,6 +104,8 @@ private:
 		  double num,
 		  T * sumReduced,
 		  T * sumVarianceReduced);
+
+  Sphere<double> const boundingSphere;
 
   int const numThreads;
 
@@ -160,9 +169,11 @@ reduceItem(T const & mean,
 
     T variance = M2 / (num - 1);
     T meanVariance = variance / num;
-    T sumVariance = meanVariance * pow(num, 2);
+    T sumVariance = meanVariance * std::pow(num, 2);
 
     (*sumVarianceReduced) += sumVariance;
+}
+
 }
 
 // ================================================================
