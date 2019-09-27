@@ -1,0 +1,14 @@
+Property,Ground Truth,Units,Mean,Difference,Rel. Diff.,Std. Dev.,Std. Uncert.,Expand Uncert.,Rel. Exp. Uncert.
+capacitance,2.15962,L,2.15971,8.59e-05,0.004%,6.88e-04,9.73e-05,1.96e-04,0.009%
+electric_polarizability_eigenvalues[0],65.418,L^3,65.439,2.07e-02,0.032%,9.77e-02,1.38e-02,2.78e-02,0.042%
+electric_polarizability_eigenvalues[1],84.087,L^3,84.075,1.18e-02,0.014%,1.31e-01,1.85e-02,3.72e-02,0.044%
+electric_polarizability_eigenvalues[2],270.51,L^3,270.53,1.92e-02,0.007%,3.30e-01,4.66e-02,9.37e-02,0.035%
+mean_electric_polarizability,140.004,L^3,140.014,1.03e-02,0.007%,1.28e-01,1.81e-02,3.64e-02,0.026%
+hydrodynamic_radius,2.15962,L,2.15971,8.59e-05,0.004%,6.88e-04,9.73e-05,1.96e-04,0.009%
+volume,17.1020,L^3,17.1020,2.36e-05,0.000%,2.01e-02,2.84e-03,5.70e-03,0.033%
+capacitance_sphere_same_volume,1.598280,L,1.598280,6.00e-08,0.000%,6.25e-04,8.84e-05,1.78e-04,0.011%
+gyration_eigenvalues[0],0.415410,L^2,0.415199,2.11e-04,0.051%,4.34e-04,6.13e-05,1.23e-04,0.030%
+gyration_eigenvalues[1],0.64270,L^2,0.64290,2.02e-04,0.031%,9.08e-04,1.28e-04,2.58e-04,0.040%
+gyration_eigenvalues[2],3.6002,L^2,3.6026,2.37e-03,0.066%,4.45e-03,6.29e-04,1.26e-03,0.035%
+intrinsic_conductivity,8.1864,1,8.1870,6.15e-04,0.008%,1.20e-02,1.69e-03,3.40e-03,0.042%
+intrinsic_viscosity,6.6823,1,6.6828,5.38e-04,0.008%,9.67e-03,1.37e-03,2.75e-03,0.041%
