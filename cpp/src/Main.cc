@@ -512,11 +512,15 @@ parseCommandLine(int argc, char **argv,
   if (args_info.surface_points_file_given) {
     parametersLocal->setSurfacePointsFileName
       (args_info.surface_points_file_arg);
+
+    parametersWalkOnSpheres->setSaveSurfacePoints(true);
   }
 
   if (args_info.interior_points_file_given) {
     parametersLocal->setInteriorPointsFileName
       (args_info.interior_points_file_arg);
+
+    parametersInteriorSampling->setSaveInteriorPoints(true);
   }
 
   parametersLocal->setPrintCounts(args_info.print_counts_given);
