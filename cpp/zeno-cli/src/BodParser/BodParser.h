@@ -56,11 +56,11 @@
 #include <vector>
 #include <string>
 
-#include "../ParametersWalkOnSpheres.h"
-#include "../ParametersInteriorSampling.h"
-#include "../ParametersResults.h"
+#include "ParametersWalkOnSpheres.h"
+#include "ParametersInteriorSampling.h"
+#include "ParametersResults.h"
 #include "../ParametersLocal.h"
-#include "../Geometry/MixedModel.h"
+#include "Geometry/MixedModel.h"
 
 // $insert namespace-open
 namespace bod_parser

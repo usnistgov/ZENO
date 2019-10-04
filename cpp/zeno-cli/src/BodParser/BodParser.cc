@@ -38,7 +38,7 @@
 
 #include "BodParser.h"
 
-#include "../Geometry/Vector3.h"
+#include "Geometry/Vector3.h"
 
 // ================================================================
 

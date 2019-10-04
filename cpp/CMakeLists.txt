@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.1)
 
 set(CMAKE_BUILD_TYPE_INIT "Release")
 
-project(ZENO VERSION 5.2.0)
+project(ZENO VERSION 5.2.1)
 
 include(GNUInstallDirs)
 
@@ -13,90 +13,97 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 
-set(SRC_DIR ${CMAKE_SOURCE_DIR}/src)
+set(SRC_DIR_LIB ${CMAKE_SOURCE_DIR}/libzeno/src)
+set(INCLUDE_DIR_LIB ${CMAKE_SOURCE_DIR}/libzeno/include)
 
-set(CMDLINE_DIR ${SRC_DIR})
+set(SRC_DIR_CLI ${CMAKE_SOURCE_DIR}/zeno-cli/src)
+
+set(CMDLINE_DIR ${SRC_DIR_CLI})
 set(CMDLINE_C cmdline.c)
 set(CMDLINE_H cmdline.h)
 
-set(BOD_PARSER_DIR ${SRC_DIR}/BodParser)
+set(BOD_PARSER_DIR ${SRC_DIR_CLI}/BodParser)
 set(BOD_PARSE_CC bod_parse.cc)
 set(BOD_PARSERBASE_H BodParserbase.h)
 
-set(BOD_SCANNER_DIR ${SRC_DIR}/BodParser)
+set(BOD_SCANNER_DIR ${SRC_DIR_CLI}/BodParser)
 set(BOD_SCAN_CC bod_lex.cc)
 set(BOD_SCANNERBASE_H BodScannerbase.h)
 
 set(SOURCE_FILES_LIB
-  ${SRC_DIR}/Zeno.cc
-  ${SRC_DIR}/ParametersWalkOnSpheres.cc
-  ${SRC_DIR}/ParametersInteriorSampling.cc
-  ${SRC_DIR}/ParametersResults.cc
-  ${SRC_DIR}/Results.cc
-  ${SRC_DIR}/ResultsCompiler.cc
-  ${SRC_DIR}/ResultsInterior.cc
-  ${SRC_DIR}/ResultsZeno.cc
-  ${SRC_DIR}/Timer.cc
-  ${SRC_DIR}/Units.cc)
+  ${SRC_DIR_LIB}/Zeno.cc
+  ${SRC_DIR_LIB}/ParametersWalkOnSpheres.cc
+  ${SRC_DIR_LIB}/ParametersInteriorSampling.cc
+  ${SRC_DIR_LIB}/ParametersResults.cc
+  ${SRC_DIR_LIB}/Results.cc
+  ${SRC_DIR_LIB}/ResultsCompiler.cc
+  ${SRC_DIR_LIB}/ResultsInterior.cc
+  ${SRC_DIR_LIB}/ResultsZeno.cc
+  ${SRC_DIR_LIB}/Timer.cc
+  ${SRC_DIR_LIB}/Units.cc)
 
 set(HEADER_FILES_LIB
-  ${SRC_DIR}/BoundingSphereGenerator.h
-  ${SRC_DIR}/CovarianceMatrix.h
-  ${SRC_DIR}/ParametersInteriorSampling.h
-  ${SRC_DIR}/ParametersResults.h
-  ${SRC_DIR}/ParametersWalkOnSpheres.h
-  ${SRC_DIR}/Result.h
-  ${SRC_DIR}/ResultsCompiler.h
-  ${SRC_DIR}/Results.h
-  ${SRC_DIR}/ResultsInterior.h
-  ${SRC_DIR}/ResultsZeno.h
-  ${SRC_DIR}/Timer.h
-  ${SRC_DIR}/Uncertain.h
-  ${SRC_DIR}/Units.h
-  ${SRC_DIR}/Zeno.h
-  ${SRC_DIR}/Geometry/AABBTree.h
-  ${SRC_DIR}/Geometry/Cuboid.h
-  ${SRC_DIR}/Geometry/Matrix3x3.h
-  ${SRC_DIR}/Geometry/MixedModel.h
-  ${SRC_DIR}/Geometry/MixedModelProcessed.h
-  ${SRC_DIR}/Geometry/Sphere.h
-  ${SRC_DIR}/Geometry/Triangle.h
-  ${SRC_DIR}/Geometry/Vector3.h
-  ${SRC_DIR}/Geometry/Voxels.h
-  ${SRC_DIR}/RandomNumber/LeapFrog.h
-  ${SRC_DIR}/RandomNumber/Rand.h
-  ${SRC_DIR}/RandomNumber/SPRNG.h
-  ${SRC_DIR}/SpherePoint/BiasedSpherePointDirect.h
-  ${SRC_DIR}/SpherePoint/BiasedSpherePointRejection.h
-  ${SRC_DIR}/SpherePoint/QuasiRandomSpherePointsRegularCube.h
-  ${SRC_DIR}/SpherePoint/RandomBallPointRejection.h
-  ${SRC_DIR}/SpherePoint/RandomSpherePointMarsaglia.h
-  ${SRC_DIR}/SpherePoint/RandomSpherePointPolar.h
-  ${SRC_DIR}/Walker/SamplerInterior.h
-  ${SRC_DIR}/Walker/WalkerExterior.h)
+  ${INCLUDE_DIR_LIB}/BoundingSphereGenerator.h
+  ${INCLUDE_DIR_LIB}/CovarianceMatrix.h
+  ${INCLUDE_DIR_LIB}/ParametersInteriorSampling.h
+  ${INCLUDE_DIR_LIB}/ParametersResults.h
+  ${INCLUDE_DIR_LIB}/ParametersWalkOnSpheres.h
+  ${INCLUDE_DIR_LIB}/Result.h
+  ${INCLUDE_DIR_LIB}/ResultsCompiler.h
+  ${INCLUDE_DIR_LIB}/Results.h
+  ${INCLUDE_DIR_LIB}/ResultsInterior.h
+  ${INCLUDE_DIR_LIB}/ResultsZeno.h
+  ${INCLUDE_DIR_LIB}/Timer.h
+  ${INCLUDE_DIR_LIB}/Uncertain.h
+  ${INCLUDE_DIR_LIB}/Units.h
+  ${INCLUDE_DIR_LIB}/Zeno.h
+  ${INCLUDE_DIR_LIB}/Geometry/AABBTree.h
+  ${INCLUDE_DIR_LIB}/Geometry/Cuboid.h
+  ${INCLUDE_DIR_LIB}/Geometry/Matrix3x3.h
+  ${INCLUDE_DIR_LIB}/Geometry/MixedModel.h
+  ${INCLUDE_DIR_LIB}/Geometry/MixedModelProcessed.h
+  ${INCLUDE_DIR_LIB}/Geometry/Sphere.h
+  ${INCLUDE_DIR_LIB}/Geometry/Triangle.h
+  ${INCLUDE_DIR_LIB}/Geometry/Vector3.h
+  ${INCLUDE_DIR_LIB}/Geometry/Voxels.h
+  ${INCLUDE_DIR_LIB}/RandomNumber/LeapFrog.h
+  ${INCLUDE_DIR_LIB}/RandomNumber/Rand.h
+  ${INCLUDE_DIR_LIB}/RandomNumber/SPRNG.h
+  ${INCLUDE_DIR_LIB}/SpherePoint/BiasedSpherePointDirect.h
+  ${INCLUDE_DIR_LIB}/SpherePoint/BiasedSpherePointRejection.h
+  ${INCLUDE_DIR_LIB}/SpherePoint/QuasiRandomSpherePointsRegularCube.h
+  ${INCLUDE_DIR_LIB}/SpherePoint/RandomBallPointRejection.h
+  ${INCLUDE_DIR_LIB}/SpherePoint/RandomSpherePointMarsaglia.h
+  ${INCLUDE_DIR_LIB}/SpherePoint/RandomSpherePointPolar.h
+  ${INCLUDE_DIR_LIB}/Walker/SamplerInterior.h
+  ${INCLUDE_DIR_LIB}/Walker/WalkerExterior.h)
 
 set(SOURCE_FILES_CLI
   ${CMDLINE_DIR}/${CMDLINE_C}
   ${BOD_PARSER_DIR}/${BOD_PARSE_CC}
   ${BOD_PARSER_DIR}/BodParser.cc
   ${BOD_SCANNER_DIR}/${BOD_SCAN_CC}
-  ${SRC_DIR}/Main.cc
-  ${SRC_DIR}/ParametersLocal.cc)
+  ${SRC_DIR_CLI}/Main.cc
+  ${SRC_DIR_CLI}/ParametersLocal.cc)
 
 set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR})
 
 add_library(libzeno SHARED ${SOURCE_FILES_LIB})
 
+target_include_directories(libzeno PUBLIC ${INCLUDE_DIR_LIB})
+
 set_target_properties(libzeno PROPERTIES
   VERSION ${PROJECT_VERSION}
-  PUBLIC_HEADER "${HEADER_FILES_LIB}"
   OUTPUT_NAME zeno)
 
 install(TARGETS libzeno
-  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+
+install(DIRECTORY ${INCLUDE_DIR_LIB}/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 add_executable(zeno-cli ${SOURCE_FILES_CLI})
+
+target_include_directories(zeno-cli PRIVATE ${INCLUDE_DIR_LIB})
 
 set_target_properties(zeno-cli PROPERTIES
   OUTPUT_NAME zeno)
@@ -131,14 +138,14 @@ if (USE_SPRNG)
 
     add_definitions(-DUSE_SPRNG_RNG)
 
-    target_sources(libzeno PUBLIC ${SRC_DIR}/RandomNumber/SPRNG.cc)
+    target_sources(libzeno PUBLIC ${SRC_DIR_LIB}/RandomNumber/SPRNG.cc)
   endif()
 else()
   message(WARNING "USE_SPRNG is OFF.  Results have not been validated without the use of SPRNG!")
   
   add_definitions(-DUSE_LEAP_FROG_RNG)
 
-  target_sources(libzeno PUBLIC ${SRC_DIR}/RandomNumber/LeapFrog.cc)
+  target_sources(libzeno PUBLIC ${SRC_DIR_LIB}/RandomNumber/LeapFrog.cc)
 endif()
 
 #setup mpi
@@ -277,10 +284,10 @@ setup_file_parser(
 
 #setup testing
 
-set(TEST_SCRIPT ${SRC_DIR}/SelfTests/run_tests.py)
+set(TEST_SCRIPT ${SRC_DIR_CLI}/SelfTests/run_tests.py)
 set(TEST_EXECUTABLE ${CMAKE_BINARY_DIR}/zeno)
-set(TEST_INPUT_DIR ${SRC_DIR}/SelfTests/Input)
-set(TEST_GROUND_TRUTH_DIR ${SRC_DIR}/SelfTests/GroundTruth)
+set(TEST_INPUT_DIR ${SRC_DIR_CLI}/SelfTests/Input)
+set(TEST_GROUND_TRUTH_DIR ${SRC_DIR_CLI}/SelfTests/GroundTruth)
 set(TEST_OUTPUT_DIR ${CMAKE_BINARY_DIR}/SelfTestOutput)
 
 if (USE_MPI)

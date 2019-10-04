@@ -36,52 +36,29 @@
 //
 // ================================================================
 
-#include "SPRNG.h"
+#include "RandomNumber/Rand.h"
 
-#include <sprng_cpp.h>
-#include <cassert>
+#include <cstdlib>
 
 // ================================================================
 
 using namespace zeno;
 
-/// Constructs a random number generator with the given stream number (out of
-/// the given total number of streams) and the given seed.
-///
-SPRNG::SPRNG(int streamNum, int numStreams, int seed) {
-  stream = SelectType(DEFAULT_RNG_TYPE);
-
-  stream->init_sprng(streamNum, 
-		     numStreams, 
-		     seed, 
-		     SPRNG_DEFAULT);
-
-  assert(stream != NULL);
+Rand::Rand(int streamNum, int numStreams, int seed) {
+  srand(seed);
 }
 
-SPRNG::~SPRNG() {
-  stream->free_sprng();
+Rand::~Rand() {
+
 }
 
-/// Return a random number in the range [0, 1).
-///
 double 
-SPRNG::getRandIn01() {
-  double num = stream->sprng();
-
-  assert(num != -1);
-
-  return num;
+Rand::getRandIn01() {
+  return (rand() / (double)RAND_MAX);
 }
 
-/// Return a random number in the range [min, max).
-///
 double 
-SPRNG::getRandInRange(double min, double max) {
-  double num = stream->sprng();
-
-  assert(num != -1);
-
-  return num * (max - min) + min;
+Rand::getRandInRange(double min, double max) {
+  return (rand() / (double)RAND_MAX) * (max - min) + min;
 }
 
