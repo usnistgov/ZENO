@@ -18,7 +18,7 @@ work.
 Dependencies
 ------------
 
-The only essential external library is the SPRNG random number library.
+The only essential external library is the SPRNG :cite:`Mascagni2000` random number library.
 This requires compilation, which is described in the next section.
 
 Other required libraries are zlib and a threading library.  These should
