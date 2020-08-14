@@ -1,0 +1,24 @@
+2
+Two spheres 1 and 1/4 with numeric labels
+1 -1.0 0 0
+2  0.25 0 0
+2
+Two spheres 1 and 1/4 with alphabetic labels
+A 0 0 0
+B 1.25 0 0
+2
+Two spheres 1 and 1/4 with mixed labels
+B 0 0 0.25
+1 0 0 -1.0
+3
+Three spheres 1 and 1/4 with mixed labels plus one hidden inside
+A 0 0 0
+2 0 1.25 0
+10 0 0.05 0 
+1
+Single sphere of radius 1 of center
+1 1 1 1
+2
+Two spheres both 1 with mixed labels
+A 0 0 0
+1 2 0 0

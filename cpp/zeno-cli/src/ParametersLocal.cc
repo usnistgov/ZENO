@@ -36,12 +36,20 @@
 // 
 // ================================================================
 
+#ifdef USE_MPI
+#include <mpi.h>
+#endif
+
 #include "ParametersLocal.h"
 
 // ================================================================
 
 ParametersLocal::ParametersLocal() 
   : inputFileName(),
+    xyzInputFileName(),
+    xyzInputFileNameWasSet(false),
+    mapInputFileName(),
+    mapInputFileNameWasSet(false),
     csvOutputFileName(),
     csvOutputFileNameWasSet(false),
     mpiSize(1),
@@ -65,6 +73,40 @@ ParametersLocal::setInputFileName(std::string const & inputFileName) {
 std::string 
 ParametersLocal::getInputFileName() const { 
   return inputFileName;
+}
+
+void
+ParametersLocal::setXyzInputFileName(std::string const & xyzInputFileName) {
+  this->xyzInputFileName = xyzInputFileName;
+
+  xyzInputFileNameWasSet = true;
+}
+
+std::string
+ParametersLocal::getXyzInputFileName() const {
+  return xyzInputFileName;
+}
+
+bool
+ParametersLocal::getXyzInputFileNameWasSet() const {
+  return xyzInputFileNameWasSet;
+}
+
+void
+ParametersLocal::setMapInputFileName(std::string const & mapInputFileName) {
+  this->mapInputFileName = mapInputFileName;
+
+  mapInputFileNameWasSet = true;
+}
+
+std::string
+ParametersLocal::getMapInputFileName() const {
+  return mapInputFileName;
+}
+
+bool
+ParametersLocal::getMapInputFileNameWasSet() const {
+  return mapInputFileNameWasSet;
 }
 
 void
@@ -144,4 +186,59 @@ ParametersLocal::setPrintBenchmarks(bool printBenchmarks) {
 bool 
 ParametersLocal::getPrintBenchmarks() const {
   return printBenchmarks;
+}
+
+void                                                                                                                   ParametersLocal::mpiBroadcast(int root) {
+  #ifdef USE_MPI
+  int mpiSize = 1, mpiRank = 0;
+
+  MPI_Comm_size(MPI_COMM_WORLD, &mpiSize);
+  MPI_Comm_rank(MPI_COMM_WORLD, &mpiRank);
+
+  if (mpiSize > 1) {
+    if (mpiRank == root) {
+      serializeMpiBroadcast(root);
+    }
+    else {
+      mpiBroadcastDeserialize(root);
+    }
+  }
+  #endif
+}
+
+/// Broadcasts a subset of parameters over MPI.
+///
+void
+ParametersLocal::serializeMpiBroadcast(int root) const {
+#ifdef USE_MPI
+  const int numLongLongsToSend = 2;
+
+  long long longLongsArray[numLongLongsToSend];
+  longLongsArray[0] = (long long)getXyzInputFileNameWasSet();
+  longLongsArray[1] = (long long)getMapInputFileNameWasSet();
+ 
+  MPI_Bcast(longLongsArray, numLongLongsToSend, MPI_LONG_LONG,
+	    root, MPI_COMM_WORLD);
+#endif
+}
+
+/// Receives a subset of parameters over MPI.
+///
+void
+ParametersLocal::mpiBroadcastDeserialize(int root) {
+#ifdef USE_MPI
+  const int numLongLongsToReceive = 2;
+
+  long long longLongsArray[numLongLongsToReceive];
+  MPI_Bcast(longLongsArray, numLongLongsToReceive, MPI_LONG_LONG,
+	    root, MPI_COMM_WORLD);
+
+  if ((bool)longLongsArray[0]) {
+    xyzInputFileNameWasSet = true;
+  }
+
+  if ((bool)longLongsArray[1]) {
+    mapInputFileNameWasSet = true;
+  }
+#endif
 }

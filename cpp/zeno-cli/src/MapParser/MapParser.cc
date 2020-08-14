@@ -32,91 +32,34 @@
 // ================================================================
 // 
 // Authors: Derek Juba <derek.juba@nist.gov>
-// Created: 2019-07-03
+// Created: 2019-08-02
 //
 // ================================================================
 
-#ifndef PARAMETERS_RESULTS_H_
-#define PARAMETERS_RESULTS_H_
+#include "MapParser.h"
+
+#include <iostream>
 
 // ================================================================
 
-#include "Units.h"
-
-// ================================================================
-
-namespace zeno {
-  
-/// Collects the parameters that are used when computing results.
-///
-/// For some parameters, tracks whether they 
-/// have been manually set or are still at their default value.
-///
-class ParametersResults
-{
-public:
-  ParametersResults();
-  ~ParametersResults();
-  
-  void setLengthScale(double number, Units::Length unit);
-  double getLengthScaleNumber() const;
-  Units::Length getLengthScaleUnit() const;
-  bool getLengthScaleWasSet() const;
-
-  void setTemperature(double number, Units::Temperature unit);
-  double getTemperatureNumber() const;
-  Units::Temperature getTemperatureUnit() const;
-  bool getTemperatureWasSet() const;
-
-  void setMass(double number, Units::Mass unit);
-  double getMassNumber() const;
-  Units::Mass getMassUnit() const;
-  bool getMassWasSet() const;
-
-  void setSolventViscosity(double number, Units::Viscosity unit);
-  double getSolventViscosityNumber() const;
-  Units::Viscosity getSolventViscosityUnit() const;
-  bool getSolventViscosityWasSet() const;
-
-  void setBuoyancyFactor(double buoyancyFactor);
-  double getBuoyancyFactor() const;
-  bool getBuoyancyFactorWasSet() const;
-
-  void mpiBroadcast(int root);
-
-private:
-  void serializeMpiBroadcast(int root) const;
-  void mpiBroadcastDeserialize(int root);
-  
-  // Command-line parameters
-
-  bool computeForm;
-
-  // .bod parameters
-  
-  double lengthScale;
-  Units::Length lengthScaleUnit;
-  bool lengthScaleWasSet;
-
-  double temperature;
-  Units::Temperature temperatureUnit;
-  bool temperatureWasSet;
-
-  double mass;
-  Units::Mass massUnit;
-  bool massWasSet;
-
-  double solventViscosity;
-  Units::Viscosity solventViscosityUnit;
-  bool solventViscosityWasSet;
-
-  double buoyancyFactor;
-  bool buoyancyFactorWasSet;
-};
+map_parser::MapParser::MapParser
+(std::istream & in,
+ std::unordered_map<std::string, double> * atomIdToRadius)
+  : d_scanner(in),
+    atomIdToRadius(atomIdToRadius) {
 
 }
 
-// ================================================================
+void map_parser::MapParser::addMapping(std::string atomId, double radius) {
+  // Ignore atoms of radius 0
+  if (radius != 0) {
+    auto emplaceResult = atomIdToRadius->emplace(atomId, radius);
 
-#endif  // #ifndef PARAMETERS_RESULTS_H_
+    if (emplaceResult.second == false) {
+      std::cerr << "Error parsing MAP file: Found duplicate atom ID " << atomId
+		<< " with radius " << radius << std::endl;
 
+      exit(1);
+    }
+  }
+}

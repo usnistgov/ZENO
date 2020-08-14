@@ -155,6 +155,28 @@ private:
 			Vector3<Uncertain<double> > const & hitPointsSum,
 			Uncertain<double> const & numInteriorHits) const;
 
+  std::array<double, numFormFactors>
+  computeFormFactorQs(double boundingSphereRadius) const;
+
+  std::array<double, numFormFactors>
+  computeFormFactors(std::vector<Vector3<double> > const & interiorPoints,
+		     std::array<double, 
+		     numFormFactors> const & 
+		     formFactorQs,
+		     int numThreads) const;
+
+  void
+  computeFormFactorsThread(int threadNum,
+			   std::vector<Vector3<double> > const & 
+			   interiorPoints,
+			   std::array<double, 
+			   numFormFactors> const & 
+			   formFactorQs,
+			   BigUInt startPairIndex,
+			   BigUInt endPairIndex,
+			   std::array<double, numFormFactors> * 
+			   threadFormFactors) const;
+
   void indexToIJ(BigUInt index, BigUInt * i, BigUInt * j) const;
 
   void printScalar(std::string const & prettyName,

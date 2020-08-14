@@ -132,8 +132,7 @@ std::ostream & operator<<(std::ostream & os, const Matrix3x3<eleT> & rhs)
      << "  "
      << rhs.get(2, 0) << " , " 
      << rhs.get(2, 1) << " , " 
-     << rhs.get(2, 2) << " ]"
-     << std::endl;
+     << rhs.get(2, 2) << " ]";
 
   return os;
 }

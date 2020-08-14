@@ -127,32 +127,34 @@ def check_result(result_filename):
             else:
                 if ground_line[0] in properties_to_ignore:
                     continue
-                
-                if ground_line[1] == "units":
-                    if ground_line[2] != result_line[2]:
-                        print(ground_line[0:3])
-                        print(result_line[0:3])
+
+                if ground_line[0] == "comment" or ground_line[1] == "units":
+                    if ground_line[2:] != result_line[2:]:
+                        print(ground_line[0:])
+                        print(result_line[0:])
                         test_passed = False
                 else:
-                    ground_float = float(ground_line[2])
-                    result_float = float(result_line[2])
+                    for (ground_item, result_item) in zip(ground_line[2:],
+                                                          result_line[2:]):
+                        ground_float = float(ground_item)
+                        result_float = float(result_item)
 
-                    absolute_error = abs(ground_float - result_float)
+                        absolute_error = abs(ground_float - result_float)
 
-                    if absolute_error > absolute_error_to_ignore:
-                        if ground_float != 0:
-                            relative_error = ((ground_float - result_float) /
-                                              ground_float)
+                        if absolute_error > absolute_error_to_ignore:
+                            if ground_float != 0:
+                                relative_error = ((ground_float - result_float) /
+                                                  ground_float)
 
-                            if abs(relative_error) > allowed_relative_error:
-                                print(ground_line[0:3])
-                                print(result_line[0:3])
-                                test_passed = False
-                        else:
-                            if result_float != 0:
-                                print(ground_line[0:3])
-                                print(result_line[0:3])
-                                test_passed = False
+                                if abs(relative_error) > allowed_relative_error:
+                                    print(ground_line[0:])
+                                    print(result_line[0:])
+                                    test_passed = False
+                            else:
+                                if result_float != 0:
+                                    print(ground_line[0:])
+                                    print(result_line[0:])
+                                    test_passed = False
 
     if test_passed:
         print("PASS\n")

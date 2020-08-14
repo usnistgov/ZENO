@@ -24,12 +24,12 @@ results being written to the file ``out.csv`` is:
 Command-line options may also be stored in a config file.  The example above
 could also have been run by creating a file ``config.cfg`` containing
 
-::
-   
-  input-file = obj.bod
-  num-walks = 1000000
-  num-interior-samples = 100000
-  csv-output-file = out.csv
+.. code-block:: none
+
+	input-file = obj.bod
+  	num-walks = 1000000
+  	num-interior-samples = 100000
+ 	csv-output-file = out.csv
 
 and running
 

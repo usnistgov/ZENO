@@ -45,7 +45,7 @@
 using namespace zeno;
 
 bod_parser::BodParser::BodParser
-(ParametersLocal const & parametersLocal,
+(ParametersLocal * parametersLocal,
  std::istream &in,
  ParametersWalkOnSpheres * parametersWalkOnSpheres,
  ParametersInteriorSampling * parametersInteriorSampling,
@@ -55,7 +55,7 @@ bod_parser::BodParser::BodParser
   parametersWalkOnSpheres(parametersWalkOnSpheres),
   parametersInteriorSampling(parametersInteriorSampling),
   parametersResults(parametersResults),
-  parametersLocal(&parametersLocal),
+  parametersLocal(parametersLocal),
   model(model) {
 
 }
@@ -131,6 +131,12 @@ void bod_parser::BodParser::addVoxels(std::string voxelsFileName) {
       
     exit(1);
   }
+}
+
+void bod_parser::BodParser::addTrajectory(std::string xyzFileName, std::string mapFileName) {
+  parametersLocal->setXyzInputFileName(xyzFileName);
+
+  parametersLocal->setMapInputFileName(mapFileName);
 }
 
 void bod_parser::BodParser::setST(double skinThickness) {

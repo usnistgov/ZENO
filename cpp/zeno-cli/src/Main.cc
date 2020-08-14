@@ -44,8 +44,11 @@
 #include <iostream>
 #include <iomanip>
 #include <fstream>
+#include <sstream>
 #include <limits>
 #include <algorithm>
+#include <array>
+#include <vector>
 #include <cstdlib>
 #include <cmath>
 #include <ctime>
@@ -61,6 +64,8 @@
 #include "Uncertain.h"
 
 #include "BodParser/BodParser.h"
+#include "MapParser/MapParser.h"
+#include "XyzParser/XyzParser.h"
 
 #include "Results.h"
 
@@ -73,6 +78,15 @@
 
 using namespace zeno;
 
+// ================================================================
+
+// [0] header
+// [1] type
+// [2] data
+using CsvItems = std::array<std::vector<std::string>, 3>;
+
+// ================================================================
+
 void 
 parseCommandLine(int argc, char **argv,
 		 ParametersWalkOnSpheres * parametersWalkOnSpheres,
@@ -81,11 +95,34 @@ parseCommandLine(int argc, char **argv,
 		 ParametersLocal * parametersLocal);
 
 void
-parseBodFile(ParametersLocal const & parametersLocal,
+parseBodFile(ParametersLocal * parametersLocal,
 	     ParametersWalkOnSpheres * parametersWalkOnSpheres,
 	     ParametersInteriorSampling * parametersInteriorSampling,
 	     ParametersResults * parametersResults,
 	     MixedModel<double> * model);
+
+void
+parseMapFile(ParametersLocal const & parametersLocal,
+	     std::unordered_map<std::string, double> * atomIdToRadius);
+
+void
+parseXyzFile(ParametersLocal const & parametersLocal,
+	     std::unordered_map<std::string, double> const & atomIdToRadius,
+	     std::list<zeno::MixedModel<double> > * snapshots,
+	     std::list<std::string> * comments);
+
+void
+broadcastSnapshots(std::list<zeno::MixedModel<double> > * snapshots);
+  
+int
+runZeno(ParametersLocal const & parametersLocal,
+	ParametersWalkOnSpheres * parametersWalkOnSpheres,
+	ParametersInteriorSampling * parametersInteriorSampling,
+	ParametersResults * parametersResults,
+	double readTime,
+	double broadcastTime,
+	MixedModel<double> * model,
+	CsvItems * csvItems);
 
 void
 printOutput(Results const & results,
@@ -101,18 +138,19 @@ printOutput(Results const & results,
 	    double reduceTime,
 	    double sampleTime,
 	    double volumeReduceTime,
-	    std::ofstream * csvOutputFile);
+	    double totalZenoTime,
+	    CsvItems * csvItems);
 
 void
 printParameters(ParametersWalkOnSpheres const & parametersWalkOnSpheres,
 	        ParametersInteriorSampling const & parametersInteriorSampling,
 	        ParametersResults const & parametersResults,
 		ParametersLocal const & parametersLocal,
-		std::ofstream * csvOutputFile);
+		CsvItems * csvItems);
 
 void
 printResults(Results const & results,
-	     std::ofstream * csvOutputFile);
+	     CsvItems * csvItems);
 
 template <typename T>
 void
@@ -120,7 +158,7 @@ printExactScalar(std::string const & prettyName,
 		 std::string const & csvName,
 		 std::string const & units,
 		 T property,
-		 std::ofstream * csvOutputFile);
+		 CsvItems * csvItems);
 
 template <typename T>
 void
@@ -128,19 +166,19 @@ printExactVector3(std::string const & prettyName,
 		  std::string const & csvName,
 		  std::string const & units,
 		  Vector3<T> const & property,
-		  std::ofstream * csvOutputFile);
+		  CsvItems * csvItems);
 
 void
 printScalar(Result<Uncertain<double> > const & result,
-	    std::ofstream * csvOutputFile);
+	    CsvItems * csvItems);
 
 void
 printVector3(Result<Vector3<Uncertain<double> > > const & result,
-	     std::ofstream * csvOutputFile);
+	     CsvItems * csvItems);
 
 void
 printMatrix3x3(Result<Matrix3x3<Uncertain<double> > > const & result,
-	       std::ofstream * csvOutputFile);
+	       CsvItems * csvItems);
 
 void
 savePointFiles(Zeno * zeno,
@@ -151,7 +189,17 @@ printTime(std::string const & label);
 
 void
 printRAM(std::string const & label,
-	 std::ofstream * csvOutputFile);
+	 CsvItems * csvItems);
+
+void
+writeCsvOutputCols(CsvItems const & globalCsvItems,
+		   std::list<CsvItems> const & perRunCsvItemsList,
+		   std::ofstream * csvOutputFile);
+
+void
+writeCsvOutputRows(CsvItems const & globalCsvItems,
+		   std::list<CsvItems> const & perRunCsvItemsList,
+		   std::ofstream * csvOutputFile);
 
 void
 writePoints(std::string const & fileName, 
@@ -161,6 +209,10 @@ writePoints(std::string const & fileName,
 template <typename T>
 int
 getRandomNumberFromOS(T * randomNumber);
+
+template <typename T>
+std::string
+to_string_scientific(T const & value);
 
 // ================================================================
 
@@ -209,19 +261,22 @@ int main(int argc, char **argv) {
     }
   }
 
+  CsvItems globalCsvItems;
+  std::list<CsvItems> perRunCsvItemsList;
+
   if (parametersLocal.getMpiRank() == 0) {
     printExactScalar("Version",
 		     "version",
 		     "",
 		     CMDLINE_PARSER_VERSION,
-		     &csvOutputFile);
+		     &globalCsvItems);
   }
 
   if (parametersLocal.getPrintBenchmarks() && 
       parametersLocal.getMpiRank() == 0) {
 
     printRAM("initialization",
-	     &csvOutputFile);
+	     &globalCsvItems);
   }
 
   MixedModel<double> model;
@@ -230,15 +285,13 @@ int main(int argc, char **argv) {
 
   if (parametersLocal.getMpiRank() == 0) {
     readTimer.start();
-    parseBodFile(parametersLocal,
+    parseBodFile(&parametersLocal,
 		 &parametersWalkOnSpheres,
 		 &parametersInteriorSampling,
 		 &parametersResults,
 		 &model);
     readTimer.stop();
   }
-
-  double readTime = readTimer.getTime();
   
   Timer broadcastTimer;
 
@@ -247,20 +300,30 @@ int main(int argc, char **argv) {
   parametersWalkOnSpheres.mpiBroadcast(0);
   parametersInteriorSampling.mpiBroadcast(0);
   parametersResults.mpiBroadcast(0);
+  parametersLocal.mpiBroadcast(0);
   model.mpiBroadcast(0);
 
   broadcastTimer.stop();
 
-  double broadcastTime = broadcastTimer.getTime();
+  if (parametersLocal.getXyzInputFileNameWasSet() !=
+      parametersLocal.getMapInputFileNameWasSet()) {
 
-  if (parametersLocal.getPrintBenchmarks() && 
-      parametersLocal.getMpiRank() == 0) {
+    std::cerr << "Error: Both xyz and map file names must be given when using "
+              << "trajectory mode" << std::endl;
 
-    printRAM("loading input data",
-	     &csvOutputFile);
+    return 1;
   }
 
-  if (parametersResults.getComputeForm() &&
+  if (parametersLocal.getXyzInputFileNameWasSet() &&
+      !model.isEmpty()) {
+
+    std::cerr << "Error: Cannot specify non-trajectory geometry when using "
+	      << "trajectory mode" << std::endl;
+
+    return 1;
+  }
+
+  if (false &&
       !(parametersInteriorSampling.getTotalNumSamplesWasSet() |
 	parametersInteriorSampling.getMaxErrorVolumeWasSet())) {
 
@@ -270,103 +333,125 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  Zeno zeno(&model);
+  // Standard mode
+  if (!parametersLocal.getXyzInputFileNameWasSet()) {
+    if (parametersLocal.getPrintBenchmarks() && 
+	parametersLocal.getMpiRank() == 0) {
 
-  if (parametersLocal.getPrintBenchmarks() && 
-      parametersLocal.getMpiRank() == 0) {
-
-    printRAM("building spatial data structure",
-	     &csvOutputFile);
-  }
-
-  Zeno::Status doWalkOnSpheresStatus =
-    zeno.doWalkOnSpheres(&parametersWalkOnSpheres,
-			 &parametersResults);
-
-  if (doWalkOnSpheresStatus != Zeno::Status::Success) {
-    if (doWalkOnSpheresStatus == Zeno::Status::EmptyModel) {
-      std::cerr << "Error: no geometry loaded" << std::endl;
+      printRAM("loading input data",
+	       &globalCsvItems);
     }
+
+    perRunCsvItemsList.emplace_back();
     
-    return 1;
-  }
+    int runZenoStatus =
+      runZeno(parametersLocal,
+	      &parametersWalkOnSpheres,
+	      &parametersInteriorSampling,
+	      &parametersResults,
+	      readTimer.getTime(),
+	      broadcastTimer.getTime(),
+	      &model,
+	      &perRunCsvItemsList.back());
 
-  if (parametersLocal.getPrintBenchmarks() && 
-      parametersLocal.getMpiRank() == 0) {
-
-    printRAM("walk on spheres",
-	     &csvOutputFile);
-  }
-
-  Zeno::Status doInteriorSamplingStatus =
-    zeno.doInteriorSampling(&parametersInteriorSampling,
-			    &parametersResults);
-
-  if (doInteriorSamplingStatus != Zeno::Status::Success) {
-    if (doInteriorSamplingStatus == Zeno::Status::EmptyModel) {
-      std::cerr << "Error: no geometry loaded" << std::endl;
+    if (runZenoStatus != 0) {
+      return runZenoStatus;
     }
+
+    writeCsvOutputCols(globalCsvItems,
+		       perRunCsvItemsList,
+		       &csvOutputFile);
+  }
+  // Trajectory mode
+  else {
+    std::list<zeno::MixedModel<double> > snapshots;
+
+    std::list<std::string> comments;
     
-    return 1;
-  }
-
-  if (parametersLocal.getPrintBenchmarks() && 
-      parametersLocal.getMpiRank() == 0) {
-
-    printRAM("interior samples",
-	     &csvOutputFile);
-  }
-  
-  if (parametersWalkOnSpheres.getMaxRunTimeWasSet() &&
-      (zeno.getTotalTime() > parametersWalkOnSpheres.getMaxRunTime())) {
-
-    std::cerr << std::endl
-              << "*** Warning ***" << std::endl
-	      << "Max run time was reached.  Not all requested computations "
-	      << "may have been performed." << std::endl;
-  }
-
-  Results results;
-
-  zeno.getResults(&parametersResults,
-		  &results);
-  
-  printOutput(results,
-	      parametersWalkOnSpheres,
-	      parametersInteriorSampling,
-	      parametersResults,
-	      parametersLocal,
-	      zeno.getInitializeTime(),
-	      readTime,
-	      broadcastTime,
-	      zeno.getPreprocessTime(),
-	      zeno.getWalkOnSpheresTime(),
-	      zeno.getWalkOnSpheresReductionTime(),
-	      zeno.getInteriorSamplingTime(),
-	      zeno.getInteriorSamplingReductionTime(),
-	      &csvOutputFile);
-
-  savePointFiles(&zeno,
-		 parametersLocal);
-
-#ifdef USE_MPI
-  MPI_Finalize();
-#endif
-
-  if (mpiRank == 0) {
-    printExactScalar("Total Time",
-		     "total_time",
-		     "s",
-		     zeno.getTotalTime(),
-		     &csvOutputFile);
+    if (parametersLocal.getMpiRank() == 0) {
+      readTimer.start();
     
-    std::cout << std::endl;
+      std::unordered_map<std::string, double> atomIdToRadius;
+    
+      parseMapFile(parametersLocal,
+		   &atomIdToRadius);
+    
+      parseXyzFile(parametersLocal,
+		   atomIdToRadius,
+		   &snapshots,
+		   &comments);
 
-    printTime("End time: ");
+      readTimer.stop();
+
+      assert(snapshots.size() == comments.size());
+    }
+
+    broadcastTimer.start();
+
+    broadcastSnapshots(&snapshots);
+
+    // Only the rank 0 node prints the comments, but all nodes need to iterate
+    // over the list, so don't broadcast the comments but resize the list
+    comments.resize(snapshots.size());
+    
+    broadcastTimer.stop();
+
+    if (parametersLocal.getPrintBenchmarks() && 
+	parametersLocal.getMpiRank() == 0) {
+
+      printRAM("loading input data",
+	       &globalCsvItems);
+    }
+
+    auto commentsIterator = comments.begin();
+    
+    for (zeno::MixedModel<double> & snapshot: snapshots) {
+      ParametersWalkOnSpheres
+	snapshotParametersWalkOnSpheres(parametersWalkOnSpheres);
+      ParametersInteriorSampling
+	snapshotParametersInteriorSampling(parametersInteriorSampling);
+      ParametersResults
+	snapshotParametersResults(parametersResults);
+
+      perRunCsvItemsList.emplace_back();
+      
+      int runZenoStatus =
+	runZeno(parametersLocal,
+		&snapshotParametersWalkOnSpheres,
+		&snapshotParametersInteriorSampling,
+		&snapshotParametersResults,
+		readTimer.getTime(),
+		broadcastTimer.getTime(),
+		&snapshot,
+		&perRunCsvItemsList.back());
+
+      if (runZenoStatus != 0) {
+	return runZenoStatus;
+      }
+
+      printExactScalar("Comment", "comment", "",
+		       *commentsIterator,
+		       &perRunCsvItemsList.back());	
+
+      ++ commentsIterator;
+    }
+
+    writeCsvOutputCols(globalCsvItems,
+		       perRunCsvItemsList,
+		       &csvOutputFile);
+
   }
 
   csvOutputFile.close();
 
+#ifdef USE_MPI
+  MPI_Finalize();
+#endif
+  
+  if (mpiRank == 0) {
+    printTime("End time: ");
+  }
+  
   return 0;
 }
 
@@ -470,8 +555,6 @@ parseCommandLine(int argc, char **argv,
     parametersInteriorSampling->setMaxRunTime(args_info.max_run_time_arg);
   }
 
-  parametersResults->setComputeForm(false);
-
   if (args_info.num_threads_given) {
     parametersWalkOnSpheres->setNumThreads(args_info.num_threads_arg);
 
@@ -533,21 +616,21 @@ parseCommandLine(int argc, char **argv,
 /// and parameters.
 ///
 void
-parseBodFile(ParametersLocal const & parametersLocal,
+parseBodFile(ParametersLocal * parametersLocal,
 	     ParametersWalkOnSpheres * parametersWalkOnSpheres,
 	     ParametersInteriorSampling * parametersInteriorSampling,
 	     ParametersResults * parametersResults,
 	     MixedModel<double> * model) {
 
-  std::string fileName = parametersLocal.getInputFileName();
+  std::string fileName = parametersLocal->getInputFileName();
 
   std::ifstream inputFile;
 
   inputFile.open(fileName, std::ifstream::in);
 
   if (!inputFile.is_open()) {
-    std::cerr << "Error opening input file " << fileName << std::endl;
-    exit(1);
+    std::cerr << "Error opening bod input file " << fileName << std::endl;
+    exit(EXIT_FAILURE);
   }
 
   bod_parser::BodParser parser(parametersLocal,
@@ -557,9 +640,196 @@ parseBodFile(ParametersLocal const & parametersLocal,
 			       parametersResults,
 			       model);
 
-  parser.parse();
+  int parseResult = parser.parse();
+
+  if (parseResult != 0) {
+    std::cerr << "Error parsing bod input file " << fileName << std::endl;
+    exit(EXIT_FAILURE);
+  }
+  
+  inputFile.close();
+}
+
+/// Parses the map file given as input and extracts the atomIdToRadius map.
+///
+void
+parseMapFile(ParametersLocal const & parametersLocal,
+	     std::unordered_map<std::string, double> * atomIdToRadius) {
+  
+  std::string fileName = parametersLocal.getMapInputFileName();
+
+  std::ifstream inputFile;
+
+  inputFile.open(fileName, std::ifstream::in);
+
+  if (!inputFile.is_open()) {
+    std::cerr << "Error opening map input file " << fileName << std::endl;
+    exit(EXIT_FAILURE);
+  }
+
+  map_parser::MapParser parser(inputFile,
+			       atomIdToRadius);
+  
+  int parseResult = parser.parse();
+
+  if (parseResult != 0) {
+    std::cerr << "Error parsing map input file " << fileName << std::endl;
+    exit(EXIT_FAILURE);
+  }
 
   inputFile.close();
+}
+
+/// Parses the xyz file given as input and extracts the spheres representing
+/// the atoms and any comment in each snapshot.
+///
+void
+parseXyzFile(ParametersLocal const & parametersLocal,
+	     std::unordered_map<std::string, double> const & atomIdToRadius,
+	     std::list<zeno::MixedModel<double> > * snapshots,
+	     std::list<std::string> * comments) {
+  
+  std::string fileName = parametersLocal.getXyzInputFileName();
+
+  std::ifstream inputFile;
+
+  inputFile.open(fileName, std::ifstream::in);
+
+  if (!inputFile.is_open()) {
+    std::cerr << "Error opening xyz input file " << fileName << std::endl;
+    exit(EXIT_FAILURE);
+  }
+
+
+  xyz_parser::XyzParser parser(atomIdToRadius,
+			       inputFile,
+			       snapshots,
+			       comments);
+
+  int parseResult = parser.parse();
+
+  if (parseResult != 0) {
+    std::cerr << "Error parsing xyz input file " << fileName << std::endl;
+    exit(EXIT_FAILURE);
+  }
+  
+  inputFile.close();
+}
+
+/// If MPI rank is 0, broadcasts the list of snapshots to all other MPI nodes.
+/// If MPI rank is not 0, fills the list of snapshots with the snapshots
+/// received from the rank 0 node.
+///
+void
+broadcastSnapshots(std::list<zeno::MixedModel<double> > * snapshots) {
+#ifdef USE_MPI
+  unsigned long long int numSnapshots = snapshots->size();
+
+  MPI_Bcast(&numSnapshots, 1, MPI_UNSIGNED_LONG_LONG, 0, MPI_COMM_WORLD);
+
+  snapshots->resize(numSnapshots);
+
+  for (zeno::MixedModel<double> & snapshot: *snapshots) {
+    snapshot.mpiBroadcast(0);
+  }
+#endif
+}
+
+/// Runs the Zeno computations on the given model and outputs the results.
+///
+/// Returns 0 on success, and 1 otherwise.
+///
+int
+runZeno(ParametersLocal const & parametersLocal,
+	ParametersWalkOnSpheres * parametersWalkOnSpheres,
+	ParametersInteriorSampling * parametersInteriorSampling,
+	ParametersResults * parametersResults,
+	double readTime,
+	double broadcastTime,
+	MixedModel<double> * model,
+	CsvItems * csvItems) {
+  
+  Zeno zeno(model);
+
+  if (parametersLocal.getPrintBenchmarks() && 
+      parametersLocal.getMpiRank() == 0) {
+
+    printRAM("building spatial data structure",
+	     csvItems);
+  }
+
+  Zeno::Status doWalkOnSpheresStatus =
+    zeno.doWalkOnSpheres(parametersWalkOnSpheres,
+			 parametersResults);
+
+  if (doWalkOnSpheresStatus != Zeno::Status::Success) {
+    if (doWalkOnSpheresStatus == Zeno::Status::EmptyModel) {
+      std::cerr << "Error: no geometry loaded" << std::endl;
+    }
+    
+    return 1;
+  }
+
+  if (parametersLocal.getPrintBenchmarks() && 
+      parametersLocal.getMpiRank() == 0) {
+
+    printRAM("walk on spheres",
+	     csvItems);
+  }
+
+  Zeno::Status doInteriorSamplingStatus =
+    zeno.doInteriorSampling(parametersInteriorSampling,
+			    parametersResults);
+
+  if (doInteriorSamplingStatus != Zeno::Status::Success) {
+    if (doInteriorSamplingStatus == Zeno::Status::EmptyModel) {
+      std::cerr << "Error: no geometry loaded" << std::endl;
+    }
+    
+    return 1;
+  }
+
+  if (parametersLocal.getPrintBenchmarks() && 
+      parametersLocal.getMpiRank() == 0) {
+
+    printRAM("interior samples",
+	     csvItems);
+  }
+  
+  if (parametersWalkOnSpheres->getMaxRunTimeWasSet() &&
+      (zeno.getTotalTime() > parametersWalkOnSpheres->getMaxRunTime())) {
+
+    std::cerr << std::endl
+              << "*** Warning ***" << std::endl
+	      << "Max run time was reached.  Not all requested computations "
+	      << "may have been performed." << std::endl;
+  }
+
+  Results results;
+
+  zeno.getResults(parametersResults,
+		  &results);
+  
+  printOutput(results,
+	      *parametersWalkOnSpheres,
+	      *parametersInteriorSampling,
+	      *parametersResults,
+	      parametersLocal,
+	      zeno.getInitializeTime(),
+	      readTime,
+	      broadcastTime,
+	      zeno.getPreprocessTime(),
+	      zeno.getWalkOnSpheresTime(),
+	      zeno.getWalkOnSpheresReductionTime(),
+	      zeno.getInteriorSamplingTime(),
+	      zeno.getInteriorSamplingReductionTime(),
+	      zeno.getTotalTime(),
+	      csvItems);
+  
+  savePointFiles(&zeno,
+		 parametersLocal);
+  
+  return 0;
 }
 
 /// Prints parameters, results, and (optionally) detailed running time
@@ -579,7 +849,8 @@ printOutput(Results const & results,
 	    double reduceTime,
 	    double sampleTime,
 	    double volumeReduceTime,
-	    std::ofstream * csvOutputFile) {
+	    double totalZenoTime,
+	    CsvItems * csvItems) {
   
   if (parametersLocal.getMpiRank() == 0) {    
     std::cout << std::endl
@@ -591,7 +862,7 @@ printOutput(Results const & results,
 		    parametersInteriorSampling,
 		    parametersResults,
 		    parametersLocal,
-		    csvOutputFile);
+		    csvItems);
 
     std::cout << std::endl
 	      << "Results" << std::endl
@@ -599,7 +870,7 @@ printOutput(Results const & results,
 	      << std::endl;
 
     printResults(results,
-		 csvOutputFile);
+		 csvItems);
 
     if (parametersLocal.getPrintCounts()) {
       std::cout << "Counts:" << std::endl
@@ -607,21 +878,21 @@ printOutput(Results const & results,
 
       if (results.resultsZenoCompiled) {
 	printScalar(results.t,
-		    csvOutputFile);
+		    csvItems);
 
 	printVector3(results.u,
-		     csvOutputFile);
+		     csvItems);
 
 	printMatrix3x3(results.v,
-		       csvOutputFile);
+		       csvItems);
 
 	printMatrix3x3(results.w,
-		       csvOutputFile);
+		       csvItems);
       }
 
       if (results.resultsInteriorCompiled) {
 	printScalar(results.numInteriorHits,
-		    csvOutputFile);
+		    csvItems);
       }
     } 
 
@@ -630,49 +901,55 @@ printOutput(Results const & results,
 		       "initialize_time",
 		       "s",
 		       initializeTime,	      
-		       csvOutputFile);
+		       csvItems);
 
       printExactScalar("Read           ",
 		       "read_time",
 		       "s",
 		       readTime,
-		       csvOutputFile);
+		       csvItems);
 
       printExactScalar("Broadcast      ",
 		       "broadcast_time",
 		       "s",
 		       broadcastTime,
-		       csvOutputFile);
+		       csvItems);
       
       printExactScalar("Preprocess     ",
 		       "preprocess_time",
 		       "s",
 		       preprocessTime,
-		       csvOutputFile);
+		       csvItems);
 
       printExactScalar("Exterior Walk  ",
 		       "exterior_walk_time",
 		       "s",
 		       walkTime,
-		       csvOutputFile);
+		       csvItems);
 
       printExactScalar("Exterior Reduce",
 		       "exterior_reduce_time",
 		       "s",
 		       reduceTime,
-		       csvOutputFile);
+		       csvItems);
 
       printExactScalar("Volume Sample  ",
 		       "volume_sample_time",
 		       "s",
 		       sampleTime,
-		       csvOutputFile);
+		       csvItems);
 
       printExactScalar("Volume Reduce  ",
 		       "volume_reduce_time",
 		       "s",
 		       volumeReduceTime,
-		       csvOutputFile);
+		       csvItems);
+
+      printExactScalar("Total Time     ",
+		       "total_time",
+		       "s",
+		       totalZenoTime,
+		       csvItems);
       
       std::cout << std::endl;
     }
@@ -687,101 +964,101 @@ printParameters(ParametersWalkOnSpheres const & parametersWalkOnSpheres,
 	        ParametersInteriorSampling const & parametersInteriorSampling,
 	        ParametersResults const & parametersResults,
 		ParametersLocal const & parametersLocal,
-		std::ofstream * csvOutputFile) {
+		CsvItems * csvItems) {
   
   printExactScalar("Input file", "input_file", "",
 		   parametersLocal.getInputFileName(),
-		   csvOutputFile);
+		   csvItems);
 
   printExactScalar("Number of nodes", "num_nodes", "",
 		   parametersLocal.getMpiSize(),
-		   csvOutputFile);
+		   csvItems);
 
   printExactScalar("Number of threads", "num_threads", "",
 		   parametersWalkOnSpheres.getNumThreads(),
-		   csvOutputFile);
+		   csvItems);
 
   printExactScalar("Random number seed", "random_number_seed", "",
 		   parametersWalkOnSpheres.getSeed(),
-		   csvOutputFile);
+		   csvItems);
 
   if (parametersWalkOnSpheres.getTotalNumWalksWasSet()) {
     printExactScalar("Number of walks requested", "num_walks_requested", "",
 		     parametersWalkOnSpheres.getTotalNumWalks(),
-		     csvOutputFile);
+		     csvItems);
   }
 
   if (parametersInteriorSampling.getTotalNumSamplesWasSet()) {
     printExactScalar("Number of interior samples requested",
 		     "num_interior_samples_requested", "",
 		     parametersInteriorSampling.getTotalNumSamples(),
-		     csvOutputFile);
+		     csvItems);
   }
 
   if (parametersWalkOnSpheres.getMaxErrorCapacitanceWasSet()) {
     printExactScalar("Max error in capacitance requested",
 		     "max_error_capacitance_requested", "%",
 	             parametersWalkOnSpheres.getMaxErrorCapacitance(),
-		     csvOutputFile);
+		     csvItems);
   }
 
   if (parametersWalkOnSpheres.getMaxErrorPolarizabilityWasSet()) {
     printExactScalar("Max error in mean polarizability requested",
 		     "max_error_mean_polarizability_requested", "%",
 	             parametersWalkOnSpheres.getMaxErrorPolarizability(),
-		     csvOutputFile);
+		     csvItems);
   }
 
   if (parametersInteriorSampling.getMaxErrorVolumeWasSet()) {
     printExactScalar("Max error in volume requested",
 		     "max_error_volume_requested", "%",
 	             parametersInteriorSampling.getMaxErrorVolume(),
-		     csvOutputFile);
+		     csvItems);
   }
 
   if (parametersWalkOnSpheres.getMaxRunTimeWasSet()) {
     printExactScalar("Max run time", "max_run_time", "s",
 		     parametersWalkOnSpheres.getMaxRunTime(),
-		     csvOutputFile);
+		     csvItems);
   }
 
   if (parametersWalkOnSpheres.getSkinThicknessWasSet()) {
     printExactScalar("Skin thickness", "skin_thickness", "",
 		     parametersWalkOnSpheres.getSkinThickness(),
-		     csvOutputFile);
+		     csvItems);
   }
 
   if (parametersWalkOnSpheres.getLaunchCenterWasSet()) {
     printExactVector3("Launch center", "launch_center", "",
 		      parametersWalkOnSpheres.getLaunchCenter(),
-		      csvOutputFile);
+		      csvItems);
   }
 
   if (parametersWalkOnSpheres.getLaunchRadiusWasSet()) {
     printExactScalar("Launch radius", "launch_radius", "",
 		     parametersWalkOnSpheres.getLaunchRadius(),
-		     csvOutputFile);
+		     csvItems);
   }
 
   if (parametersResults.getLengthScaleWasSet()) {
     printExactScalar("Length scale", "length_scale",
 		     Units::getName(parametersResults.getLengthScaleUnit()),
 		     parametersResults.getLengthScaleNumber(),
-		     csvOutputFile);
+		     csvItems);
   }
 
   if (parametersResults.getTemperatureWasSet()) {
     printExactScalar("Temperature", "temperature",
 		     Units::getName(parametersResults.getTemperatureUnit()),
 		     parametersResults.getTemperatureNumber(),
-		     csvOutputFile);
+		     csvItems);
   }
 
   if (parametersResults.getMassWasSet()) {
     printExactScalar("Mass", "mass",
 		     Units::getName(parametersResults.getMassUnit()),
 		     parametersResults.getMassNumber(),
-		     csvOutputFile);
+		     csvItems);
   }
 
   if (parametersResults.getSolventViscosityWasSet()) {
@@ -789,13 +1066,13 @@ printParameters(ParametersWalkOnSpheres const & parametersWalkOnSpheres,
 		     Units::getName
 		     (parametersResults.getSolventViscosityUnit()),
 		     parametersResults.getSolventViscosityNumber(),
-		     csvOutputFile);
+		     csvItems);
   }
 
   if (parametersResults.getBuoyancyFactorWasSet()) {
     printExactScalar("Buoyancy factor", "buoyancy_factor", "",
 		     parametersResults.getBuoyancyFactor(),
-		     csvOutputFile);
+		     csvItems);
   }
 }
 
@@ -803,14 +1080,14 @@ printParameters(ParametersWalkOnSpheres const & parametersWalkOnSpheres,
 ///
 void
 printResults(Results const & results,
-	     std::ofstream * csvOutputFile) {
+	     CsvItems * csvItems) {
 
   if (results.resultsZenoCompiled) {
     printExactScalar(results.numWalks.prettyName,
 		     results.numWalks.csvName,
 		     results.numWalks.unit,
 		     results.numWalks.value,
-		     csvOutputFile);
+		     csvItems);
 
     std::cout << std::endl;
   }
@@ -820,7 +1097,7 @@ printResults(Results const & results,
 		     results.numInteriorSamples.csvName,
 		     results.numInteriorSamples.unit,
 		     results.numInteriorSamples.value,
-		     csvOutputFile);
+		     csvItems);
 
     std::cout << std::endl;
   }
@@ -828,74 +1105,74 @@ printResults(Results const & results,
   if (results.resultsZenoCompiled) {
 
     printScalar(results.capacitance,
-		csvOutputFile);
+		csvItems);
 
     printMatrix3x3(results.polarizabilityTensor,
-		   csvOutputFile);
+		   csvItems);
 
     printVector3(results.polarizabilityEigenvalues,
-		 csvOutputFile);
+		 csvItems);
 
     printScalar(results.meanPolarizability,
-		csvOutputFile);
+		csvItems);
 
     printScalar(results.hydrodynamicRadius,
-		csvOutputFile);
+		csvItems);
 
     printScalar(results.q_eta,
-		csvOutputFile);
+		csvItems);
 
     printScalar(results.viscometricRadius,
-		csvOutputFile);
+		csvItems);
 
     if (results.intrinsicViscosityConventionalComputed) {
       
       printScalar(results.intrinsicViscosityConventional,
-		  csvOutputFile);
+		  csvItems);
     }
 
     if (results.frictionCoefficientComputed) {
 
       printScalar(results.frictionCoefficient,
-		  csvOutputFile);
+		  csvItems);
     }
 
     if (results.diffusionCoefficientComputed) {
 
       printScalar(results.diffusionCoefficient,
-		  csvOutputFile);
+		  csvItems);
     }
 
     if (results.sedimentationCoefficientComputed) {
 
       printScalar(results.sedimentationCoefficient,
-		  csvOutputFile);
+		  csvItems);
     }
   }
 
   if (results.resultsInteriorCompiled) {
 
     printScalar(results.volume,
-		csvOutputFile);
+		csvItems);
 
     printScalar(results.capacitanceOfASphere,
-		csvOutputFile);
+		csvItems);
 
     printMatrix3x3(results.gyrationTensor,
-		   csvOutputFile);
+		   csvItems);
 
     printVector3(results.gyrationEigenvalues,
-		 csvOutputFile);
+		 csvItems);
   }
 
   if (results.resultsZenoCompiled &&
       results.resultsInteriorCompiled) {
 
     printScalar(results.intrinsicConductivity,
-		csvOutputFile);
+		csvItems);
 
     printScalar(results.intrinsicViscosity,
-		csvOutputFile);
+		csvItems);
   }
 
   // if (results.formResultsCompiled) {
@@ -926,7 +1203,7 @@ printExactScalar(std::string const & prettyName,
 		 std::string const & csvName,
 		 std::string const & units,
 		 T property,
-		 std::ofstream * csvOutputFile) {
+		 CsvItems * csvItems) {
 
   std::cout << prettyName;
 
@@ -937,13 +1214,14 @@ printExactScalar(std::string const & prettyName,
   std::cout << std::fixed << ": " << property << std::endl;
 
   if (!units.empty()) {
-    *csvOutputFile << csvName << ",units," << units
-		   << std::endl;
+    csvItems->at(0).push_back(csvName);
+    csvItems->at(1).push_back("units");
+    csvItems->at(2).push_back(units);
   }
-  
-  *csvOutputFile << std::scientific
-		 << csvName << ",value," << property
-		 << std::endl;
+
+  csvItems->at(0).push_back(csvName);
+  csvItems->at(1).push_back("value");
+  csvItems->at(2).push_back(to_string_scientific(property));
 }
 
 /// Prints a Vector3 that does not have uncertainty
@@ -954,7 +1232,7 @@ printExactVector3(std::string const & prettyName,
 		  std::string const & csvName,
 		  std::string const & units,
 		  Vector3<T> const & property,
-		  std::ofstream * csvOutputFile) {
+		  CsvItems * csvItems) {
 
   std::cout << prettyName;
 
@@ -966,17 +1244,14 @@ printExactVector3(std::string const & prettyName,
   
   for (int i = 0; i < 3; ++i) {
     if (!units.empty()) {
-      *csvOutputFile << csvName << "[" << i << "],"
-		     << "units,"
-		     << units
-		     << std::endl;
+      csvItems->at(0).push_back(csvName + "[" + std::to_string(i) + "]");
+      csvItems->at(1).push_back("units");
+      csvItems->at(2).push_back(units);
     }
-      
-    *csvOutputFile << std::scientific
-		   << csvName << "[" << i << "],"
-		   << "value,"
-		   << property.get(i)
-		   << std::endl;
+
+    csvItems->at(0).push_back(csvName + "[" + std::to_string(i) + "]");
+    csvItems->at(1).push_back("value");
+    csvItems->at(2).push_back(to_string_scientific(property.get(i)));
   }
 }
 
@@ -984,27 +1259,31 @@ printExactVector3(std::string const & prettyName,
 ///
 void
 printScalar(Result<Uncertain<double> > const & result,
-	    std::ofstream * csvOutputFile) {
+	    CsvItems * csvItems) {
 
   std::cout << std::scientific
 	    << result.prettyName << " (" << result.unit << "): "
 	    << result.value << std::endl
 	    << std::endl;
 
-  *csvOutputFile << std::scientific
-		 << result.csvName << ",units," << result.unit
-		 << std::endl
-		 << result.csvName << ",value," << result.value.getMean()
-		 << std::endl
-		 << result.csvName << ",std_dev," << result.value.getStdDev()
-		 << std::endl;
+  csvItems->at(0).push_back(result.csvName);
+  csvItems->at(1).push_back("units");
+  csvItems->at(2).push_back(result.unit);
+
+  csvItems->at(0).push_back(result.csvName);
+  csvItems->at(1).push_back("value");
+  csvItems->at(2).push_back(to_string_scientific(result.value.getMean()));
+
+  csvItems->at(0).push_back(result.csvName);
+  csvItems->at(1).push_back("std_dev");
+  csvItems->at(2).push_back(to_string_scientific(result.value.getStdDev()));
 }
 
 /// Prints a Vector3 with uncertainty
 ///
 void
 printVector3(Result<Vector3<Uncertain<double> > > const & result,
-	     std::ofstream * csvOutputFile) {
+	     CsvItems * csvItems) {
 
   std::cout << std::scientific
 	    << result.prettyName << " (" << result.unit << "): "
@@ -1013,19 +1292,17 @@ printVector3(Result<Vector3<Uncertain<double> > > const & result,
 	    << std::endl;
 
   for (int i = 0; i < 3; ++i) {
-    *csvOutputFile << std::scientific
-		   << result.csvName << "[" << i << "],"
-		   << "units,"
-		   << result.unit
-		   << std::endl
-		   << result.csvName << "[" << i << "],"
-		   << "value,"
-		   << result.value.get(i).getMean()
-		   << std::endl
-		   << result.csvName << "[" << i << "],"
-		   << "std_dev,"
-		   << result.value.get(i).getStdDev()
-		   << std::endl;
+    csvItems->at(0).push_back(result.csvName + "[" + std::to_string(i) + "]");
+    csvItems->at(1).push_back("units");
+    csvItems->at(2).push_back(result.unit);
+
+    csvItems->at(0).push_back(result.csvName + "[" + std::to_string(i) + "]");
+    csvItems->at(1).push_back("value");
+    csvItems->at(2).push_back(to_string_scientific(result.value.get(i).getMean()));
+
+    csvItems->at(0).push_back(result.csvName + "[" + std::to_string(i) + "]");
+    csvItems->at(1).push_back("std_dev");
+    csvItems->at(2).push_back(to_string_scientific(result.value.get(i).getStdDev()));
   }
 }
 
@@ -1033,7 +1310,7 @@ printVector3(Result<Vector3<Uncertain<double> > > const & result,
 ///
 void
 printMatrix3x3(Result<Matrix3x3<Uncertain<double> > > const & result,
-	       std::ofstream * csvOutputFile) {
+	       CsvItems * csvItems) {
 
   std::cout << std::scientific
 	    << result.prettyName << " (" << result.unit << "): "
@@ -1043,19 +1320,17 @@ printMatrix3x3(Result<Matrix3x3<Uncertain<double> > > const & result,
 
   for (int row = 0; row < 3; ++row) {
     for (int col = 0; col < 3; ++col) {
-      *csvOutputFile << std::scientific
-		     << result.csvName << "[" << row << "][" << col << "],"
-		     << "units,"
-		     << result.unit
-		     << std::endl
-		     << result.csvName << "[" << row << "][" << col << "],"
-		     << "value,"
-		     << result.value.get(row, col).getMean()
-		     << std::endl
-		     << result.csvName << "[" << row << "][" << col << "],"
-		     << "std_dev,"
-		     << result.value.get(row, col).getStdDev()
-		     << std::endl;
+      csvItems->at(0).push_back(result.csvName + "[" + std::to_string(row) + "][" + std::to_string(col) + "]");
+      csvItems->at(1).push_back("units");
+      csvItems->at(2).push_back(result.unit);
+
+      csvItems->at(0).push_back(result.csvName + "[" + std::to_string(row) + "][" + std::to_string(col) + "]");
+      csvItems->at(1).push_back("value");
+      csvItems->at(2).push_back(to_string_scientific(result.value.get(row, col).getMean()));
+
+      csvItems->at(0).push_back(result.csvName + "[" + std::to_string(row) + "][" + std::to_string(col) + "]");
+      csvItems->at(1).push_back("std_dev");
+      csvItems->at(2).push_back(to_string_scientific(result.value.get(row, col).getStdDev()));
     }
   }
 }
@@ -1132,7 +1407,7 @@ printTime(std::string const & label) {
 ///
 void
 printRAM(std::string const & label,
-	 std::ofstream * csvOutputFile) {
+	 CsvItems * csvItems) {
   
   std::ifstream statusFile("/proc/self/status");
 
@@ -1176,7 +1451,117 @@ printRAM(std::string const & label,
 		   csvName,
 		   units,
 		   ram,	       
-		   csvOutputFile);
+		   csvItems);
+}
+
+/// Writes the given CSV items into the given CSV output file.
+/// The header/type/data tuples are written as rows down a column.
+///
+void
+writeCsvOutputCols(CsvItems const & globalCsvItems,
+		   std::list<CsvItems> const & perRunCsvItemsList,
+		   std::ofstream * csvOutputFile) {
+
+  assert(globalCsvItems.at(0).size() == globalCsvItems.at(1).size());
+  assert(globalCsvItems.at(0).size() == globalCsvItems.at(2).size());
+
+  // write global CSV items
+  for (size_t row = 0;
+       row < globalCsvItems.at(0).size();
+       ++row) {
+
+    // write header
+    *csvOutputFile << globalCsvItems.at(0).at(row) << ","
+		   << globalCsvItems.at(1).at(row);
+
+    // write data
+    for (size_t i = 0;
+	 i < perRunCsvItemsList.size();
+	 ++i) {
+      
+      *csvOutputFile << "," << globalCsvItems.at(2).at(row);
+    }
+
+    *csvOutputFile << std::endl;
+  }
+  
+  // write per-run CSV items
+  for (size_t row = 0;
+       row < perRunCsvItemsList.back().at(0).size();
+       ++row) {
+
+    // write header
+    *csvOutputFile << perRunCsvItemsList.back().at(0).at(row) << ","
+		   << perRunCsvItemsList.back().at(1).at(row);
+
+    // write data
+    for (CsvItems const & perRunCsvItems: perRunCsvItemsList) {
+      assert(perRunCsvItems.at(0).size() == perRunCsvItems.at(1).size());
+      assert(perRunCsvItems.at(0).size() == perRunCsvItems.at(2).size());
+
+      assert(perRunCsvItems.at(0).size() == perRunCsvItemsList.back().at(0).size());
+    
+      *csvOutputFile << "," << perRunCsvItems.at(2).at(row);
+    }
+
+    *csvOutputFile << std::endl;
+  }
+}
+
+/// Writes the given CSV items into the given CSV output file.
+/// The header/type/data tuples are written as columns across a row.
+///
+void
+writeCsvOutputRows(CsvItems const & globalCsvItems,
+		   std::list<CsvItems> const & perRunCsvItemsList,
+		   std::ofstream * csvOutputFile) {
+
+  bool writeHeader = true;
+  
+  for (CsvItems const & perRunCsvItems: perRunCsvItemsList) {
+    
+    size_t row = 0;
+
+    if (!writeHeader) {
+      row = 2;
+    }
+
+    for (; row < 3; ++row) {
+      bool writeComma = false;
+    
+      assert(globalCsvItems.at(0).size() == globalCsvItems.at(1).size());
+      assert(globalCsvItems.at(0).size() == globalCsvItems.at(2).size());
+    
+      for (size_t i = 0; i < globalCsvItems.at(row).size(); ++i) {
+	if (writeComma) {
+	  *csvOutputFile << ",";
+	}
+    
+	*csvOutputFile << globalCsvItems.at(row).at(i);
+
+	writeComma = true;
+      }
+
+      assert(perRunCsvItems.at(0).size() == perRunCsvItems.at(1).size());
+      assert(perRunCsvItems.at(0).size() == perRunCsvItems.at(2).size());
+
+      assert(perRunCsvItems.at(0).size() == perRunCsvItemsList.back().at(0).size());
+      
+      for (size_t i = 0; i < perRunCsvItems.at(row).size(); ++i) {
+	if (writeComma) {
+	  *csvOutputFile << ",";
+	}
+    
+	*csvOutputFile << perRunCsvItems.at(row).at(i);
+
+	writeComma = true;
+      }
+
+      *csvOutputFile << std::endl;
+    }
+
+    writeHeader = false;
+  }
 }
 
 /// Writes the given set of points and (if not NULL) charges to disk.
@@ -1233,4 +1618,15 @@ getRandomNumberFromOS(T * randomNumber) {
   urandom.close();
 
   return status;
+}
+
+/// Converts a value to a string in the "scientific" format
+///
+template <typename T>
+std::string
+to_string_scientific(T const & value)
+{
+  std::ostringstream out;
+  out << std::scientific << value;
+  return out.str();
 }

@@ -191,7 +191,7 @@ Zeno::getResults(ParametersResults * parametersResults,
 
   resultsCompiler.compile(resultsZeno,
   			  resultsInterior,
-  			  parametersResults->getComputeForm(),
+  			  false,
 			  results);
 }
 
@@ -597,7 +597,7 @@ Zeno::getInteriorResults
 
   bool saveInteriorPoints = 
     parametersInteriorSampling.getSaveInteriorPoints() ||
-    parametersResults.getComputeForm();
+    false;
 
   if (parametersInteriorSampling.getTotalNumSamplesWasSet() &&
       !parametersInteriorSampling.getMaxErrorVolumeWasSet()) {
@@ -689,7 +689,7 @@ Zeno::getInteriorResults
     }
   }
 
-  if (parametersResults.getComputeForm()) {
+  if (false) {
     interiorSamplingReductionTimer.start();
     (*resultsInterior)->gatherHitPoints();
     interiorSamplingReductionTimer.stop();

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.1)
 
 set(CMAKE_BUILD_TYPE_INIT "Release")
 
-project(ZENO VERSION 5.2.1)
+project(ZENO VERSION 5.3.0)
 
 include(GNUInstallDirs)
 
@@ -29,6 +29,22 @@ set(BOD_PARSERBASE_H BodParserbase.h)
 set(BOD_SCANNER_DIR ${SRC_DIR_CLI}/BodParser)
 set(BOD_SCAN_CC bod_lex.cc)
 set(BOD_SCANNERBASE_H BodScannerbase.h)
+
+set(XYZ_PARSER_DIR ${SRC_DIR_CLI}/XyzParser)
+set(XYZ_PARSE_CC xyz_parse.cc)
+set(XYZ_PARSERBASE_H XyzParserbase.h)
+
+set(XYZ_SCANNER_DIR ${SRC_DIR_CLI}/XyzParser)
+set(XYZ_SCAN_CC xyz_lex.cc)
+set(XYZ_SCANNERBASE_H XyzScannerbase.h)
+
+set(MAP_PARSER_DIR ${SRC_DIR_CLI}/MapParser)
+set(MAP_PARSE_CC map_parse.cc)
+set(MAP_PARSERBASE_H MapParserbase.h)
+
+set(MAP_SCANNER_DIR ${SRC_DIR_CLI}/MapParser)
+set(MAP_SCAN_CC map_lex.cc)
+set(MAP_SCANNERBASE_H MapScannerbase.h)
 
 set(SOURCE_FILES_LIB
   ${SRC_DIR_LIB}/Zeno.cc
@@ -83,6 +99,12 @@ set(SOURCE_FILES_CLI
   ${BOD_PARSER_DIR}/${BOD_PARSE_CC}
   ${BOD_PARSER_DIR}/BodParser.cc
   ${BOD_SCANNER_DIR}/${BOD_SCAN_CC}
+  ${XYZ_PARSER_DIR}/${XYZ_PARSE_CC}
+  ${XYZ_PARSER_DIR}/XyzParser.cc
+  ${XYZ_SCANNER_DIR}/${XYZ_SCAN_CC}
+  ${MAP_PARSER_DIR}/${MAP_PARSE_CC}
+  ${MAP_PARSER_DIR}/MapParser.cc
+  ${MAP_SCANNER_DIR}/${MAP_SCAN_CC}
   ${SRC_DIR_CLI}/Main.cc
   ${SRC_DIR_CLI}/ParametersLocal.cc)
 
@@ -281,6 +303,36 @@ setup_file_parser(
   ${BOD_SCANNERBASE_H}
   BodScanner
   bod_lexer)
+
+setup_file_parser(
+  GEN_XYZ_PARSER
+  "Generate xyz file parser"
+  xyz_parser
+  ${XYZ_PARSER_DIR}
+  ${XYZ_PARSE_CC}
+  ${XYZ_PARSERBASE_H}
+  XyzParser
+  xyz_grammar
+  ${XYZ_SCANNER_DIR}
+  ${XYZ_SCAN_CC}
+  ${XYZ_SCANNERBASE_H}
+  XyzScanner
+  xyz_lexer)
+
+setup_file_parser(
+  GEN_MAP_PARSER
+  "Generate map file parser"
+  map_parser
+  ${MAP_PARSER_DIR}
+  ${MAP_PARSE_CC}
+  ${MAP_PARSERBASE_H}
+  MapParser
+  map_grammar
+  ${MAP_SCANNER_DIR}
+  ${MAP_SCAN_CC}
+  ${MAP_SCANNERBASE_H}
+  MapScanner
+  map_lexer)
 
 #setup testing
 

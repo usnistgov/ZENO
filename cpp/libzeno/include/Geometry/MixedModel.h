@@ -78,16 +78,20 @@ class MixedModel {
   
   std::vector<Sphere<T> > const * getSpheres() const;
   std::vector<Cuboid<T> > const * getCuboids() const;
+  std::vector<Triangle<T> > const * getTriangles() const;
 
   std::vector<Sphere<T> > * getAndLockSpheres();
   std::vector<Cuboid<T> > * getAndLockCuboids();
+  std::vector<Triangle<T> > * getAndLockTriangles();
   
  private:
   bool spheresLocked;
   bool cuboidsLocked;
+  bool trianglesLocked;
   
   std::vector<Sphere<T> > spheres;
   std::vector<Cuboid<T> > cuboids;
+  std::vector<Triangle<T> > triangles;
 
   void serializeMpiBroadcast(int root) const;
   void mpiBroadcastDeserialize(int root);
@@ -105,8 +109,10 @@ template <class T>
 MixedModel<T>::MixedModel()
 : spheresLocked(false),
   cuboidsLocked(false),
+  trianglesLocked(false),
   spheres(),
-  cuboids() {
+  cuboids(),
+  triangles() {
 
 }
 
@@ -152,6 +158,7 @@ MixedModel<T>::addCuboid(Cuboid<T> const & cuboid) {
   
   cuboids.push_back(cuboid);
 }
+
 
 /// Add cuboids to the model representing voxels stored in a .fits.gz file.
 ///
@@ -204,10 +211,12 @@ void
 MixedModel<T>::serializeMpiBroadcast(int root) const {
 #ifdef USE_MPI
   assert(!spheresLocked &&
-	 !cuboidsLocked);
+	 !cuboidsLocked &&
+	 !trianglesLocked);
 
   if (spheresLocked ||
-      cuboidsLocked) {
+      cuboidsLocked ||
+      trianglesLocked) {
     return;
   }
   
@@ -215,13 +224,14 @@ MixedModel<T>::serializeMpiBroadcast(int root) const {
 
   sizeArray[0] = spheres.size();
   sizeArray[1] = cuboids.size();
-  sizeArray[2] = 0;
+  sizeArray[2] = triangles.size();
   
   MPI_Bcast(sizeArray, 3, MPI_LONG_LONG_INT, root, MPI_COMM_WORLD);
 
   long long int geometryArraySize =
     spheres.size() * 4 +
-    cuboids.size() * 6;
+    cuboids.size() * 6 +
+    triangles.size() * 9;
   
   double * geometryArray = new double[geometryArraySize];
 
@@ -246,6 +256,21 @@ MixedModel<T>::serializeMpiBroadcast(int root) const {
       geometryArray[geometryArrayIndex++] = cuboid.getMaxCoords().get(dim);
     }
   }
+
+  // triangles
+  for (Triangle<T> const & triangle : triangles) {
+    for (int dim = 0; dim < 3; ++ dim) {
+      geometryArray[geometryArrayIndex++] = triangle.getV1().get(dim);
+    }
+
+    for (int dim = 0; dim < 3; ++ dim) {
+      geometryArray[geometryArrayIndex++] = triangle.getV2().get(dim);
+    }
+
+    for (int dim = 0; dim < 3; ++ dim) {
+      geometryArray[geometryArrayIndex++] = triangle.getV3().get(dim);
+    }
+  }
   
   assert(geometryArrayIndex == geometryArraySize);
 
@@ -263,10 +288,12 @@ void
 MixedModel<T>::mpiBroadcastDeserialize(int root) {
 #ifdef USE_MPI
   assert(!spheresLocked &&
-	 !cuboidsLocked);
+	 !cuboidsLocked &&
+	 !trianglesLocked);
 
   if (spheresLocked ||
-      cuboidsLocked) {
+      cuboidsLocked ||
+      trianglesLocked) {
     return;
   }
   
@@ -276,10 +303,12 @@ MixedModel<T>::mpiBroadcastDeserialize(int root) {
 
   long long int spheresSize   = sizeArray[0];
   long long int cuboidsSize   = sizeArray[1];
+  long long int trianglesSize = sizeArray[2];
   
   long long int geometryArraySize =
     spheresSize * 4 +
-    cuboidsSize * 6;
+    cuboidsSize * 6 +
+    trianglesSize * 9;
 
   double * geometryArray = new double[geometryArraySize];
 
@@ -287,9 +316,11 @@ MixedModel<T>::mpiBroadcastDeserialize(int root) {
 
   spheres.clear();
   cuboids.clear();
+  triangles.clear();
 
   spheres.reserve(spheresSize);
   cuboids.reserve(cuboidsSize);
+  triangles.reserve(trianglesSize);
   
   long long int geometryArrayIndex = 0;
 
@@ -323,6 +354,29 @@ MixedModel<T>::mpiBroadcastDeserialize(int root) {
     cuboids.emplace_back(minCoords, maxCoords);
   }
 
+  // triangles
+  for (long long int i = 0; i < trianglesSize; i++) {
+    Vector3<T> v1;
+
+    for (int dim = 0; dim < 3; ++ dim) {
+      v1.set(dim, geometryArray[geometryArrayIndex++]);
+    }
+
+    Vector3<T> v2;
+
+    for (int dim = 0; dim < 3; ++ dim) {
+      v2.set(dim, geometryArray[geometryArrayIndex++]);
+    }
+
+    Vector3<T> v3;
+
+    for (int dim = 0; dim < 3; ++ dim) {
+      v3.set(dim, geometryArray[geometryArrayIndex++]);
+    }
+
+    triangles.emplace_back(v1, v2, v3);
+  }
+
   assert(geometryArrayIndex == geometryArraySize);
 
   delete [] geometryArray;
@@ -335,7 +389,8 @@ template <class T>
 bool
 MixedModel<T>::isEmpty() const {
   return (spheres.empty() &&
-	  cuboids.empty());
+	  cuboids.empty() &&
+	  triangles.empty());
 }
 
 template <class T>
@@ -348,6 +403,12 @@ template <class T>
 std::vector<Cuboid<T> > const *
 MixedModel<T>::getCuboids() const {
   return &cuboids;
+}
+
+template <class T>
+std::vector<Triangle<T> > const *
+MixedModel<T>::getTriangles() const {
+  return &triangles;
 }
 
 template <class T>
@@ -376,6 +437,20 @@ MixedModel<T>::getAndLockCuboids() {
   cuboidsLocked = true;
   
   return &cuboids;
+}
+
+template <class T>
+std::vector<Triangle<T> > *
+MixedModel<T>::getAndLockTriangles() {
+  assert(!trianglesLocked);
+
+  if (trianglesLocked) {
+    return nullptr;
+  }
+
+  trianglesLocked = true;
+  
+  return &triangles;
 }
 
 /// Uses MPI_Bcast to send or receive an array with size represented by

@@ -32,91 +32,86 @@
 // ================================================================
 // 
 // Authors: Derek Juba <derek.juba@nist.gov>
-// Created: 2019-07-03
+// Created: 2019-07-26
 //
 // ================================================================
 
-#ifndef PARAMETERS_RESULTS_H_
-#define PARAMETERS_RESULTS_H_
+#include "XyzParser.h"
+
+#include <iostream>
 
 // ================================================================
 
-#include "Units.h"
+using namespace zeno;
 
-// ================================================================
-
-namespace zeno {
-  
-/// Collects the parameters that are used when computing results.
-///
-/// For some parameters, tracks whether they 
-/// have been manually set or are still at their default value.
-///
-class ParametersResults
-{
-public:
-  ParametersResults();
-  ~ParametersResults();
-  
-  void setLengthScale(double number, Units::Length unit);
-  double getLengthScaleNumber() const;
-  Units::Length getLengthScaleUnit() const;
-  bool getLengthScaleWasSet() const;
-
-  void setTemperature(double number, Units::Temperature unit);
-  double getTemperatureNumber() const;
-  Units::Temperature getTemperatureUnit() const;
-  bool getTemperatureWasSet() const;
-
-  void setMass(double number, Units::Mass unit);
-  double getMassNumber() const;
-  Units::Mass getMassUnit() const;
-  bool getMassWasSet() const;
-
-  void setSolventViscosity(double number, Units::Viscosity unit);
-  double getSolventViscosityNumber() const;
-  Units::Viscosity getSolventViscosityUnit() const;
-  bool getSolventViscosityWasSet() const;
-
-  void setBuoyancyFactor(double buoyancyFactor);
-  double getBuoyancyFactor() const;
-  bool getBuoyancyFactorWasSet() const;
-
-  void mpiBroadcast(int root);
-
-private:
-  void serializeMpiBroadcast(int root) const;
-  void mpiBroadcastDeserialize(int root);
-  
-  // Command-line parameters
-
-  bool computeForm;
-
-  // .bod parameters
-  
-  double lengthScale;
-  Units::Length lengthScaleUnit;
-  bool lengthScaleWasSet;
-
-  double temperature;
-  Units::Temperature temperatureUnit;
-  bool temperatureWasSet;
-
-  double mass;
-  Units::Mass massUnit;
-  bool massWasSet;
-
-  double solventViscosity;
-  Units::Viscosity solventViscosityUnit;
-  bool solventViscosityWasSet;
-
-  double buoyancyFactor;
-  bool buoyancyFactorWasSet;
-};
+xyz_parser::XyzParser::XyzParser
+(std::unordered_map<std::string, double> const & atomIdToRadius,
+ std::istream & in,
+ std::list<zeno::MixedModel<double> > * snapshots,
+ std::list<std::string> * comments)
+  : d_scanner(in),
+    atomIdToRadius(&atomIdToRadius),
+    snapshots(snapshots),
+    comments(comments),
+    numAtomsExpected(0),
+    numAtomsSeen(0) {
 
 }
 
-// ================================================================
+void xyz_parser::XyzParser::addSnapshot(int numAtoms) {
+  if (numAtomsSeen < numAtomsExpected) {
+    std::cerr << "Error parsing XYZ file: Expected " << numAtomsExpected
+	      << " atoms in snapshot but found only " << numAtomsSeen
+	      << std::endl;
 
-#endif  // #ifndef PARAMETERS_RESULTS_H_
+    exit(1);
+  }
 
+  numAtomsExpected = numAtoms;
+
+  numAtomsSeen = 0;
+
+  snapshots->emplace_back();
+
+  comments->emplace_back();
+}
+
+void xyz_parser::XyzParser::addCommentWord(std::string commentWord) {
+  if (!comments->back().empty()) {
+    comments->back() += " ";
+  }
+  
+  comments->back() += commentWord;
+}
+
+void xyz_parser::XyzParser::addAtom(std::string id,
+				    double x, double y, double z) {
+
+  ++ numAtomsSeen;
+
+  if (numAtomsSeen > numAtomsExpected) {
+    std::cerr << "Error parsing XYZ file: Expected only " << numAtomsExpected
+	      << " atoms in snapshot but found more"
+	      << std::endl;
+
+    exit(1);
+  }
+
+  double radius{};
+  
+  try {
+    radius = atomIdToRadius->at(id);
+  }
+  catch (std::out_of_range const & oor) {
+    std::cerr << "Error parsing XYZ file: Found unknown atom ID " << id
+	      << std::endl;
+
+    exit(1);
+  }
+
+  Vector3<double> center(x, y, z);
+
+  Sphere<double> sphere(center, radius);
+
+  snapshots->back().addSphere(sphere);
+}

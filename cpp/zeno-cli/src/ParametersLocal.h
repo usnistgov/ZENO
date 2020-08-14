@@ -59,6 +59,14 @@ public:
   void setInputFileName(std::string const & inputFileName);
   std::string getInputFileName() const;
 
+  void setXyzInputFileName(std::string const & xyzInputFileName);
+  std::string getXyzInputFileName() const;
+  bool getXyzInputFileNameWasSet() const;
+  
+  void setMapInputFileName(std::string const & mapInputFileName);
+  std::string getMapInputFileName() const;
+  bool getMapInputFileNameWasSet() const;
+  
   void setCsvOutputFileName(std::string const & csvOutputFileName);
   std::string getCsvOutputFileName() const;
   bool getCsvOutputFileNameWasSet() const;
@@ -81,9 +89,20 @@ public:
   void setPrintBenchmarks(bool printBenchmarks);
   bool getPrintBenchmarks() const;
 
+  void mpiBroadcast(int root);
+
 private:
+  void serializeMpiBroadcast(int root) const;
+  void mpiBroadcastDeserialize(int root);
+  
   std::string inputFileName;
 
+  std::string xyzInputFileName;
+  bool xyzInputFileNameWasSet;
+
+  std::string mapInputFileName;
+  bool mapInputFileNameWasSet;
+  
   std::string csvOutputFileName;
   bool csvOutputFileNameWasSet;
 

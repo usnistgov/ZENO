@@ -70,16 +70,6 @@ ParametersResults::~ParametersResults() {
 }
 
 void
-ParametersResults::setComputeForm(bool computeForm) {
-  this->computeForm = computeForm;
-}
-
-bool
-ParametersResults::getComputeForm() const {
-  return computeForm;
-}
-
-void
 ParametersResults::setLengthScale(double number, Units::Length unit) {
   lengthScale     = number;
   lengthScaleUnit = unit;
@@ -230,7 +220,7 @@ ParametersResults::serializeMpiBroadcast(int root) const {
   parametersArray[11] = (double)getSolventViscosityWasSet();
   parametersArray[12] = getBuoyancyFactor();
   parametersArray[13] = (double)getBuoyancyFactorWasSet();
-  parametersArray[14] = (double)getComputeForm();
+  parametersArray[14] = 0;
 
   MPI_Bcast(parametersArray, countToSend, MPI_DOUBLE, root, MPI_COMM_WORLD);
 #endif
@@ -271,6 +261,5 @@ ParametersResults::mpiBroadcastDeserialize(int root) {
     setBuoyancyFactor(parametersArray[12]);
   }
 
-  setComputeForm((bool)parametersArray[14]);
 #endif
 }

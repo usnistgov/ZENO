@@ -81,6 +81,7 @@ class MixedModelProcessed {
   
   std::vector<Sphere<T> > const * getSpheres() const;
   std::vector<Cuboid<T> > const * getCuboids() const;
+  std::vector<Triangle<T> > const * getTriangles() const;
   
  private:
   template <class Primitive>
@@ -94,9 +95,11 @@ class MixedModelProcessed {
     
   AABBTree<Sphere<T> > aabbTreeSpheres;
   AABBTree<Cuboid<T> > aabbTreeCuboids;
+  AABBTree<Triangle<T> > aabbTreeTriangles;
 
   std::vector<Sphere<T> > * spheres;
   std::vector<Cuboid<T> > * cuboids;
+  std::vector<Triangle<T> > * triangles;
 
   bool preprocessed;
 };
@@ -109,8 +112,10 @@ template <class T>
 MixedModelProcessed<T>::MixedModelProcessed()
 : aabbTreeSpheres(),
   aabbTreeCuboids(),
+  aabbTreeTriangles(),
   spheres(nullptr),
   cuboids(nullptr),
+  triangles(nullptr),
   preprocessed(false) {
 
 }
@@ -125,6 +130,7 @@ void
 MixedModelProcessed<T>::addMixedModel(MixedModel<T> * mixedModel) {
   spheres = mixedModel->getAndLockSpheres();
   cuboids = mixedModel->getAndLockCuboids();
+  triangles = mixedModel->getAndLockTriangles();
 
   preprocessed = false;
 }
@@ -135,7 +141,8 @@ template <class T>
 bool
 MixedModelProcessed<T>::isEmpty() const {
   return ((spheres == nullptr || spheres->empty()) &&
-	  (cuboids == nullptr || cuboids->empty()));
+	  (cuboids == nullptr || cuboids->empty()) &&
+	  (triangles == nullptr || triangles->empty()));
 }
 
 /// Preprocesses geometric primitives stored in the model for use with
@@ -146,6 +153,7 @@ void
 MixedModelProcessed<T>::preprocess() {
   aabbTreeSpheres.preprocess(spheres);
   aabbTreeCuboids.preprocess(cuboids);
+  aabbTreeTriangles.preprocess(triangles);
 
   preprocessed = true;
 }
@@ -172,6 +180,12 @@ MixedModelProcessed<T>::findNearestPoint(Vector3<T> const & queryPoint,
   aabbTreeCuboids.findNearestObject(queryPoint,
 				    &nearestCuboid, 
 				    minDistanceSqr);
+
+  Triangle<T> const * nearestTriangle = NULL;
+
+  aabbTreeTriangles.findNearestObject(queryPoint,
+				      &nearestTriangle, 
+				      minDistanceSqr);
 }
 
 /// Returns whether the model contains the query point.
@@ -181,7 +195,19 @@ bool
 MixedModelProcessed<T>::contains(Vector3<T> const & queryPoint) const {
   assert(preprocessed);
 
-  return (aabbTreeSpheres.objectsContain(queryPoint) ||
+  T minDistanceSqr = std::numeric_limits<T>::infinity();
+  
+  Triangle<T> const * nearestTriangle = NULL;
+
+  aabbTreeTriangles.findNearestObject(queryPoint,
+				      &nearestTriangle, 
+				      &minDistanceSqr);
+
+  bool meshContains = ((nearestTriangle != NULL) &&
+		       (nearestTriangle->isAbove(queryPoint))); 
+  
+  return (meshContains ||
+	  aabbTreeSpheres.objectsContain(queryPoint) ||
 	  aabbTreeCuboids.objectsContain(queryPoint));
 }
 
@@ -199,6 +225,10 @@ MixedModelProcessed<T>::findFarthestPoint(Vector3<T> const & queryPoint) const {
 		   &farthestPoint);
 
   getFarthestPoint(*cuboids,
+		   queryPoint,
+		   &farthestPoint);
+
+  getFarthestPoint(*triangles,
 		   queryPoint,
 		   &farthestPoint);
 
@@ -251,6 +281,9 @@ MixedModelProcessed<T>::generateAABB() const {
   generateAABB(*cuboids,
 	       &aabb);
 
+  generateAABB(*triangles,
+	       &aabb);
+
   return aabb;
 }
 
@@ -293,6 +326,12 @@ template <class T>
 std::vector<Cuboid<T> > const *
 MixedModelProcessed<T>::getCuboids() const {
   return cuboids;
+}
+
+template <class T>
+std::vector<Triangle<T> > const *
+MixedModelProcessed<T>::getTriangles() const {
+  return triangles;
 }
 
 }

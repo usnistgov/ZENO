@@ -31,3 +31,5 @@ as documented in Ref. :cite:`Juba2016`
 the ability to read voxels in addition to spheres as input
 
 5.2.x : Core functionality (that is, not involving input/output) was moved into a shared library
+
+5.3.x : Adds support for trajectory input

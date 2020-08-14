@@ -1,18 +1,18 @@
 %scanner                BodScanner.h
 %scanner-token-function d_scanner.lex()
 
-%token INT FLOAT SPHERE CUBE CUBOID ATOM VOXELS ST RLAUNCH HUNITS UNITS TEMP MASS VISCOSITY BF STRING
+%token INT FLOAT SPHERE CUBE CUBOID ATOM VOXELS TRAJECTORY ST RLAUNCH HUNITS UNITS TEMP MASS VISCOSITY BF WORD
 %polymorphic FLOAT_TYPE: double; STRING_TYPE: std::string;
 %type <FLOAT_TYPE> real
-%type <STRING_TYPE> string
+%type <STRING_TYPE> word
 
 %%
 
 lines:
   // empty
 |
-  line
   lines
+  line
 ;
 
 line:
@@ -25,6 +25,8 @@ line:
   atomDef
 |
   voxelsFile
+|
+  trajectoryFiles  
 |
   parameter
 ;
@@ -55,22 +57,29 @@ cuboidDef:
 
 atomDef:
   //   atmNum atmName resName chainID resNum X    Y    Z    Q    R
-  ATOM INT    STRING  STRING  STRING  INT    real real real real real
+  ATOM INT    word    word    WORD    INT    real real real real real
   {
     addSphere($7, $8, $9, $11);
   }
 |
   //   atmNum atmName resName resNum X    Y    Z    Q    R
-  ATOM INT    STRING  STRING  INT    real real real real real
+  ATOM INT    word    word    INT    real real real real real
   {
     addSphere($6, $7, $8, $10);
   }
 ;
 
 voxelsFile:
-  VOXELS string
+  VOXELS word
   {
     addVoxels($2);
+  }
+;
+
+trajectoryFiles:
+  TRAJECTORY word word
+  {
+    addTrajectory($2, $3);
   }
 ;
 
@@ -85,27 +94,27 @@ parameter:
     setRLAUNCH($2);
   }
 |
-  HUNITS real string
+  HUNITS real word
   {
     setHUNITS($2, $3);
   }
 |
-  UNITS string
+  UNITS word
   {
     setUNITS($2);
   }
 |
-  TEMP real string
+  TEMP real word
   {
     setTEMP($2, $3);
   }
 |
-  MASS real string
+  MASS real word
   {
     setMASS($2, $3);
   }
 |
-  VISCOSITY real string
+  VISCOSITY real word
   {
     setVISCOSITY($2, $3);
   }
@@ -128,8 +137,18 @@ real:
   }
 ;
 
-string:
-  STRING
+word:
+  WORD
+  {
+    $$ = d_scanner.matched();
+  }
+|
+  FLOAT
+  {
+    $$ = d_scanner.matched();
+  }
+|
+  INT
   {
     $$ = d_scanner.matched();
   }

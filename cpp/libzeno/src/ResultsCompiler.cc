@@ -267,6 +267,21 @@ ResultsCompiler::compile(ResultsZeno const * resultsZeno,
       computeIntrinsicViscosity(results->q_eta.value,
 				results->intrinsicConductivity.value);
   }
+
+  if (computeForm) {
+
+    assert(resultsInterior != NULL);
+
+    results->formFactorQs =
+      computeFormFactorQs(resultsInterior->getBoundingSphere().getRadius());
+
+    // TODO: Make number of threads not hard-coded
+    results->formFactors = computeFormFactors(*(resultsInterior->getPoints()),
+					      results->formFactorQs,
+					      16);
+
+    results->formResultsCompiled = true;
+  }
 }
 
 Result<Uncertain<double> > 
@@ -711,6 +726,156 @@ computeGyrationTensor(Matrix3x3<Uncertain<double> > const & hitPointsSqrSum,
 	   Units::getName(parameters->getLengthScaleUnit()) + "^2");
   
   return result;
+}
+
+std::array<double, ResultsCompiler::numFormFactors>
+ResultsCompiler::
+computeFormFactorQs(double boundingSphereRadius) const {
+
+  const double l = parameters->getLengthScaleNumber();
+
+  std::array<double, numFormFactors> qs;
+
+  for (unsigned int factorNum = 0; 
+       factorNum < numFormFactors; 
+       ++factorNum) {
+
+    qs.at(factorNum) =
+      0.01 * std::pow(10000, (double)factorNum/(numFormFactors - 1)) /
+      boundingSphereRadius;
+
+    qs.at(factorNum) *= std::pow(l, -1);
+  }
+
+  return qs;
+}
+
+std::array<double, ResultsCompiler::numFormFactors>
+ResultsCompiler::
+computeFormFactors(std::vector<Vector3<double> > const & interiorPoints,
+		   std::array<double, 
+		   ResultsCompiler::numFormFactors> const & 
+		   formFactorQs,
+		   int numThreads) const {
+
+  BigUInt numPairs = 
+    (interiorPoints.size() * interiorPoints.size() - 
+     interiorPoints.size()) / 2;
+
+  BigUInt numPairsInProcess = numPairs;
+
+  std::vector<std::array<double, numFormFactors> > threadsFormFactors;
+
+  threadsFormFactors.reserve(numThreads);
+
+  std::vector<std::thread> threads;
+
+  threads.reserve(numThreads);
+
+  BigUInt threadStartPairIndex = 0;
+
+  for (int threadNum = 0; threadNum < numThreads; ++threadNum) {
+    BigUInt numPairsInThread = numPairsInProcess / numThreads;
+
+    if ((unsigned int)threadNum < numPairsInProcess % numThreads) {
+      numPairsInThread ++;
+    }
+
+    BigUInt threadEndPairIndex = threadStartPairIndex + numPairsInThread;
+
+    threads.emplace_back(&ResultsCompiler::computeFormFactorsThread,
+			 this,
+			 threadNum,
+			 interiorPoints,
+			 formFactorQs,
+			 threadStartPairIndex,
+			 threadEndPairIndex,
+			 &(threadsFormFactors[threadNum]));
+
+    threadStartPairIndex += numPairsInThread;
+  }
+
+  for (int threadNum = 0; threadNum < numThreads; ++threadNum) {
+    threads.at(threadNum).join();
+  }
+
+  std::array<double, numFormFactors> formFactorsReduced;
+
+  formFactorsReduced.fill(0);
+
+  for (int threadNum = 0; 
+       threadNum < numThreads; 
+       ++threadNum) {
+
+    for (unsigned int factorNum = 0; 
+	 factorNum < numFormFactors; 
+	 ++factorNum) {
+
+      formFactorsReduced.at(factorNum) += 
+	threadsFormFactors[threadNum].at(factorNum);
+    }
+  }
+
+  for (unsigned int factorNum = 0; 
+       factorNum < numFormFactors; 
+       ++factorNum) {
+
+    formFactorsReduced.at(factorNum) /= numPairs;
+  }
+
+  return formFactorsReduced;
+}
+
+void
+ResultsCompiler::
+computeFormFactorsThread(int threadNum,
+			      std::vector<Vector3<double> > const & 
+			      interiorPoints,
+			      std::array<double, 
+			      ResultsCompiler::numFormFactors> const & 
+			      formFactorQs,
+			      BigUInt startPairIndex,
+			      BigUInt endPairIndex,
+			      std::array<double, numFormFactors> * 
+			      threadFormFactors) const {
+
+  const double l = parameters->getLengthScaleNumber();
+
+  threadFormFactors->fill(0);
+
+  for (BigUInt pairIndex = startPairIndex;
+       pairIndex < endPairIndex;
+       ++pairIndex) {
+
+    BigUInt i = 0, j = 0;
+
+    indexToIJ(pairIndex, &i, &j);
+
+    double distance = 
+      (interiorPoints.at(i) - 
+       interiorPoints.at(j)).getMagnitude();
+
+    distance *= l;
+
+    for (unsigned int factorNum = 0; 
+	 factorNum < numFormFactors; 
+	 ++factorNum) {
+
+      double q = formFactorQs.at(factorNum);
+
+      double divisor = q*distance;
+
+      //use Taylor expansion of sin(x)/x for small x
+      if (divisor < 0.001) {
+	threadFormFactors->at(factorNum) +=
+	  1. - std::pow(divisor, 2)/6.;
+      }
+      else {
+	threadFormFactors->at(factorNum) += 
+	  std::sin(divisor)/divisor;
+      }
+    }
+  }
 }
 
 /// Inverts the formula: 
