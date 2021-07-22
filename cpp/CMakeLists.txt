@@ -62,6 +62,7 @@ set(SOURCE_FILES_LIB
   ${SRC_DIR_LIB}/Virials/MCMove.cc
   ${SRC_DIR_LIB}/Virials/MeterOverlap.cc
   ${SRC_DIR_LIB}/Virials/OverlapTester.cc
+  ${SRC_DIR_LIB}/Virials/ParametersVirial.cc
   ${SRC_DIR_LIB}/Virials/Particle.cc
   ${SRC_DIR_LIB}/Virials/ResultsVirial.cc
   ${SRC_DIR_LIB}/Virials/SamplerVirial.cc
