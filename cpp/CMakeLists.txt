@@ -56,7 +56,17 @@ set(SOURCE_FILES_LIB
   ${SRC_DIR_LIB}/ResultsInterior.cc
   ${SRC_DIR_LIB}/ResultsZeno.cc
   ${SRC_DIR_LIB}/Timer.cc
-  ${SRC_DIR_LIB}/Units.cc)
+  ${SRC_DIR_LIB}/Units.cc
+  ${SRC_DIR_LIB}/Virials/ClusterSum.cc
+  ${SRC_DIR_LIB}/Virials/IntegratorMSMC.cc
+  ${SRC_DIR_LIB}/Virials/MCMove.cc
+  ${SRC_DIR_LIB}/Virials/MeterOverlap.cc
+  ${SRC_DIR_LIB}/Virials/OverlapTester.cc
+  ${SRC_DIR_LIB}/Virials/Particle.cc
+  ${SRC_DIR_LIB}/Virials/ResultsVirial.cc
+  ${SRC_DIR_LIB}/Virials/SamplerVirial.cc
+  ${SRC_DIR_LIB}/Virials/VirialAlpha.cc
+  ${SRC_DIR_LIB}/Virials/VirialProduction.cc)
 
 set(HEADER_FILES_LIB
   ${INCLUDE_DIR_LIB}/BoundingSphereGenerator.h
@@ -91,6 +101,9 @@ set(HEADER_FILES_LIB
   ${INCLUDE_DIR_LIB}/SpherePoint/RandomBallPointRejection.h
   ${INCLUDE_DIR_LIB}/SpherePoint/RandomSpherePointMarsaglia.h
   ${INCLUDE_DIR_LIB}/SpherePoint/RandomSpherePointPolar.h
+  ${INCLUDE_DIR_LIB}/Virials/VirialAlpha.h
+  ${INCLUDE_DIR_LIB}/Virials/VirialProduction.h
+  ${INCLUDE_DIR_LIB}/Virials/ResultsVirial.h
   ${INCLUDE_DIR_LIB}/Walker/SamplerInterior.h
   ${INCLUDE_DIR_LIB}/Walker/WalkerExterior.h)
 
