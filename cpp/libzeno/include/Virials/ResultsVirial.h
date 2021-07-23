@@ -39,6 +39,9 @@ public:
     void reduce();
 
     long long getNumSteps() const;
+    double getRefIntegral() {
+      return refIntegral;
+    }
     double getRefFrac() const;
     Uncertain<double> getRefAverageReduced() const;
     Uncertain<double> getRefOverlapAverageReduced() const;

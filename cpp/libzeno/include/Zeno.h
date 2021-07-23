@@ -185,6 +185,8 @@ class Zeno {
   double getWalkOnSpheresReductionTime() const;
   double getInteriorSamplingTime() const;
   double getInteriorSamplingReductionTime() const;
+  double getVirialTime() const;
+  double getVirialReductionTime() const;
   double getTotalTime() const;
 
  private:
@@ -289,15 +291,26 @@ class Zeno {
 				  RandomNumberGenerator * randomNumberGenerator,
 				  ResultsInterior * resultsInterior);
 
+  /// Perform the given number of virial steps
+  /// (either number of walks or error) and perform a parallel reduction on
+  /// the results.
+  ///
+  void getVirialResults
+    (long long numStepsInProcess,
+     ParametersVirial const & parametersVirial,
+     ParametersResults const & parametersResults,
+     BoundingSphere const & boundingSphere,
+     Model const & model,
+     std::vector<RandomNumberGenerator> * threadRNGs,
+     ResultsVirial * * resultsVirial);
+
   void doVirialSampling(ParametersVirial const & parameters,
-                        long long stepsInProcess,
+                        long long numStepsInProcess,
                         BoundingSphere const & boundingSphere,
                         Model const & model,
-                        Timer const & totalTimer,
                         std::vector<RandomNumberGenerator> * threadRNGs,
-                        ResultsVirial * * resultsVirial,
-                        double * virialTime,
-                        double * virialReduceTime);
+                        ResultsVirial * resultsVirial,
+                        double refDiameter);
 
   static
     void doVirialSamplingThread(ParametersVirial const * parameters,
@@ -308,8 +321,7 @@ class Zeno {
 			        Timer const * totalTimer,
 			        RandomNumberGenerator * randomNumberGenerator,
 			        ResultsVirial * resultsVirial,
-			        double refDiameter,
-			        double refIntegral);
+			        double refDiameter);
 
   int mpiSize;
   int mpiRank;
@@ -327,6 +339,8 @@ class Zeno {
   Timer walkOnSpheresReductionTimer;
   Timer interiorSamplingTimer;
   Timer interiorSamplingReductionTimer;
+  Timer virialTimer;
+  Timer virialReductionTimer;
   Timer totalTimer;
 };
 

@@ -75,6 +75,8 @@ Zeno::Zeno(MixedModel<double> * modelToProcess)
     walkOnSpheresReductionTimer(),
     interiorSamplingTimer(),
     interiorSamplingReductionTimer(),
+    virialTimer(),
+    virialReductionTimer(),
     totalTimer() {
 
   totalTimer.start();
@@ -257,6 +259,16 @@ Zeno::getInteriorSamplingTime() const {
 double
 Zeno::getInteriorSamplingReductionTime() const {
   return interiorSamplingReductionTimer.getTime();
+}
+
+double
+Zeno::getVirialTime() const {
+  return virialTimer.getTime();
+}
+
+double
+Zeno::getVirialReductionTime() const {
+  return virialReductionTimer.getTime();
 }
 
 double
@@ -789,6 +801,34 @@ Zeno::doInteriorSamplingThread(ParametersInteriorSampling const * parameters,
   }
 }
 
+void
+Zeno::getVirialResults
+(long long numStepsInProcess,
+ ParametersVirial const & parametersVirial,
+ ParametersResults const & parametersResults,
+ BoundingSphere const & boundingSphere,
+ Model const & model,
+ std::vector<RandomNumberGenerator> * threadRNGs,
+ ResultsVirial * * resultsVirial) {
+
+  double refDiameter = 2 * boundingSphere.getRadius();
+  double refIntegral = std::pow(4.0*M_PI*refDiameter*refDiameter*refDiameter/3.0,parametersVirial.getOrder()-1)/2;
+  *resultsVirial = new ResultsVirial(parametersVirial.getNumThreads(),
+                                     refIntegral);
+
+  doVirialSampling(parametersVirial,
+                   numStepsInProcess,
+                   boundingSphere,
+                   model,
+                   threadRNGs,
+                   *resultsVirial,
+                   refDiameter);
+
+  virialReductionTimer.start();
+  (*resultsVirial)->reduce();
+  virialReductionTimer.stop();
+}
+
 /// Launches a set of virial-coefficient samples in each of a set of parallel
 /// threads.
 ///
@@ -797,21 +837,11 @@ Zeno::doVirialSampling(ParametersVirial const & parameters,
                  long long stepsInProcess,
                  BoundingSphere const & boundingSphere,
                  Model const & model,
-                 Timer const & totalTimer,
                  std::vector<RandomNumberGenerator> * threadRNGs,
-                 ResultsVirial * * resultsVirial,
-                 double * virialTime,
-                 double * virialReduceTime) {
+                 ResultsVirial * resultsVirial,
+                 double refDiameter) {
 
-    Timer virialTimer, reduceTimer;
     virialTimer.start();
-
-    double refDiameter = 2 * boundingSphere.getRadius();
-    //std::cout<<"refDiameter: "<<refDiameter<<std::endl;
-    double refIntegral = std::pow(4.0*M_PI*refDiameter*refDiameter*refDiameter/3.0,parameters.getOrder()-1)/2;
-    for (int i=2; i<=parameters.getOrder(); i++) refIntegral *= i;
-
-    *resultsVirial = new ResultsVirial(parameters.getNumThreads(), refIntegral);
 
     const int numThreads = parameters.getNumThreads();
     //std::cout<<numThreads<<std::endl;
@@ -819,7 +849,7 @@ Zeno::doVirialSampling(ParametersVirial const & parameters,
 
     for (int threadNum = 0; threadNum < numThreads; threadNum++) {
 
-        long long stepsInThread = stepsInProcess / numThreads;
+        long long stepsInThread = parameters.getSteps() / numThreads;
 
         if (threadNum < stepsInProcess % numThreads) {
             stepsInThread ++;
@@ -834,19 +864,14 @@ Zeno::doVirialSampling(ParametersVirial const & parameters,
                                 stepsInThread,
                                 &totalTimer,
                                 &(threadRNGs->at(threadNum)),
-                                *resultsVirial,
-                                refDiameter,
-                                refIntegral);
+                                resultsVirial,
+                                refDiameter);
     }
 
     for (int threadNum = 0; threadNum < numThreads; threadNum++) {
         threads[threadNum]->join();
     }
 
-    reduceTimer.start();
-    (*resultsVirial)->reduce();
-    reduceTimer.stop();
-    *virialReduceTime += reduceTimer.getTime();
     for (int threadNum = 0; threadNum < numThreads; threadNum++) {
         delete threads[threadNum];
     }
@@ -854,7 +879,6 @@ Zeno::doVirialSampling(ParametersVirial const & parameters,
     delete [] threads;
 
     virialTimer.stop();
-    *virialTime += virialTimer.getTime();
 }
 
 void
@@ -866,8 +890,7 @@ Zeno::doVirialSamplingThread(ParametersVirial const * parameters,
 			     Timer const * totalTimer,
 			     RandomNumberGenerator * randomNumberGenerator,
 			     ResultsVirial * resultsVirial,
-                             double refDiameter,
-                             double refIntegral) {
+                             double refDiameter) {
 
     std::vector <BoundingSphere const *> boundingSpheres;
     boundingSpheres.push_back(&boundingSphere);
@@ -917,7 +940,7 @@ Zeno::doVirialSamplingThread(ParametersVirial const * parameters,
 
     VirialProduction<double, RandomNumberGenerator> virialProduction(refIntegrator,targetIntegrator,
             clusterSumRef, clusterSumTarget, clusterSumRefT, clusterSumTargetT, alphaStats[0],
-            refIntegral);
+            resultsVirial->getRefIntegral());
     virialProduction.runSteps(stepsInThread);
     //virialProduction.printResults(NULL);
 
