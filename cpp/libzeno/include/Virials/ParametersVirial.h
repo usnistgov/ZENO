@@ -43,6 +43,9 @@ public:
   void setSeed(int seed);
   int getSeed() const;
 
+  void setOrder(int order);
+  int getOrder() const;
+
   void setSteps(long long steps);
   long long getSteps() const;
   bool getStepsWasSet() const;
@@ -54,9 +57,6 @@ public:
   void setMaxRunTime(double maxRunTime);
   double getMaxRunTime() const;
   bool getMaxRunTimeWasSet() const;
-
-  void setOrder(int order);
-  int getOrder() const;
 
   void mpiBroadcast(int root);
 

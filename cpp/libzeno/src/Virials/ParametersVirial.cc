@@ -84,6 +84,16 @@ ParametersVirial::getSeed() const {
 }
 
 void
+ParametersVirial::setOrder(int order) {
+  this->order = order;
+}
+
+int
+ParametersVirial::getOrder() const {
+  return order;
+}
+
+void
 ParametersVirial::setSteps(long long steps) {
   this->steps = steps;
 

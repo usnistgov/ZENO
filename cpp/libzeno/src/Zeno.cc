@@ -57,6 +57,9 @@
 #include "Walker/WalkerExterior.h"
 #include "Walker/SamplerInterior.h"
 
+#include "Virials/VirialAlpha.h"
+#include "Virials/VirialProduction.h"
+
 using namespace zeno;
 
 Zeno::Zeno(MixedModel<double> * modelToProcess)
@@ -784,4 +787,72 @@ Zeno::doInteriorSamplingThread(ParametersInteriorSampling const * parameters,
       break;
     }
   }
+}
+
+void
+Zeno::doVirialSamplingThread(ParametersVirial const * parameters,
+			     BoundingSphere const & boundingSphere, 
+			     Model const & model,
+			     int threadNum,
+			     long long stepsInThread,
+			     Timer const * totalTimer,
+			     RandomNumberGenerator * randomNumberGenerator,
+			     ResultsVirial * resultsVirial,
+                             double refDiameter,
+                             double refIntegral) {
+
+    std::vector <BoundingSphere const *> boundingSpheres;
+    boundingSpheres.push_back(&boundingSphere);
+    std::vector <int> numParticles;
+    numParticles.push_back(parameters->getOrder());
+    std::vector<Model const *> models;
+    models.push_back(&model);
+    OverlapTester<double> const overlapTester;
+    IntegratorMSMC<double, RandomNumberGenerator> refIntegrator(threadNum,
+                                                                 totalTimer,
+                                                                 randomNumberGenerator,
+                                                                 boundingSpheres,
+                                                                 numParticles,
+                                                                 models);
+
+    ClusterSumChain<double> clusterSumRef(refIntegrator.getParticles(), refDiameter, 0.0, 1.0);
+    ClusterSumWheatleyRecursion<double> clusterSumTarget(refIntegrator.getParticles(), &overlapTester);
+    MCMoveChainVirial<double, RandomNumberGenerator> mcMoveChain(refIntegrator, &clusterSumRef, refDiameter);
+    MCMoveRotate<double , RandomNumberGenerator> mcMoveRotateRef(refIntegrator, &clusterSumRef);
+    refIntegrator.addMove(&mcMoveChain, 1.0);
+    refIntegrator.addMove(&mcMoveRotateRef, 1.0);
+    refIntegrator.setCurrentValue(clusterSumRef.value());
+
+    IntegratorMSMC<double, RandomNumberGenerator> targetIntegrator(threadNum,
+                                                                totalTimer,
+                                                                randomNumberGenerator,
+                                                                boundingSpheres,
+                                                                numParticles,
+                                                                models);
+
+    ClusterSumChain<double> clusterSumRefT(targetIntegrator.getParticles(), refDiameter, 0.0, 1.0);
+    ClusterSumWheatleyRecursion<double> clusterSumTargetT(targetIntegrator.getParticles(), &overlapTester);
+    MCMoveTranslate<double, RandomNumberGenerator> mcMoveTranslate(targetIntegrator, &clusterSumTargetT);
+    MCMoveRotate<double , RandomNumberGenerator> mcMoveRotateTarget(targetIntegrator, &clusterSumTargetT);
+    targetIntegrator.addMove(&mcMoveTranslate, 1.0);
+    targetIntegrator.addMove(&mcMoveRotateTarget, 1.0);
+    targetIntegrator.setCurrentValue(clusterSumTargetT.value());
+
+    VirialAlpha<double,RandomNumberGenerator> virialAlpha(refIntegrator, targetIntegrator,
+            clusterSumRef, clusterSumTarget, clusterSumRefT, clusterSumTargetT);
+    virialAlpha.run();
+
+    double* alphaStats = virialAlpha.getAlphaStatistics();
+    /*printf("alpha: %e  %e\n", alphaStats[0], alphaStats[1]);
+    printf("alpha block correlation: %f\n", alphaStats[2]);
+    printf("alpha span: %f\n", alphaStats[3]);*/
+
+    VirialProduction<double, RandomNumberGenerator> virialProduction(refIntegrator,targetIntegrator,
+            clusterSumRef, clusterSumTarget, clusterSumRefT, clusterSumTargetT, alphaStats[0],
+            refIntegral);
+    virialProduction.runSteps(stepsInThread);
+    //virialProduction.printResults(NULL);
+
+    resultsVirial->putData(threadNum, virialProduction.getRefMeter(), virialProduction.getTargetMeter());
+    resultsVirial->putVirialCoefficient(threadNum, virialProduction.getFullStats()[0][0], std::pow(virialProduction.getFullStats()[0][1],2));
 }

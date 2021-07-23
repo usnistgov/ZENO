@@ -60,6 +60,10 @@
 #include "Geometry/MixedModel.h"
 #include "Geometry/MixedModelProcessed.h"
 
+#include "Virials/ParametersVirial.h"
+#include "Virials/ResultsVirial.h"
+#include "Virials/IntegratorMSMC.h"
+
 #include "Timer.h"
 
 // ================================================================
@@ -284,6 +288,18 @@ class Zeno {
 				  Timer const * totalTimer,
 				  RandomNumberGenerator * randomNumberGenerator,
 				  ResultsInterior * resultsInterior);
+
+  static
+    void doVirialSamplingThread(ParametersVirial const * parameters,
+			        BoundingSphere const & boundingSphere, 
+			        Model const & model,
+			        int threadNum,
+			        long long stepsInThread,
+			        Timer const * totalTimer,
+			        RandomNumberGenerator * randomNumberGenerator,
+			        ResultsVirial * resultsVirial,
+			        double refDiameter,
+			        double refIntegral);
 
   int mpiSize;
   int mpiRank;

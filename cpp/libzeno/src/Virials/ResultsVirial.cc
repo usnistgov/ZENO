@@ -14,7 +14,6 @@
 // ================================================================
 
 #include "Virials/ResultsVirial.h"
-#include "math.h"
 
 using namespace zeno;
 
