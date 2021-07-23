@@ -289,6 +289,16 @@ class Zeno {
 				  RandomNumberGenerator * randomNumberGenerator,
 				  ResultsInterior * resultsInterior);
 
+  void doVirialSampling(ParametersVirial const & parameters,
+                        long long stepsInProcess,
+                        BoundingSphere const & boundingSphere,
+                        Model const & model,
+                        Timer const & totalTimer,
+                        std::vector<RandomNumberGenerator> * threadRNGs,
+                        ResultsVirial * * resultsVirial,
+                        double * virialTime,
+                        double * virialReduceTime);
+
   static
     void doVirialSamplingThread(ParametersVirial const * parameters,
 			        BoundingSphere const & boundingSphere, 

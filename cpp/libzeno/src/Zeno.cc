@@ -789,6 +789,74 @@ Zeno::doInteriorSamplingThread(ParametersInteriorSampling const * parameters,
   }
 }
 
+/// Launches a set of virial-coefficient samples in each of a set of parallel
+/// threads.
+///
+void
+Zeno::doVirialSampling(ParametersVirial const & parameters,
+                 long long stepsInProcess,
+                 BoundingSphere const & boundingSphere,
+                 Model const & model,
+                 Timer const & totalTimer,
+                 std::vector<RandomNumberGenerator> * threadRNGs,
+                 ResultsVirial * * resultsVirial,
+                 double * virialTime,
+                 double * virialReduceTime) {
+
+    Timer virialTimer, reduceTimer;
+    virialTimer.start();
+
+    double refDiameter = 2 * boundingSphere.getRadius();
+    //std::cout<<"refDiameter: "<<refDiameter<<std::endl;
+    double refIntegral = std::pow(4.0*M_PI*refDiameter*refDiameter*refDiameter/3.0,parameters.getOrder()-1)/2;
+    for (int i=2; i<=parameters.getOrder(); i++) refIntegral *= i;
+
+    *resultsVirial = new ResultsVirial(parameters.getNumThreads(), refIntegral);
+
+    const int numThreads = parameters.getNumThreads();
+    //std::cout<<numThreads<<std::endl;
+    std::thread * * threads = new std::thread *[numThreads];
+
+    for (int threadNum = 0; threadNum < numThreads; threadNum++) {
+
+        long long stepsInThread = stepsInProcess / numThreads;
+
+        if (threadNum < stepsInProcess % numThreads) {
+            stepsInThread ++;
+        }
+
+        threads[threadNum] =
+                new std::thread(doVirialSamplingThread,
+                                &parameters,
+                                boundingSphere,
+                                model,
+                                threadNum,
+                                stepsInThread,
+                                &totalTimer,
+                                &(threadRNGs->at(threadNum)),
+                                *resultsVirial,
+                                refDiameter,
+                                refIntegral);
+    }
+
+    for (int threadNum = 0; threadNum < numThreads; threadNum++) {
+        threads[threadNum]->join();
+    }
+
+    reduceTimer.start();
+    (*resultsVirial)->reduce();
+    reduceTimer.stop();
+    *virialReduceTime += reduceTimer.getTime();
+    for (int threadNum = 0; threadNum < numThreads; threadNum++) {
+        delete threads[threadNum];
+    }
+
+    delete [] threads;
+
+    virialTimer.stop();
+    *virialTime += virialTimer.getTime();
+}
+
 void
 Zeno::doVirialSamplingThread(ParametersVirial const * parameters,
 			     BoundingSphere const & boundingSphere, 
