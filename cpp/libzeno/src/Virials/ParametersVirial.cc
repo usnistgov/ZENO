@@ -51,10 +51,6 @@ ParametersVirial::ParametersVirial()
     seed(),
     steps(),
     stepsWasSet(false),
-    maxErrorVirialCoefficient(),
-    maxErrorVirialCoefficientWasSet(false),
-    maxRunTime(),
-    maxRunTimeWasSet(false),
     order() {
 
 }
@@ -110,40 +106,6 @@ ParametersVirial::getStepsWasSet() const {
   return stepsWasSet;
 }
 
-void
-ParametersVirial::setMaxRunTime(double maxRunTime) {
-  this->maxRunTime = maxRunTime;
-
-  maxRunTimeWasSet = true;
-}
-
-double
-ParametersVirial::getMaxRunTime() const {
-  return maxRunTime;
-}
-
-bool
-ParametersVirial::getMaxRunTimeWasSet() const {
-  return maxRunTimeWasSet;
-}
-
-void
-ParametersVirial::setMaxErrorVirialCoefficient(double maxErrorVirialCoefficient) {
-  this->maxErrorVirialCoefficient = maxErrorVirialCoefficient;
-
-  maxErrorVirialCoefficientWasSet = true;
-}
-
-double
-ParametersVirial::getMaxErrorVirialCoefficient() const {
-  return maxErrorVirialCoefficient;
-}
-
-bool
-ParametersVirial::getMaxErrorVirialCoefficientWasSet() const {
-  return maxErrorVirialCoefficientWasSet;
-}
-
 void 
 ParametersVirial::mpiBroadcast(int root) {
 #ifdef USE_MPI
@@ -168,28 +130,15 @@ ParametersVirial::mpiBroadcast(int root) {
 void 
 ParametersVirial::serializeMpiBroadcast(int root) const {
 #ifdef USE_MPI
-  const int numDoublesToSend = 4;
-  
-  double doublesArray[numDoublesToSend];
-
-  doublesArray[0] = getMaxErrorVirialCoefficient();
-  doublesArray[1] = (double)getMaxErrorVirialCoefficientWasSet();
-  doublesArray[2] = getMaxRunTime();
-  doublesArray[3] = (double)getMaxRunTimeWasSet();
-
-  MPI_Bcast(doublesArray, numDoublesToSend, MPI_DOUBLE,
-	    root, MPI_COMM_WORLD);
-  
-  const int numLongLongsToSend = 6;
+  const int numLongLongsToSend = 5;
 
   long long longLongsArray[numLongLongsToSend];
 
   longLongsArray[0] = (long long)getNumThreads();
   longLongsArray[1] = (long long)getSeed();
-  longLongsArray[2] = getTotalNumSamples();
-  longLongsArray[3] = (long long)getStepsWasSet();
-  longLongsArray[4] = getSteps();
-  longLongsArray[5] = getOrder();
+  longLongsArray[2] = (long long)getStepsWasSet();
+  longLongsArray[3] = getSteps();
+  longLongsArray[4] = getOrder();
 
   MPI_Bcast(longLongsArray, numLongLongsToSend, MPI_LONG_LONG,
 	    root, MPI_COMM_WORLD);
@@ -201,14 +150,7 @@ ParametersVirial::serializeMpiBroadcast(int root) const {
 void 
 ParametersVirial::mpiBroadcastDeserialize(int root) {
 #ifdef USE_MPI
-  const int numDoublesToReceive = 4;
-
-  double doublesArray[numDoublesToReceive];
-
-  MPI_Bcast(doublesArray, numDoublesToReceive, MPI_DOUBLE,
-	    root, MPI_COMM_WORLD);
-
-  const int numLongLongsToReceive = 6;
+  const int numLongLongsToReceive = 5;
 
   long long longLongsArray[numLongLongsToReceive];
 
@@ -221,14 +163,6 @@ ParametersVirial::mpiBroadcastDeserialize(int root) {
 
   if ((bool)longLongsArray[3]) {
     setSteps(longLongsArray[2]);
-  }
-
-  if ((bool)doublesArray[1]) {
-    setMaxErrorVirialCoefficient(doublesArray[0]);
-  }
-
-  if ((bool)doublesArray[3]) {
-    setMaxRunTime(doublesArray[2]);
   }
 
   setOrder((bool)longLongsArray[4]);

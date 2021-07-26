@@ -186,6 +186,51 @@ Zeno::doInteriorSampling
   return Status::Success;
 }
 
+Zeno::Status
+Zeno::doVirialSampling
+(ParametersVirial * parametersVirial,
+ ParametersResults * parametersResults) {
+
+  if (model.isEmpty()) {
+    return Status::EmptyModel;
+  }
+ 
+  initializeTimer.start();
+
+  computeDefaultParameters(parametersVirial);
+  computeDefaultParameters(parametersResults);
+
+  long long numStepsInProcess =
+	computeNumInProcess(mpiSize,
+			    mpiRank,
+			    parametersVirial->getSteps());
+ 
+  std::vector<RandomNumberGenerator> threadRNGs;
+
+  setupRNGs(parametersVirial->getNumThreads(),
+	    parametersVirial->getSeed(),
+	    &threadRNGs);
+
+  delete resultsVirial;
+
+  resultsVirial = nullptr;
+
+  initializeTimer.stop();
+
+  Sphere<double> boundingSphere(modelBoundingSphere.getCenter(),
+                                modelBoundingSphere.getRadius());
+ 
+  getVirialResults(numStepsInProcess,
+		   *parametersVirial,
+		   *parametersResults,
+		   boundingSphere,
+		   model,
+		   &threadRNGs,
+		   &resultsVirial);
+ 
+  return Status::Success;
+}
+
 void
 Zeno::getResults(ParametersResults * parametersResults,
 		 Results * results) const {
@@ -342,6 +387,11 @@ Zeno::computeDefaultParameters(ParametersInteriorSampling * parameters) const {
 	      << "User-specified launch sphere may not contain the entire model"
 	      << std::endl;
   }
+}
+
+void
+Zeno::computeDefaultParameters(ParametersVirial * parameters) const {
+
 }
 
 void

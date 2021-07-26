@@ -91,6 +91,7 @@ void
 parseCommandLine(int argc, char **argv,
 		 ParametersWalkOnSpheres * parametersWalkOnSpheres,
 		 ParametersInteriorSampling * parametersInteriorSampling,
+		 ParametersVirial * parametersVirial,
 		 ParametersResults * parametersResults,
 		 ParametersLocal * parametersLocal);
 
@@ -118,6 +119,7 @@ int
 runZeno(ParametersLocal const & parametersLocal,
 	ParametersWalkOnSpheres * parametersWalkOnSpheres,
 	ParametersInteriorSampling * parametersInteriorSampling,
+	ParametersVirial * parametersVirial,
 	ParametersResults * parametersResults,
 	double readTime,
 	double broadcastTime,
@@ -229,6 +231,7 @@ int main(int argc, char **argv) {
 
   ParametersWalkOnSpheres parametersWalkOnSpheres;
   ParametersInteriorSampling parametersInteriorSampling;
+  ParametersVirial parametersVirial;
   ParametersResults parametersResults;
   ParametersLocal parametersLocal;
 
@@ -238,6 +241,7 @@ int main(int argc, char **argv) {
   parseCommandLine(argc, argv,
 		   &parametersWalkOnSpheres,
 		   &parametersInteriorSampling,
+		   &parametersVirial,
 		   &parametersResults,
 		   &parametersLocal);
 
@@ -299,6 +303,7 @@ int main(int argc, char **argv) {
 
   parametersWalkOnSpheres.mpiBroadcast(0);
   parametersInteriorSampling.mpiBroadcast(0);
+  parametersVirial.mpiBroadcast(0);
   parametersResults.mpiBroadcast(0);
   parametersLocal.mpiBroadcast(0);
   model.mpiBroadcast(0);
@@ -348,6 +353,7 @@ int main(int argc, char **argv) {
       runZeno(parametersLocal,
 	      &parametersWalkOnSpheres,
 	      &parametersInteriorSampling,
+	      &parametersVirial,
 	      &parametersResults,
 	      readTimer.getTime(),
 	      broadcastTimer.getTime(),
@@ -410,6 +416,10 @@ int main(int argc, char **argv) {
 	snapshotParametersWalkOnSpheres(parametersWalkOnSpheres);
       ParametersInteriorSampling
 	snapshotParametersInteriorSampling(parametersInteriorSampling);
+      ParametersVirial
+	snapshotParametersVirial(parametersVirial);
+      // virial cannot be computed from snapshots
+      snapshotParametersVirial.setSteps(0);
       ParametersResults
 	snapshotParametersResults(parametersResults);
 
@@ -419,6 +429,7 @@ int main(int argc, char **argv) {
 	runZeno(parametersLocal,
 		&snapshotParametersWalkOnSpheres,
 		&snapshotParametersInteriorSampling,
+		&snapshotParametersVirial,
 		&snapshotParametersResults,
 		readTimer.getTime(),
 		broadcastTimer.getTime(),
@@ -465,6 +476,7 @@ void
 parseCommandLine(int argc, char **argv,
 		 ParametersWalkOnSpheres * parametersWalkOnSpheres,
 		 ParametersInteriorSampling * parametersInteriorSampling,
+		 ParametersVirial * parametersVirial,
 		 ParametersResults * parametersResults,
 		 ParametersLocal * parametersLocal) {
   
@@ -743,6 +755,7 @@ int
 runZeno(ParametersLocal const & parametersLocal,
 	ParametersWalkOnSpheres * parametersWalkOnSpheres,
 	ParametersInteriorSampling * parametersInteriorSampling,
+	ParametersVirial * parametersVirial,
 	ParametersResults * parametersResults,
 	double readTime,
 	double broadcastTime,
@@ -783,6 +796,25 @@ runZeno(ParametersLocal const & parametersLocal,
 
   if (doInteriorSamplingStatus != Zeno::Status::Success) {
     if (doInteriorSamplingStatus == Zeno::Status::EmptyModel) {
+      std::cerr << "Error: no geometry loaded" << std::endl;
+    }
+    
+    return 1;
+  }
+
+  if (parametersLocal.getPrintBenchmarks() && 
+      parametersLocal.getMpiRank() == 0) {
+
+    printRAM("interior samples",
+	     csvItems);
+  }
+  
+  Zeno::Status doVirialSamplingStatus =
+    zeno.doVirialSampling(parametersVirial,
+			  parametersResults);
+
+  if (doVirialSamplingStatus != Zeno::Status::Success) {
+    if (doVirialSamplingStatus == Zeno::Status::EmptyModel) {
       std::cerr << "Error: no geometry loaded" << std::endl;
     }
     

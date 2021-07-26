@@ -50,14 +50,6 @@ public:
   long long getSteps() const;
   bool getStepsWasSet() const;
 
-  void setMaxErrorVirialCoefficient(double maxErrorVirialCoefficient);
-  double getMaxErrorVirialCoefficient() const;
-  bool getMaxErrorVirialCoefficientWasSet() const;
-
-  void setMaxRunTime(double maxRunTime);
-  double getMaxRunTime() const;
-  bool getMaxRunTimeWasSet() const;
-
   void mpiBroadcast(int root);
 
 private:
@@ -72,12 +64,6 @@ private:
 
   long long steps;
   bool stepsWasSet;
-
-  double maxErrorVirialCoefficient;
-  bool maxErrorVirialCoefficientWasSet;
-
-  double maxRunTime;
-  bool maxRunTimeWasSet;
 
   int order;
 };
