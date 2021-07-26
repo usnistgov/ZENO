@@ -94,3 +94,8 @@ optional
 option "print-benchmarks" - "Print detailed RAM and timing information"
 optional
 
+option "virial-steps" - "Number of Monte Carlo steps to perform to compute a virial coefficient"
+longlong optional
+
+option "virial-coefficient-order" - "Order of virial coefficient to compute"
+int optional

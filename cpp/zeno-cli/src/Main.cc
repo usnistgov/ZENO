@@ -547,6 +547,10 @@ parseCommandLine(int argc, char **argv,
       (args_info.num_interior_samples_arg);
   }
 
+  if (args_info.virial_steps_given) {
+    parametersVirial->setSteps(args_info.virial_steps_arg);
+  }
+
   if (args_info.max_rsd_capacitance_given) {
     parametersWalkOnSpheres->setMaxErrorCapacitance
       (args_info.max_rsd_capacitance_arg);
@@ -571,6 +575,8 @@ parseCommandLine(int argc, char **argv,
     parametersWalkOnSpheres->setNumThreads(args_info.num_threads_arg);
 
     parametersInteriorSampling->setNumThreads(args_info.num_threads_arg);
+
+    parametersVirial->setNumThreads(args_info.num_threads_arg);
   }
   else {
     int numThreads = std::thread::hardware_concurrency();
@@ -582,12 +588,16 @@ parseCommandLine(int argc, char **argv,
     parametersWalkOnSpheres->setNumThreads(numThreads);
 
     parametersInteriorSampling->setNumThreads(numThreads);
+
+    parametersVirial->setNumThreads(numThreads);
   }
 
   if (args_info.seed_given) {
     parametersWalkOnSpheres->setSeed(args_info.seed_arg);
 
     parametersInteriorSampling->setSeed(args_info.seed_arg);
+
+    parametersVirial->setSeed(args_info.seed_arg);
   }
   else {
     int seed{};
@@ -602,6 +612,8 @@ parseCommandLine(int argc, char **argv,
     parametersWalkOnSpheres->setSeed(seed);
 
     parametersInteriorSampling->setSeed(seed);
+
+    parametersVirial->setSeed(seed);
   }
 
   if (args_info.surface_points_file_given) {
@@ -616,6 +628,10 @@ parseCommandLine(int argc, char **argv,
       (args_info.interior_points_file_arg);
 
     parametersInteriorSampling->setSaveInteriorPoints(true);
+  }
+
+  if (args_info.virial_coefficient_order_given) {
+    parametersVirial->setOrder(args_info.virial_coefficient_order_arg);
   }
 
   parametersLocal->setPrintCounts(args_info.print_counts_given);
