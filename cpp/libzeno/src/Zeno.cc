@@ -241,6 +241,7 @@ Zeno::getResults(ParametersResults * parametersResults,
 
   resultsCompiler.compile(resultsZeno,
   			  resultsInterior,
+  			  resultsVirial,
   			  false,
 			  results);
 }
@@ -502,6 +503,7 @@ Zeno::getWalkOnSpheresResults
 
       resultsCompiler.compile(*resultsZeno,
 			      NULL,
+			      NULL,
 			      false,
 			      &results);
 
@@ -717,6 +719,7 @@ Zeno::getInteriorResults
 
       resultsCompiler.compile(NULL,
 			      *resultsInterior,
+			      NULL,
 			      false,
 			      &results);
 
