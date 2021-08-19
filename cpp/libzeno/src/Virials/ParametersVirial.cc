@@ -51,7 +51,8 @@ ParametersVirial::ParametersVirial()
     seed(),
     steps(),
     stepsWasSet(false),
-    order() {
+    order(),
+    orderWasSet(false) {
 
 }
 
@@ -82,11 +83,18 @@ ParametersVirial::getSeed() const {
 void
 ParametersVirial::setOrder(int order) {
   this->order = order;
+
+  orderWasSet = true;
 }
 
 int
 ParametersVirial::getOrder() const {
   return order;
+}
+
+bool
+ParametersVirial::getOrderWasSet() const {
+  return orderWasSet;
 }
 
 void

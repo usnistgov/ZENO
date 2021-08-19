@@ -87,6 +87,7 @@ class Results {
   Result<Uncertain<double> > sedimentationCoefficient;
   Result<Matrix3x3<Uncertain<double> > > gyrationTensor;
   Result<Vector3<Uncertain<double> > > gyrationEigenvalues;
+
   Result<Uncertain<double> > virialCoefficient;
 
   std::array<double, numFormFactors> formFactorQs;

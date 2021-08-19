@@ -45,6 +45,7 @@ public:
 
   void setOrder(int order);
   int getOrder() const;
+  bool getOrderWasSet() const;
 
   void setSteps(long long steps);
   long long getSteps() const;
@@ -66,6 +67,7 @@ private:
   bool stepsWasSet;
 
   int order;
+  bool orderWasSet;
 };
 
 }

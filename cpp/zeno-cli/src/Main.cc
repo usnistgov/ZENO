@@ -130,6 +130,7 @@ void
 printOutput(Results const & results,
 	    ParametersWalkOnSpheres const & parametersWalkOnSpheres,
 	    ParametersInteriorSampling const & parametersInteriorSampling,
+	    ParametersVirial const & parametersVirial,
 	    ParametersResults const & parametersResults,
 	    ParametersLocal const & parametersLocal,
 	    double initializeTime,
@@ -140,12 +141,15 @@ printOutput(Results const & results,
 	    double reduceTime,
 	    double sampleTime,
 	    double volumeReduceTime,
+	    double virialTime,
+	    double virialReduceTime,
 	    double totalZenoTime,
 	    CsvItems * csvItems);
 
 void
 printParameters(ParametersWalkOnSpheres const & parametersWalkOnSpheres,
 	        ParametersInteriorSampling const & parametersInteriorSampling,
+	        ParametersVirial const & parametersVirial,
 	        ParametersResults const & parametersResults,
 		ParametersLocal const & parametersLocal,
 		CsvItems * csvItems);
@@ -861,6 +865,7 @@ runZeno(ParametersLocal const & parametersLocal,
   printOutput(results,
 	      *parametersWalkOnSpheres,
 	      *parametersInteriorSampling,
+	      *parametersVirial,
 	      *parametersResults,
 	      parametersLocal,
 	      zeno.getInitializeTime(),
@@ -871,6 +876,8 @@ runZeno(ParametersLocal const & parametersLocal,
 	      zeno.getWalkOnSpheresReductionTime(),
 	      zeno.getInteriorSamplingTime(),
 	      zeno.getInteriorSamplingReductionTime(),
+	      zeno.getVirialTime(),
+	      zeno.getVirialReductionTime(),
 	      zeno.getTotalTime(),
 	      csvItems);
   
@@ -887,6 +894,7 @@ void
 printOutput(Results const & results,
 	    ParametersWalkOnSpheres const & parametersWalkOnSpheres,
 	    ParametersInteriorSampling const & parametersInteriorSampling,
+	    ParametersVirial const & parametersVirial,
 	    ParametersResults const & parametersResults,
 	    ParametersLocal const & parametersLocal,
 	    double initializeTime,
@@ -897,6 +905,8 @@ printOutput(Results const & results,
 	    double reduceTime,
 	    double sampleTime,
 	    double volumeReduceTime,
+	    double virialTime,
+	    double virialReduceTime,
 	    double totalZenoTime,
 	    CsvItems * csvItems) {
   
@@ -908,6 +918,7 @@ printOutput(Results const & results,
 
     printParameters(parametersWalkOnSpheres,
 		    parametersInteriorSampling,
+		    parametersVirial,
 		    parametersResults,
 		    parametersLocal,
 		    csvItems);
@@ -993,6 +1004,18 @@ printOutput(Results const & results,
 		       volumeReduceTime,
 		       csvItems);
 
+      printExactScalar("Virial Sample  ",
+		       "virial_sample_time",
+		       "s",
+		       virialTime,
+		       csvItems);
+
+      printExactScalar("Virial Reduce  ",
+		       "virial_reduce_time",
+		       "s",
+		       virialReduceTime,
+		       csvItems);
+
       printExactScalar("Total Time     ",
 		       "total_time",
 		       "s",
@@ -1010,6 +1033,7 @@ printOutput(Results const & results,
 void
 printParameters(ParametersWalkOnSpheres const & parametersWalkOnSpheres,
 	        ParametersInteriorSampling const & parametersInteriorSampling,
+	        ParametersVirial const & parametersVirial,
 	        ParametersResults const & parametersResults,
 		ParametersLocal const & parametersLocal,
 		CsvItems * csvItems) {
@@ -1088,6 +1112,20 @@ printParameters(ParametersWalkOnSpheres const & parametersWalkOnSpheres,
 		     csvItems);
   }
 
+  if (parametersVirial.getOrderWasSet()) {
+    printExactScalar("Virial coefficient order", "virial_order", "",
+		     parametersVirial.getOrder(),
+		     csvItems);
+  }
+
+  if (parametersVirial.getStepsWasSet()) {
+    printExactScalar("Virial steps", "virial_steps", "",
+		     parametersVirial.getSteps(),
+		     csvItems);
+  }
+
+
+
   if (parametersResults.getLengthScaleWasSet()) {
     printExactScalar("Length scale", "length_scale",
 		     Units::getName(parametersResults.getLengthScaleUnit()),
@@ -1150,6 +1188,16 @@ printResults(Results const & results,
     std::cout << std::endl;
   }
   
+  if (results.resultsVirialCompiled) {
+    printExactScalar(results.virialCoefficient.prettyName,
+		     results.virialCoefficient.csvName,
+		     results.virialCoefficient.unit,
+		     results.virialCoefficient.value,
+		     csvItems);
+
+    std::cout << std::endl;
+  }
+
   if (results.resultsZenoCompiled) {
 
     printScalar(results.capacitance,
