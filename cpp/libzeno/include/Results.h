@@ -88,6 +88,7 @@ class Results {
   Result<Matrix3x3<Uncertain<double> > > gyrationTensor;
   Result<Vector3<Uncertain<double> > > gyrationEigenvalues;
 
+  Result<double> refFrac;
   Result<Uncertain<double> > virialCoefficient;
 
   std::array<double, numFormFactors> formFactorQs;

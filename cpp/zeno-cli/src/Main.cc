@@ -1189,11 +1189,14 @@ printResults(Results const & results,
   }
   
   if (results.resultsVirialCompiled) {
-    printExactScalar(results.virialCoefficient.prettyName,
-		     results.virialCoefficient.csvName,
-		     results.virialCoefficient.unit,
-		     results.virialCoefficient.value,
+    printExactScalar(results.refFrac.prettyName,
+		     results.refFrac.csvName,
+		     results.refFrac.unit,
+		     results.refFrac.value,
 		     csvItems);
+
+    printScalar(results.virialCoefficient,
+		csvItems);
 
     std::cout << std::endl;
   }
