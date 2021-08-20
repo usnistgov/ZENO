@@ -48,6 +48,7 @@
 
 #include "ResultsZeno.h"
 #include "ResultsInterior.h"
+#include "Virials/ResultsVirial.h"
 #include "Results.h"
 #include "Uncertain.h"
 #include "ParametersResults.h"
@@ -71,6 +72,7 @@ public:
 
   void compile(ResultsZeno const * resultsZeno,
 	       ResultsInterior const * resultsInterior,
+	       ResultsVirial const * resultsVirial,
 	       bool computeForm,
 	       Results * results);
 

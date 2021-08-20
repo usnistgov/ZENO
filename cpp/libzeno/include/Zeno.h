@@ -60,6 +60,10 @@
 #include "Geometry/MixedModel.h"
 #include "Geometry/MixedModelProcessed.h"
 
+#include "Virials/ParametersVirial.h"
+#include "Virials/ResultsVirial.h"
+#include "Virials/IntegratorMSMC.h"
+
 #include "Timer.h"
 
 // ================================================================
@@ -146,6 +150,18 @@ class Zeno {
     (ParametersInteriorSampling * parametersInteriorSampling,
      ParametersResults * parametersResults);
 
+  /// Perform the Virial calculation with the provided parameters and
+  /// store the results internally.
+  ///
+  /// Parameters that have not been set may have default values computed.  If
+  /// so, these values will be written into the parameters object.
+  ///
+  /// Returns EmptyModel if the model is empty, and Success otherwise.
+  ///
+  Status doVirialSampling
+    (ParametersVirial * parametersVirial,
+     ParametersResults * parametersResults);
+
   /// Computes final results based on the provided parameters and the results
   /// from the Walk-on-Spheres and Interior Sampling computations.  Different
   /// results are computed depending on which of the computations have been run.
@@ -181,6 +197,8 @@ class Zeno {
   double getWalkOnSpheresReductionTime() const;
   double getInteriorSamplingTime() const;
   double getInteriorSamplingReductionTime() const;
+  double getVirialTime() const;
+  double getVirialReductionTime() const;
   double getTotalTime() const;
 
  private:
@@ -196,6 +214,7 @@ class Zeno {
   ///
   void computeDefaultParameters(ParametersWalkOnSpheres * parameters) const;
   void computeDefaultParameters(ParametersInteriorSampling * parameters) const;
+  void computeDefaultParameters(ParametersVirial * parameters) const;
   void computeDefaultParameters(ParametersResults * parameters) const;
 
   /// Allocate a random number generator for each thread, ensuring that each has
@@ -285,6 +304,38 @@ class Zeno {
 				  RandomNumberGenerator * randomNumberGenerator,
 				  ResultsInterior * resultsInterior);
 
+  /// Perform the given number of virial steps
+  /// (either number of walks or error) and perform a parallel reduction on
+  /// the results.
+  ///
+  void getVirialResults
+    (long long numStepsInProcess,
+     ParametersVirial const & parametersVirial,
+     ParametersResults const & parametersResults,
+     BoundingSphere const & boundingSphere,
+     Model const & model,
+     std::vector<RandomNumberGenerator> * threadRNGs,
+     ResultsVirial * * resultsVirial);
+
+  void doVirialSampling(ParametersVirial const & parameters,
+                        long long numStepsInProcess,
+                        BoundingSphere const & boundingSphere,
+                        Model const & model,
+                        std::vector<RandomNumberGenerator> * threadRNGs,
+                        ResultsVirial * resultsVirial,
+                        double refDiameter);
+
+  static
+    void doVirialSamplingThread(ParametersVirial const * parameters,
+			        BoundingSphere const & boundingSphere, 
+			        Model const & model,
+			        int threadNum,
+			        long long stepsInThread,
+			        Timer const * totalTimer,
+			        RandomNumberGenerator * randomNumberGenerator,
+			        ResultsVirial * resultsVirial,
+			        double refDiameter);
+
   int mpiSize;
   int mpiRank;
 
@@ -294,6 +345,7 @@ class Zeno {
 
   ResultsZeno * resultsZeno;
   ResultsInterior * resultsInterior;
+  ResultsVirial * resultsVirial;
 
   Timer initializeTimer;
   Timer preprocessTimer;
@@ -301,6 +353,8 @@ class Zeno {
   Timer walkOnSpheresReductionTimer;
   Timer interiorSamplingTimer;
   Timer interiorSamplingReductionTimer;
+  Timer virialTimer;
+  Timer virialReductionTimer;
   Timer totalTimer;
 };
 

@@ -109,6 +109,10 @@ class Matrix3x3
   Matrix3x3<eleT> & operator*=(eleT b);
   Matrix3x3<eleT> & operator/=(eleT b);
 
+  void transform(Matrix3x3<eleT> & A) const ;
+  void transform(Vector3<eleT> & A) const;
+  void setAxisAngle(const Vector3<eleT> & axis, const eleT theta);
+
   template <class otherEleT>
   Matrix3x3<eleT> & operator=(const Matrix3x3<otherEleT> & rhs);
 
@@ -576,9 +580,71 @@ Matrix3x3<eleT> & Matrix3x3<eleT>::operator=(const Matrix3x3<otherEleT> & rhs)
   return *this;
 }
 
+template <class eleT>
+void Matrix3x3<eleT>::
+transform(Matrix3x3<eleT> & A) const {
+    for(int i = 0; i < 3; ++i)
+    {
+        eleT X = 0;
+        eleT Y = 0;
+        eleT Z = 0;
+
+        for(int k = 0; k < 3; ++k)
+        {
+            X += get(0,k) * A.get(k,i);
+            Y += get(1,k) * A.get(k,i);
+            Z += get(2,k) * A.get(k,i);
+
+        }
+        A.set(0, i, X);
+        A.set(1, i, Y);
+        A.set(2, i, Z);
+
+    }
 }
 
+template <class eleT>
+void Matrix3x3<eleT>::
+transform(Vector3<eleT> & A) const {
+    eleT X = 0;
+    eleT Y = 0;
+    eleT Z = 0;
+
+    for(int k = 0; k < 3; ++k)
+    {
+        X += get(0,k) * A.get(k);
+        Y += get(1,k) * A.get(k);
+        Z += get(2,k) * A.get(k);
+
+    }
+    A.set(0, X);
+    A.set(1, Y);
+    A.set(2, Z);
+}
+
+
+template <class eleT>
+void
+Matrix3x3<eleT>::
+setAxisAngle(const Vector3<eleT> & axis, const eleT theta) {
+    double st = sin(theta);
+    double ct = cos(theta);
+    double vx = axis.get(0);
+    double vy = axis.get(1);
+    double vz = axis.get(2);
+    set(0, 0, ct + (1 - ct) * vx*vx);
+    set(1, 1,  ct + (1 - ct) * vy*vy);
+    set(2, 2, ct + (1 - ct) * vz*vz);
+    set(0, 1, (1 - ct) * vx*vy - st*vz);
+    set(1, 0, (1 - ct) * vx*vy + st*vz);
+    set(0, 2, (1 - ct) * vx*vz + st*vy);
+    set(2, 0, (1 - ct) * vx*vz - st*vy);
+    set(1, 2, (1 - ct) * vy*vz - st*vx);
+    set(2, 1, (1 - ct) * vy*vz + st*vx);
+}
 // ================================================================
+
+}
 
 #endif  // #ifndef MATRIX3X3_H_
 

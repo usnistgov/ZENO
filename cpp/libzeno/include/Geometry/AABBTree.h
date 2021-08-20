@@ -41,6 +41,7 @@
 
 #include <vector>
 #include <algorithm>
+#include <limits>
 
 #include "Vector3.h"
 #include "Cuboid.h"

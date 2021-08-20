@@ -91,6 +91,7 @@ void
 parseCommandLine(int argc, char **argv,
 		 ParametersWalkOnSpheres * parametersWalkOnSpheres,
 		 ParametersInteriorSampling * parametersInteriorSampling,
+		 ParametersVirial * parametersVirial,
 		 ParametersResults * parametersResults,
 		 ParametersLocal * parametersLocal);
 
@@ -118,6 +119,7 @@ int
 runZeno(ParametersLocal const & parametersLocal,
 	ParametersWalkOnSpheres * parametersWalkOnSpheres,
 	ParametersInteriorSampling * parametersInteriorSampling,
+	ParametersVirial * parametersVirial,
 	ParametersResults * parametersResults,
 	double readTime,
 	double broadcastTime,
@@ -128,6 +130,7 @@ void
 printOutput(Results const & results,
 	    ParametersWalkOnSpheres const & parametersWalkOnSpheres,
 	    ParametersInteriorSampling const & parametersInteriorSampling,
+	    ParametersVirial const & parametersVirial,
 	    ParametersResults const & parametersResults,
 	    ParametersLocal const & parametersLocal,
 	    double initializeTime,
@@ -138,12 +141,15 @@ printOutput(Results const & results,
 	    double reduceTime,
 	    double sampleTime,
 	    double volumeReduceTime,
+	    double virialTime,
+	    double virialReduceTime,
 	    double totalZenoTime,
 	    CsvItems * csvItems);
 
 void
 printParameters(ParametersWalkOnSpheres const & parametersWalkOnSpheres,
 	        ParametersInteriorSampling const & parametersInteriorSampling,
+	        ParametersVirial const & parametersVirial,
 	        ParametersResults const & parametersResults,
 		ParametersLocal const & parametersLocal,
 		CsvItems * csvItems);
@@ -229,6 +235,7 @@ int main(int argc, char **argv) {
 
   ParametersWalkOnSpheres parametersWalkOnSpheres;
   ParametersInteriorSampling parametersInteriorSampling;
+  ParametersVirial parametersVirial;
   ParametersResults parametersResults;
   ParametersLocal parametersLocal;
 
@@ -238,6 +245,7 @@ int main(int argc, char **argv) {
   parseCommandLine(argc, argv,
 		   &parametersWalkOnSpheres,
 		   &parametersInteriorSampling,
+		   &parametersVirial,
 		   &parametersResults,
 		   &parametersLocal);
 
@@ -299,6 +307,7 @@ int main(int argc, char **argv) {
 
   parametersWalkOnSpheres.mpiBroadcast(0);
   parametersInteriorSampling.mpiBroadcast(0);
+  parametersVirial.mpiBroadcast(0);
   parametersResults.mpiBroadcast(0);
   parametersLocal.mpiBroadcast(0);
   model.mpiBroadcast(0);
@@ -348,6 +357,7 @@ int main(int argc, char **argv) {
       runZeno(parametersLocal,
 	      &parametersWalkOnSpheres,
 	      &parametersInteriorSampling,
+	      &parametersVirial,
 	      &parametersResults,
 	      readTimer.getTime(),
 	      broadcastTimer.getTime(),
@@ -410,6 +420,10 @@ int main(int argc, char **argv) {
 	snapshotParametersWalkOnSpheres(parametersWalkOnSpheres);
       ParametersInteriorSampling
 	snapshotParametersInteriorSampling(parametersInteriorSampling);
+      ParametersVirial
+	snapshotParametersVirial(parametersVirial);
+      // virial cannot be computed from snapshots
+      snapshotParametersVirial.setSteps(0);
       ParametersResults
 	snapshotParametersResults(parametersResults);
 
@@ -419,6 +433,7 @@ int main(int argc, char **argv) {
 	runZeno(parametersLocal,
 		&snapshotParametersWalkOnSpheres,
 		&snapshotParametersInteriorSampling,
+		&snapshotParametersVirial,
 		&snapshotParametersResults,
 		readTimer.getTime(),
 		broadcastTimer.getTime(),
@@ -465,6 +480,7 @@ void
 parseCommandLine(int argc, char **argv,
 		 ParametersWalkOnSpheres * parametersWalkOnSpheres,
 		 ParametersInteriorSampling * parametersInteriorSampling,
+		 ParametersVirial * parametersVirial,
 		 ParametersResults * parametersResults,
 		 ParametersLocal * parametersLocal) {
   
@@ -535,6 +551,10 @@ parseCommandLine(int argc, char **argv,
       (args_info.num_interior_samples_arg);
   }
 
+  if (args_info.virial_steps_given) {
+    parametersVirial->setSteps(args_info.virial_steps_arg);
+  }
+
   if (args_info.max_rsd_capacitance_given) {
     parametersWalkOnSpheres->setMaxErrorCapacitance
       (args_info.max_rsd_capacitance_arg);
@@ -559,6 +579,8 @@ parseCommandLine(int argc, char **argv,
     parametersWalkOnSpheres->setNumThreads(args_info.num_threads_arg);
 
     parametersInteriorSampling->setNumThreads(args_info.num_threads_arg);
+
+    parametersVirial->setNumThreads(args_info.num_threads_arg);
   }
   else {
     int numThreads = std::thread::hardware_concurrency();
@@ -570,12 +592,16 @@ parseCommandLine(int argc, char **argv,
     parametersWalkOnSpheres->setNumThreads(numThreads);
 
     parametersInteriorSampling->setNumThreads(numThreads);
+
+    parametersVirial->setNumThreads(numThreads);
   }
 
   if (args_info.seed_given) {
     parametersWalkOnSpheres->setSeed(args_info.seed_arg);
 
     parametersInteriorSampling->setSeed(args_info.seed_arg);
+
+    parametersVirial->setSeed(args_info.seed_arg);
   }
   else {
     int seed{};
@@ -590,6 +616,8 @@ parseCommandLine(int argc, char **argv,
     parametersWalkOnSpheres->setSeed(seed);
 
     parametersInteriorSampling->setSeed(seed);
+
+    parametersVirial->setSeed(seed);
   }
 
   if (args_info.surface_points_file_given) {
@@ -604,6 +632,10 @@ parseCommandLine(int argc, char **argv,
       (args_info.interior_points_file_arg);
 
     parametersInteriorSampling->setSaveInteriorPoints(true);
+  }
+
+  if (args_info.virial_coefficient_order_given) {
+    parametersVirial->setOrder(args_info.virial_coefficient_order_arg);
   }
 
   parametersLocal->setPrintCounts(args_info.print_counts_given);
@@ -743,6 +775,7 @@ int
 runZeno(ParametersLocal const & parametersLocal,
 	ParametersWalkOnSpheres * parametersWalkOnSpheres,
 	ParametersInteriorSampling * parametersInteriorSampling,
+	ParametersVirial * parametersVirial,
 	ParametersResults * parametersResults,
 	double readTime,
 	double broadcastTime,
@@ -796,6 +829,25 @@ runZeno(ParametersLocal const & parametersLocal,
 	     csvItems);
   }
   
+  Zeno::Status doVirialSamplingStatus =
+    zeno.doVirialSampling(parametersVirial,
+			  parametersResults);
+
+  if (doVirialSamplingStatus != Zeno::Status::Success) {
+    if (doVirialSamplingStatus == Zeno::Status::EmptyModel) {
+      std::cerr << "Error: no geometry loaded" << std::endl;
+    }
+    
+    return 1;
+  }
+
+  if (parametersLocal.getPrintBenchmarks() && 
+      parametersLocal.getMpiRank() == 0) {
+
+    printRAM("interior samples",
+	     csvItems);
+  }
+  
   if (parametersWalkOnSpheres->getMaxRunTimeWasSet() &&
       (zeno.getTotalTime() > parametersWalkOnSpheres->getMaxRunTime())) {
 
@@ -813,6 +865,7 @@ runZeno(ParametersLocal const & parametersLocal,
   printOutput(results,
 	      *parametersWalkOnSpheres,
 	      *parametersInteriorSampling,
+	      *parametersVirial,
 	      *parametersResults,
 	      parametersLocal,
 	      zeno.getInitializeTime(),
@@ -823,6 +876,8 @@ runZeno(ParametersLocal const & parametersLocal,
 	      zeno.getWalkOnSpheresReductionTime(),
 	      zeno.getInteriorSamplingTime(),
 	      zeno.getInteriorSamplingReductionTime(),
+	      zeno.getVirialTime(),
+	      zeno.getVirialReductionTime(),
 	      zeno.getTotalTime(),
 	      csvItems);
   
@@ -839,6 +894,7 @@ void
 printOutput(Results const & results,
 	    ParametersWalkOnSpheres const & parametersWalkOnSpheres,
 	    ParametersInteriorSampling const & parametersInteriorSampling,
+	    ParametersVirial const & parametersVirial,
 	    ParametersResults const & parametersResults,
 	    ParametersLocal const & parametersLocal,
 	    double initializeTime,
@@ -849,6 +905,8 @@ printOutput(Results const & results,
 	    double reduceTime,
 	    double sampleTime,
 	    double volumeReduceTime,
+	    double virialTime,
+	    double virialReduceTime,
 	    double totalZenoTime,
 	    CsvItems * csvItems) {
   
@@ -860,6 +918,7 @@ printOutput(Results const & results,
 
     printParameters(parametersWalkOnSpheres,
 		    parametersInteriorSampling,
+		    parametersVirial,
 		    parametersResults,
 		    parametersLocal,
 		    csvItems);
@@ -945,6 +1004,18 @@ printOutput(Results const & results,
 		       volumeReduceTime,
 		       csvItems);
 
+      printExactScalar("Virial Sample  ",
+		       "virial_sample_time",
+		       "s",
+		       virialTime,
+		       csvItems);
+
+      printExactScalar("Virial Reduce  ",
+		       "virial_reduce_time",
+		       "s",
+		       virialReduceTime,
+		       csvItems);
+
       printExactScalar("Total Time     ",
 		       "total_time",
 		       "s",
@@ -962,6 +1033,7 @@ printOutput(Results const & results,
 void
 printParameters(ParametersWalkOnSpheres const & parametersWalkOnSpheres,
 	        ParametersInteriorSampling const & parametersInteriorSampling,
+	        ParametersVirial const & parametersVirial,
 	        ParametersResults const & parametersResults,
 		ParametersLocal const & parametersLocal,
 		CsvItems * csvItems) {
@@ -1040,6 +1112,20 @@ printParameters(ParametersWalkOnSpheres const & parametersWalkOnSpheres,
 		     csvItems);
   }
 
+  if (parametersVirial.getOrderWasSet()) {
+    printExactScalar("Virial coefficient order", "virial_order", "",
+		     parametersVirial.getOrder(),
+		     csvItems);
+  }
+
+  if (parametersVirial.getStepsWasSet()) {
+    printExactScalar("Virial steps", "virial_steps", "",
+		     parametersVirial.getSteps(),
+		     csvItems);
+  }
+
+
+
   if (parametersResults.getLengthScaleWasSet()) {
     printExactScalar("Length scale", "length_scale",
 		     Units::getName(parametersResults.getLengthScaleUnit()),
@@ -1102,6 +1188,19 @@ printResults(Results const & results,
     std::cout << std::endl;
   }
   
+  if (results.resultsVirialCompiled) {
+    printExactScalar(results.refFrac.prettyName,
+		     results.refFrac.csvName,
+		     results.refFrac.unit,
+		     results.refFrac.value,
+		     csvItems);
+
+    printScalar(results.virialCoefficient,
+		csvItems);
+
+    std::cout << std::endl;
+  }
+
   if (results.resultsZenoCompiled) {
 
     printScalar(results.capacitance,
