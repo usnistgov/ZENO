@@ -63,6 +63,8 @@ properties_to_ignore = ["version",
                         "exterior_reduce_time",
                         "volume_sample_time",
                         "volume_reduce_time",
+                        "virial_sample_time",
+                        "virial_reduce_time",
                         "total_time"]
 
 arg_parser = argparse.ArgumentParser()

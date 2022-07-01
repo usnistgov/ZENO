@@ -1,15 +1,15 @@
-version,value,5.2.1,5.2.1,5.2.1,5.2.1,5.2.1,5.2.1
+version,value,5.3.0,5.3.0,5.3.0,5.3.0,5.3.0,5.3.0
 initialization_ram,units,kB,kB,kB,kB,kB,kB
-initialization_ram,value,13124 ,13124 ,13124 ,13124 ,13124 ,13124 
+initialization_ram,value,14220 ,14220 ,14220 ,14220 ,14220 ,14220 
 loading_input_data_ram,units,kB,kB,kB,kB,kB,kB
-loading_input_data_ram,value,13124 ,13124 ,13124 ,13124 ,13124 ,13124 
+loading_input_data_ram,value,14220 ,14220 ,14220 ,14220 ,14220 ,14220 
 building_spatial_data_structure_ram,units,kB,kB,kB,kB,kB,kB
-building_spatial_data_structure_ram,value,13124 ,14472 ,14472 ,14472 ,14472 ,14664 
+building_spatial_data_structure_ram,value,14220 ,15400 ,15400 ,15400 ,15732 ,15732 
 walk_on_spheres_ram,units,kB,kB,kB,kB,kB,kB
-walk_on_spheres_ram,value,14472 ,14472 ,14472 ,14472 ,14664 ,14664 
+walk_on_spheres_ram,value,15400 ,15400 ,15400 ,15732 ,15732 ,15732 
 interior_samples_ram,units,kB,kB,kB,kB,kB,kB
-interior_samples_ram,value,14472 ,14472 ,14472 ,14472 ,14664 ,14664 
-input_file,value,/home/dcj/Projects/zeno/cpp/zeno-cli/src/SelfTests/Input/trajectory.bod,/home/dcj/Projects/zeno/cpp/zeno-cli/src/SelfTests/Input/trajectory.bod,/home/dcj/Projects/zeno/cpp/zeno-cli/src/SelfTests/Input/trajectory.bod,/home/dcj/Projects/zeno/cpp/zeno-cli/src/SelfTests/Input/trajectory.bod,/home/dcj/Projects/zeno/cpp/zeno-cli/src/SelfTests/Input/trajectory.bod,/home/dcj/Projects/zeno/cpp/zeno-cli/src/SelfTests/Input/trajectory.bod
+interior_samples_ram,value,15400 ,15400 ,15400 ,15732 ,15732 ,15732 
+input_file,value,/home/dcj/projects/zeno-release/cpp/zeno-cli/src/SelfTests/Input/trajectory.bod,/home/dcj/projects/zeno-release/cpp/zeno-cli/src/SelfTests/Input/trajectory.bod,/home/dcj/projects/zeno-release/cpp/zeno-cli/src/SelfTests/Input/trajectory.bod,/home/dcj/projects/zeno-release/cpp/zeno-cli/src/SelfTests/Input/trajectory.bod,/home/dcj/projects/zeno-release/cpp/zeno-cli/src/SelfTests/Input/trajectory.bod,/home/dcj/projects/zeno-release/cpp/zeno-cli/src/SelfTests/Input/trajectory.bod
 num_nodes,value,1,1,1,1,1,1
 num_threads,value,1,1,1,1,1,1
 random_number_seed,value,0,0,0,0,0,0
@@ -201,21 +201,25 @@ interior_hits,units,1,1,1,1,1,1
 interior_hits,value,5.256000e+03,5.256000e+03,5.194000e+03,5.200000e+03,1.000000e+04,2.483000e+03
 interior_hits,std_dev,4.993692e+01,4.993692e+01,4.996485e+01,4.996248e+01,0.000000e+00,4.320483e+01
 initialize_time,units,s,s,s,s,s,s
-initialize_time,value,8.238819e-03,8.982156e-03,8.969093e-03,8.171587e-03,7.384660e-03,8.176026e-03
+initialize_time,value,1.231346e-02,1.258457e-02,1.140830e-02,1.362637e-02,1.246240e-02,1.179339e-02
 read_time,units,s,s,s,s,s,s
-read_time,value,2.956301e-03,2.956301e-03,2.956301e-03,2.956301e-03,2.956301e-03,2.956301e-03
+read_time,value,2.353770e-04,2.353770e-04,2.353770e-04,2.353770e-04,2.353770e-04,2.353770e-04
 broadcast_time,units,s,s,s,s,s,s
-broadcast_time,value,4.885000e-06,4.885000e-06,4.885000e-06,4.885000e-06,4.885000e-06,4.885000e-06
+broadcast_time,value,4.580000e-06,4.580000e-06,4.580000e-06,4.580000e-06,4.580000e-06,4.580000e-06
 preprocess_time,units,s,s,s,s,s,s
-preprocess_time,value,7.208300e-05,1.595900e-05,1.496000e-05,1.743700e-05,9.699000e-06,1.215700e-05
+preprocess_time,value,1.590800e-05,1.816000e-06,2.455000e-06,2.834000e-06,1.891000e-06,1.991000e-06
 exterior_walk_time,units,s,s,s,s,s,s
-exterior_walk_time,value,6.603959e-01,6.020439e-01,6.104680e-01,6.713118e-01,1.143199e-01,6.003710e-01
+exterior_walk_time,value,1.005930e-01,1.018254e-01,1.032964e-01,1.094753e-01,2.336731e-02,9.420180e-02
 exterior_reduce_time,units,s,s,s,s,s,s
-exterior_reduce_time,value,2.871400e-05,1.474500e-05,1.497400e-05,2.144400e-05,9.945000e-06,1.299100e-05
+exterior_reduce_time,value,1.165000e-05,4.556000e-06,4.544000e-06,4.594000e-06,6.400000e-06,4.613000e-06
 volume_sample_time,units,s,s,s,s,s,s
-volume_sample_time,value,2.828705e-02,2.986680e-02,2.727723e-02,2.923092e-02,3.086941e-02,2.956377e-02
+volume_sample_time,value,9.329565e-03,7.688232e-03,9.155085e-03,6.954269e-03,6.074962e-03,8.500620e-03
 volume_reduce_time,units,s,s,s,s,s,s
-volume_reduce_time,value,1.025100e-05,6.658000e-06,7.501000e-06,5.054000e-06,7.758000e-06,8.173000e-06
+volume_reduce_time,value,8.942000e-06,3.544000e-06,4.156000e-06,3.365000e-06,2.921000e-06,3.806000e-06
+virial_sample_time,units,s,s,s,s,s,s
+virial_sample_time,value,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00
+virial_reduce_time,units,s,s,s,s,s,s
+virial_reduce_time,value,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00
 total_time,units,s,s,s,s,s,s
-total_time,value,8.574306e-01,8.032359e-01,8.086709e-01,8.558140e-01,3.025695e-01,7.947996e-01
+total_time,value,1.305626e-01,1.328013e-01,1.322492e-01,1.401806e-01,5.141836e-02,1.245712e-01
 comment,value,Two spheres 1 and 1/4 with numeric labels,Two spheres 1 and 1/4 with alphabetic labels,Two spheres 1 and 1/4 with mixed labels,Three spheres 1 and 1/4 with mixed labels plus one hidden inside,Single sphere of radius 1 of center,Two spheres both 1 with mixed labels
