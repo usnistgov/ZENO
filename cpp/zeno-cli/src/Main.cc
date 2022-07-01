@@ -423,7 +423,8 @@ int main(int argc, char **argv) {
       ParametersVirial
 	snapshotParametersVirial(parametersVirial);
       // virial cannot be computed from snapshots
-      snapshotParametersVirial.setSteps(0);
+      if (snapshotParametersVirial.getStepsWasSet())
+        snapshotParametersVirial.setSteps(0);
       ParametersResults
 	snapshotParametersResults(parametersResults);
 
@@ -828,26 +829,30 @@ runZeno(ParametersLocal const & parametersLocal,
     printRAM("interior samples",
 	     csvItems);
   }
-  
-  Zeno::Status doVirialSamplingStatus =
-    zeno.doVirialSampling(parametersVirial,
-			  parametersResults);
 
-  if (doVirialSamplingStatus != Zeno::Status::Success) {
-    if (doVirialSamplingStatus == Zeno::Status::EmptyModel) {
-      std::cerr << "Error: no geometry loaded" << std::endl;
-    }
+  if (parametersVirial->getOrderWasSet() ||
+      parametersVirial->getStepsWasSet()) {
+
+    Zeno::Status doVirialSamplingStatus =
+      zeno.doVirialSampling(parametersVirial,
+			    parametersResults);
+
+    if (doVirialSamplingStatus != Zeno::Status::Success) {
+      if (doVirialSamplingStatus == Zeno::Status::EmptyModel) {
+	std::cerr << "Error: no geometry loaded" << std::endl;
+      }
     
-    return 1;
+      return 1;
+    }
+
+    if (parametersLocal.getPrintBenchmarks() && 
+	parametersLocal.getMpiRank() == 0) {
+
+      printRAM("interior samples",
+	       csvItems);
+    }
   }
 
-  if (parametersLocal.getPrintBenchmarks() && 
-      parametersLocal.getMpiRank() == 0) {
-
-    printRAM("interior samples",
-	     csvItems);
-  }
-  
   if (parametersWalkOnSpheres->getMaxRunTimeWasSet() &&
       (zeno.getTotalTime() > parametersWalkOnSpheres->getMaxRunTime())) {
 
