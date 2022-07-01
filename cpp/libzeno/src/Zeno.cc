@@ -69,6 +69,7 @@ Zeno::Zeno(MixedModel<double> * modelToProcess)
     modelBoundingSphere(),
     resultsZeno(nullptr),
     resultsInterior(nullptr),
+    resultsVirial(nullptr),
     initializeTimer(),
     preprocessTimer(),
     walkOnSpheresTimer(),
