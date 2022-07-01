@@ -72,6 +72,7 @@ ResultsCompiler::
 void 
 ResultsCompiler::compile(ResultsZeno const * resultsZeno,
 			 ResultsInterior const * resultsInterior,
+			 ResultsVirial const * resultsVirial,
 			 bool computeForm,
 			 Results * results) {
 
@@ -281,6 +282,25 @@ ResultsCompiler::compile(ResultsZeno const * resultsZeno,
 					      16);
 
     results->formResultsCompiled = true;
+  }
+
+  if (resultsVirial != NULL) {
+      Uncertain<double> v = resultsVirial->getVirialCoefficientReduced();
+      Result<Uncertain<double> >
+        result("Virial coefficient",
+	       "virial_coefficient",
+	       v,
+	       Units::getName(parameters->getLengthScaleUnit()) + "^3");
+      results->virialCoefficient = result;
+
+      Result<double>
+        resultRefFrac("Fraction of steps in reference",
+	              "frac_ref_steps",
+	              resultsVirial->getRefFrac(),
+	              "1");
+      results->refFrac = resultRefFrac;
+
+      results->resultsVirialCompiled = true;
   }
 }
 

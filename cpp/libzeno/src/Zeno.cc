@@ -57,6 +57,9 @@
 #include "Walker/WalkerExterior.h"
 #include "Walker/SamplerInterior.h"
 
+#include "Virials/VirialAlpha.h"
+#include "Virials/VirialProduction.h"
+
 using namespace zeno;
 
 Zeno::Zeno(MixedModel<double> * modelToProcess)
@@ -72,6 +75,8 @@ Zeno::Zeno(MixedModel<double> * modelToProcess)
     walkOnSpheresReductionTimer(),
     interiorSamplingTimer(),
     interiorSamplingReductionTimer(),
+    virialTimer(),
+    virialReductionTimer(),
     totalTimer() {
 
   totalTimer.start();
@@ -181,6 +186,51 @@ Zeno::doInteriorSampling
   return Status::Success;
 }
 
+Zeno::Status
+Zeno::doVirialSampling
+(ParametersVirial * parametersVirial,
+ ParametersResults * parametersResults) {
+
+  if (model.isEmpty()) {
+    return Status::EmptyModel;
+  }
+ 
+  initializeTimer.start();
+
+  computeDefaultParameters(parametersVirial);
+  computeDefaultParameters(parametersResults);
+
+  long long numStepsInProcess =
+	computeNumInProcess(mpiSize,
+			    mpiRank,
+			    parametersVirial->getSteps());
+ 
+  std::vector<RandomNumberGenerator> threadRNGs;
+
+  setupRNGs(parametersVirial->getNumThreads(),
+	    parametersVirial->getSeed(),
+	    &threadRNGs);
+
+  delete resultsVirial;
+
+  resultsVirial = nullptr;
+
+  initializeTimer.stop();
+
+  Sphere<double> boundingSphere(modelBoundingSphere.getCenter(),
+                                modelBoundingSphere.getRadius());
+ 
+  getVirialResults(numStepsInProcess,
+		   *parametersVirial,
+		   *parametersResults,
+		   boundingSphere,
+		   model,
+		   &threadRNGs,
+		   &resultsVirial);
+ 
+  return Status::Success;
+}
+
 void
 Zeno::getResults(ParametersResults * parametersResults,
 		 Results * results) const {
@@ -191,6 +241,7 @@ Zeno::getResults(ParametersResults * parametersResults,
 
   resultsCompiler.compile(resultsZeno,
   			  resultsInterior,
+  			  resultsVirial,
   			  false,
 			  results);
 }
@@ -254,6 +305,16 @@ Zeno::getInteriorSamplingTime() const {
 double
 Zeno::getInteriorSamplingReductionTime() const {
   return interiorSamplingReductionTimer.getTime();
+}
+
+double
+Zeno::getVirialTime() const {
+  return virialTimer.getTime();
+}
+
+double
+Zeno::getVirialReductionTime() const {
+  return virialReductionTimer.getTime();
 }
 
 double
@@ -327,6 +388,11 @@ Zeno::computeDefaultParameters(ParametersInteriorSampling * parameters) const {
 	      << "User-specified launch sphere may not contain the entire model"
 	      << std::endl;
   }
+}
+
+void
+Zeno::computeDefaultParameters(ParametersVirial * parameters) const {
+
 }
 
 void
@@ -436,6 +502,7 @@ Zeno::getWalkOnSpheresResults
       walkOnSpheresReductionTimer.stop();
 
       resultsCompiler.compile(*resultsZeno,
+			      NULL,
 			      NULL,
 			      false,
 			      &results);
@@ -652,6 +719,7 @@ Zeno::getInteriorResults
 
       resultsCompiler.compile(NULL,
 			      *resultsInterior,
+			      NULL,
 			      false,
 			      &results);
 
@@ -784,4 +852,151 @@ Zeno::doInteriorSamplingThread(ParametersInteriorSampling const * parameters,
       break;
     }
   }
+}
+
+void
+Zeno::getVirialResults
+(long long numStepsInProcess,
+ ParametersVirial const & parametersVirial,
+ ParametersResults const & parametersResults,
+ BoundingSphere const & boundingSphere,
+ Model const & model,
+ std::vector<RandomNumberGenerator> * threadRNGs,
+ ResultsVirial * * resultsVirial) {
+
+  double refDiameter = 2 * boundingSphere.getRadius();
+  double refIntegral = std::pow(4.0*M_PI*refDiameter*refDiameter*refDiameter/3.0,parametersVirial.getOrder()-1)/2;
+  *resultsVirial = new ResultsVirial(parametersVirial.getNumThreads(),
+                                     refIntegral);
+
+  doVirialSampling(parametersVirial,
+                   numStepsInProcess,
+                   boundingSphere,
+                   model,
+                   threadRNGs,
+                   *resultsVirial,
+                   refDiameter);
+
+  virialReductionTimer.start();
+  (*resultsVirial)->reduce();
+  virialReductionTimer.stop();
+}
+
+/// Launches a set of virial-coefficient samples in each of a set of parallel
+/// threads.
+///
+void
+Zeno::doVirialSampling(ParametersVirial const & parameters,
+                 long long stepsInProcess,
+                 BoundingSphere const & boundingSphere,
+                 Model const & model,
+                 std::vector<RandomNumberGenerator> * threadRNGs,
+                 ResultsVirial * resultsVirial,
+                 double refDiameter) {
+
+    virialTimer.start();
+
+    const int numThreads = parameters.getNumThreads();
+    //std::cout<<numThreads<<std::endl;
+    std::thread * * threads = new std::thread *[numThreads];
+
+    for (int threadNum = 0; threadNum < numThreads; threadNum++) {
+
+        long long stepsInThread = parameters.getSteps() / numThreads;
+
+        if (threadNum < stepsInProcess % numThreads) {
+            stepsInThread ++;
+        }
+
+        threads[threadNum] =
+                new std::thread(doVirialSamplingThread,
+                                &parameters,
+                                boundingSphere,
+                                model,
+                                threadNum,
+                                stepsInThread,
+                                &totalTimer,
+                                &(threadRNGs->at(threadNum)),
+                                resultsVirial,
+                                refDiameter);
+    }
+
+    for (int threadNum = 0; threadNum < numThreads; threadNum++) {
+        threads[threadNum]->join();
+    }
+
+    for (int threadNum = 0; threadNum < numThreads; threadNum++) {
+        delete threads[threadNum];
+    }
+
+    delete [] threads;
+
+    virialTimer.stop();
+}
+
+void
+Zeno::doVirialSamplingThread(ParametersVirial const * parameters,
+			     BoundingSphere const & boundingSphere, 
+			     Model const & model,
+			     int threadNum,
+			     long long stepsInThread,
+			     Timer const * totalTimer,
+			     RandomNumberGenerator * randomNumberGenerator,
+			     ResultsVirial * resultsVirial,
+                             double refDiameter) {
+
+    std::vector <BoundingSphere const *> boundingSpheres;
+    boundingSpheres.push_back(&boundingSphere);
+    std::vector <int> numParticles;
+    numParticles.push_back(parameters->getOrder());
+    std::vector<Model const *> models;
+    models.push_back(&model);
+    OverlapTester<double> const overlapTester;
+    IntegratorMSMC<double, RandomNumberGenerator> refIntegrator(threadNum,
+                                                                 totalTimer,
+                                                                 randomNumberGenerator,
+                                                                 boundingSpheres,
+                                                                 numParticles,
+                                                                 models);
+
+    ClusterSumChain<double> clusterSumRef(refIntegrator.getParticles(), refDiameter, 0.0, 1.0);
+    ClusterSumWheatleyRecursion<double> clusterSumTarget(refIntegrator.getParticles(), &overlapTester);
+    MCMoveChainVirial<double, RandomNumberGenerator> mcMoveChain(refIntegrator, &clusterSumRef, refDiameter);
+    MCMoveRotate<double , RandomNumberGenerator> mcMoveRotateRef(refIntegrator, &clusterSumRef);
+    refIntegrator.addMove(&mcMoveChain, 1.0);
+    refIntegrator.addMove(&mcMoveRotateRef, 1.0);
+    refIntegrator.setCurrentValue(clusterSumRef.value());
+
+    IntegratorMSMC<double, RandomNumberGenerator> targetIntegrator(threadNum,
+                                                                totalTimer,
+                                                                randomNumberGenerator,
+                                                                boundingSpheres,
+                                                                numParticles,
+                                                                models);
+
+    ClusterSumChain<double> clusterSumRefT(targetIntegrator.getParticles(), refDiameter, 0.0, 1.0);
+    ClusterSumWheatleyRecursion<double> clusterSumTargetT(targetIntegrator.getParticles(), &overlapTester);
+    MCMoveTranslate<double, RandomNumberGenerator> mcMoveTranslate(targetIntegrator, &clusterSumTargetT);
+    MCMoveRotate<double , RandomNumberGenerator> mcMoveRotateTarget(targetIntegrator, &clusterSumTargetT);
+    targetIntegrator.addMove(&mcMoveTranslate, 1.0);
+    targetIntegrator.addMove(&mcMoveRotateTarget, 1.0);
+    targetIntegrator.setCurrentValue(clusterSumTargetT.value());
+
+    VirialAlpha<double,RandomNumberGenerator> virialAlpha(refIntegrator, targetIntegrator,
+            clusterSumRef, clusterSumTarget, clusterSumRefT, clusterSumTargetT);
+    virialAlpha.run();
+
+    double* alphaStats = virialAlpha.getAlphaStatistics();
+    /*printf("alpha: %e  %e\n", alphaStats[0], alphaStats[1]);
+    printf("alpha block correlation: %f\n", alphaStats[2]);
+    printf("alpha span: %f\n", alphaStats[3]);*/
+
+    VirialProduction<double, RandomNumberGenerator> virialProduction(refIntegrator,targetIntegrator,
+            clusterSumRef, clusterSumTarget, clusterSumRefT, clusterSumTargetT, alphaStats[0],
+            resultsVirial->getRefIntegral());
+    virialProduction.runSteps(stepsInThread);
+    //virialProduction.printResults(NULL);
+
+    resultsVirial->putData(threadNum, virialProduction.getRefMeter(), virialProduction.getTargetMeter());
+    resultsVirial->putVirialCoefficient(threadNum, virialProduction.getFullStats()[0][0], std::pow(virialProduction.getFullStats()[0][1],2));
 }

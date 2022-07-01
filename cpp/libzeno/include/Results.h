@@ -88,6 +88,9 @@ class Results {
   Result<Matrix3x3<Uncertain<double> > > gyrationTensor;
   Result<Vector3<Uncertain<double> > > gyrationEigenvalues;
 
+  Result<double> refFrac;
+  Result<Uncertain<double> > virialCoefficient;
+
   std::array<double, numFormFactors> formFactorQs;
   std::array<double, numFormFactors> formFactors;
 
@@ -99,6 +102,8 @@ class Results {
   bool resultsZenoCompiled;
   bool resultsInteriorCompiled;
   bool formResultsCompiled;
+
+  bool resultsVirialCompiled;
 };
 
 }
