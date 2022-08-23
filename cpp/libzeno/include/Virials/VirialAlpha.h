@@ -207,6 +207,8 @@ runSteps(int numSteps) {
         setAlpha(newAlpha, alphaSpan);
         nextCheck *= nextCheckFac;
         nextCheck = stepCount + nextCheck;
+        if (nextCheck > targetMeter.getBlockSize() * 200) targetMeter.setBlockSize(nextCheck / 200);
+        if (nextCheck > refMeter.getBlockSize() * 200) targetMeter.setBlockSize(nextCheck / 200);
     }
 }
 
