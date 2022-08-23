@@ -995,6 +995,8 @@ Zeno::doVirialSamplingThread(ParametersVirial const * parameters,
     VirialProduction<double, RandomNumberGenerator> virialProduction(refIntegrator,targetIntegrator,
             clusterSumRef, clusterSumTarget, clusterSumRefT, clusterSumTargetT, alphaStats[0],
             resultsVirial->getRefIntegral());
+    virialProduction.getRefMeter()->setBlockSize(1);
+    virialProduction.getTargetMeter()->setBlockSize(std::max(stepsInThread / 1000, 1LL));
     virialProduction.runSteps(stepsInThread);
     //virialProduction.printResults(NULL);
 

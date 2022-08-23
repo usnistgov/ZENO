@@ -75,6 +75,7 @@ VirialAlpha(IntegratorMSMC<T, RandomNumberGenerator> & rIntegrator,
     int numAlpha = refMeter.getNumAlpha();
     const double *alpha = refMeter.getAlpha();
     alphaSpan = std::log(alpha[numAlpha-1]/alpha[0]);
+    refMeter.setBlockSize(1);
     refIntegrator.setMeter(&refMeter);
     targetIntegrator.setMeter(&targetMeter);
 }
@@ -208,7 +209,6 @@ runSteps(int numSteps) {
         nextCheck *= nextCheckFac;
         nextCheck = stepCount + nextCheck;
         if (nextCheck > targetMeter.getBlockSize() * 200) targetMeter.setBlockSize(nextCheck / 200);
-        if (nextCheck > refMeter.getBlockSize() * 200) targetMeter.setBlockSize(nextCheck / 200);
     }
 }
 
