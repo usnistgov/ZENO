@@ -52,6 +52,7 @@ class IntegratorMSMC {
   void addMove(MCMove<T, RandomNumberGenerator> * mcMove, double moveProb);
   void setMeter(MeterOverlap<T> * meter);
   void setCurrentValue(double currentValue);
+  void setEquilibrationFinished();
 private:
   int threadNum;
   Timer const * totalTimer;
@@ -193,6 +194,20 @@ void
 IntegratorMSMC<T, RandomNumberGenerator>::
 setCurrentValue(double currentValue) {
     this->currentValue = currentValue;
+}
+
+/// Configures integrator for production
+/// disables further move step size adjustment
+///
+template <class T,
+        class RandomNumberGenerator>
+void
+IntegratorMSMC<T, RandomNumberGenerator>::
+setEquilibrationFinished() {
+    for(unsigned int i = 0; i < mcMoves.size(); ++i)
+    {
+        mcMoves[i]->tunable = false;
+    }
 }
 
 }

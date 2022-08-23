@@ -90,6 +90,8 @@ VirialProduction(IntegratorMSMC<T, RandomNumberGenerator> & rIntegrator,
     fullBCStats = (double**)malloc2D(numTargets-1, numTargets-1, sizeof(double));
     refIntegrator.setMeter(&refMeter);
     targetIntegrator.setMeter(&targetMeter);
+    refIntegrator.setEquilibrationFinished();
+    targetIntegrator.setEquilibrationFinished();
 }
 
 template <class T,

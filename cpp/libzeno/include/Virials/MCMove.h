@@ -35,8 +35,10 @@ class MCMove {
     virtual double doTrial(double oldValue, bool & accepted) = 0;
     double getStepSize();
     void setStepSize(double sS);
+    bool verboseAdjust, tunable;
 
 protected:
+    std::string moveName;
     IntegratorMSMC<T, RandomNumberGenerator> & integratorMSMC;
     ClusterSum<T> * clusterSum;
     double stepSize;
@@ -47,7 +49,6 @@ protected:
     double adjustInterval;
     int lastAdjust;
     double adjustStep, minAdjustStep;
-    bool verboseAdjust, tunable;
     
 };
 
@@ -124,6 +125,7 @@ template <class T,
 MCMoveTranslate<T, RandomNumberGenerator>::
 MCMoveTranslate(IntegratorMSMC<T, RandomNumberGenerator> & integratorMSMC, ClusterSum<T> * clusterSum) : MCMove<T, RandomNumberGenerator>(integratorMSMC, clusterSum)
 {
+    MCMove<T, RandomNumberGenerator>::moveName = "translate";
     MCMove<T, RandomNumberGenerator>::stepSize = cbrt(integratorMSMC.getParticles()->at(0)->numSpheres())*integratorMSMC.getParticles()->at(0)->getModel()->getSpheres()->at(0).getRadius();
     MCMove<T, RandomNumberGenerator>::maxStepSize = 1000;
 }
@@ -140,6 +142,7 @@ template <class T,
         class RandomNumberGenerator>
 double MCMoveTranslate<T, RandomNumberGenerator>::
 doTrial(double oldValue, bool & accepted){
+    MCMove<T, RandomNumberGenerator>::numTrials++;
     if (MCMove<T, RandomNumberGenerator>::tunable && MCMove<T, RandomNumberGenerator>::numTrials >= MCMove<T, RandomNumberGenerator>::adjustInterval) {
         MCMove<T, RandomNumberGenerator>::adjustStepSize();
     }
@@ -159,6 +162,7 @@ doTrial(double oldValue, bool & accepted){
     double newValue = MCMove<T, RandomNumberGenerator>::clusterSum->value();
     double ratio = newValue / oldValue;
     ratio = std::abs(ratio);
+    MCMove<T, RandomNumberGenerator>::chiSum += ratio;
     accepted = (ratio > 1) || (ratio > MCMove<T, RandomNumberGenerator>::integratorMSMC.getRandomNumberGenerator()->getRandIn01());
     if(!accepted)
     {
@@ -179,6 +183,7 @@ template <class T,
 MCMoveRotate<T, RandomNumberGenerator>::
 MCMoveRotate(IntegratorMSMC<T, RandomNumberGenerator> & integratorMSMC, ClusterSum<T> * clusterSum) : MCMove<T, RandomNumberGenerator>(integratorMSMC, clusterSum)
 {
+    MCMove<T, RandomNumberGenerator>::moveName = "rotate";
     MCMove<T, RandomNumberGenerator>::stepSize = M_PI/4;
     MCMove<T, RandomNumberGenerator>::maxStepSize = M_PI/2;
 }
@@ -193,6 +198,7 @@ MCMoveRotate<T, RandomNumberGenerator>::
 template <class T, class RandomNumberGenerator>
 double MCMoveRotate<T, RandomNumberGenerator>::
 doTrial(double oldValue, bool & accepted){
+    MCMove<T, RandomNumberGenerator>::numTrials++;
     if (MCMove<T, RandomNumberGenerator>::tunable && MCMove<T, RandomNumberGenerator>::numTrials >= MCMove<T, RandomNumberGenerator>::adjustInterval) {
         MCMove<T, RandomNumberGenerator>::adjustStepSize();
     }
@@ -214,6 +220,7 @@ doTrial(double oldValue, bool & accepted){
     }
     double ratio = newValue / oldValue;
     ratio = std::abs(ratio);
+    MCMove<T, RandomNumberGenerator>::chiSum += ratio;
 
     accepted = (ratio > 1) || (ratio > MCMove<T, RandomNumberGenerator>::integratorMSMC.getRandomNumberGenerator()->getRandIn01());
     if(!accepted)
@@ -233,6 +240,7 @@ template <class T, class RandomNumberGenerator>
 MCMoveChainVirial<T, RandomNumberGenerator>::
 MCMoveChainVirial(IntegratorMSMC<T, RandomNumberGenerator> & integratorMSMC, ClusterSum<T> * clusterSum, double sigma): MCMove<T, RandomNumberGenerator>(integratorMSMC, clusterSum), sigma(sigma)
 {
+    MCMove<T, RandomNumberGenerator>::moveName = "chain";
 }
 
 template <class T, class RandomNumberGenerator>
@@ -245,6 +253,7 @@ MCMoveChainVirial<T, RandomNumberGenerator>::
 template <class T, class RandomNumberGenerator>
 double MCMoveChainVirial<T, RandomNumberGenerator>::
 doTrial(double oldValue, bool & accepted) {
+    MCMove<T, RandomNumberGenerator>::numTrials++;
     const Vector3<T> rPrev = MCMove<T, RandomNumberGenerator>::integratorMSMC.getParticles()->at(0)->getCenter();
     Vector3<T> sPrev = rPrev;
     accepted = true;
@@ -256,6 +265,7 @@ doTrial(double oldValue, bool & accepted) {
         MCMove<T, RandomNumberGenerator>::integratorMSMC.getParticles()->at(j)->setCenter(s);
          sPrev = s;
     }
+    MCMove<T, RandomNumberGenerator>::chiSum += 1;
     return MCMove<T, RandomNumberGenerator>::clusterSum->value();
 }
 
@@ -282,15 +292,12 @@ adjustStepSize(){
             }
             stepSize *= adjustStep;
             stepSize = std::min(stepSize, maxStepSize);
-            /*if (verboseAdjust) {
-                printf("move increasing step size: %f (<chi> = %f)\n", stepSize, avg);
-            }*/
+            if (verboseAdjust) {
+                printf("%s move increasing step size: %e (<chi> = %e)\n", MCMove<T, RandomNumberGenerator>::moveName.c_str(), stepSize, avg);
+            }
             if (lastAdjust < 1) lastAdjust = 1;
             else lastAdjust++;
         }
-        /*else if (verboseAdjust) {
-            printf("move step size: %f (<chi> = %f\n)", stepSize, avg);
-        }*/
     }
     else {
         if (lastAdjust > 0) {
@@ -307,9 +314,9 @@ adjustStepSize(){
             lastAdjust = -3;
         }
         stepSize /= adjustStep;
-        /*if (verboseAdjust) {
-            printf("move decreasing step size: %f (<chi> = %f)\n", stepSize, avg);
-        }*/
+        if (verboseAdjust) {
+            printf("%s move decreasing step size: %e (<chi> = %e)\n", MCMove<T, RandomNumberGenerator>::moveName.c_str(), stepSize, avg);
+        }
         if (lastAdjust > -1) lastAdjust = -1;
         else lastAdjust--;
     }
