@@ -266,7 +266,7 @@ MeterOverlap<T>::
 collectData(double primaryValue, bool accepted) {
     double pi = std::abs(primaryValue);
     if (pi == 0 || pi == std::numeric_limits<double>::infinity() || std::isnan(pi)) {
-        std::cerr << "pi is" << pi << std::endl;
+        std::cerr << "pi is " << pi << std::endl;
         exit(1);
     }
     if(accepted || perturbValue == -1){
