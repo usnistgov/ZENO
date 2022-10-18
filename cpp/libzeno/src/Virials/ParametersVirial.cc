@@ -173,6 +173,6 @@ ParametersVirial::mpiBroadcastDeserialize(int root) {
     setSteps(longLongsArray[2]);
   }
 
-  setOrder((bool)longLongsArray[4]);
+  setOrder(longLongsArray[4]);
 #endif
 }
