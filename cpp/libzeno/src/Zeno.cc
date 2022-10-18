@@ -903,7 +903,7 @@ Zeno::doVirialSampling(ParametersVirial const & parameters,
 
     for (int threadNum = 0; threadNum < numThreads; threadNum++) {
 
-        long long stepsInThread = parameters.getSteps() / numThreads;
+        long long stepsInThread = stepsInProcess / numThreads;
 
         if (threadNum < stepsInProcess % numThreads) {
             stepsInThread ++;
