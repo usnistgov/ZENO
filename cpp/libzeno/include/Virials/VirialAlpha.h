@@ -203,11 +203,11 @@ runSteps(int numSteps) {
         if (jBestAlpha<numAlpha*0.1 || jBestAlpha>(numAlpha-1)*0.9) alphaSpan *= 2;
         else if (alphaCor < 0.3 && alphaSpan > 0.5 && jBestAlpha>numAlpha*0.2 && jBestAlpha<(numAlpha-1)*0.8) alphaSpan *= 0.25;
         else if (alphaCor < 0.6 && alphaSpan > 0.5 && jBestAlpha>numAlpha*0.2 && jBestAlpha<(numAlpha-1)*0.8) alphaSpan *= 0.6;
-        else if (alphaCor > 0.2) nextCheckFac *= 2;
-        else if (alphaCor < 0.1 && newAlphaErr/newAlpha < 0.02) allDone = true;
+        else if (alphaCor > 0.2 || newAlphaErr/newAlpha > 0.1) nextCheckFac = 2;
+        else if (alphaCor < 0.1) allDone = true;
+        if (alphaSpan < 0.5) alphaSpan = 0.5;
         setAlpha(newAlpha, alphaSpan);
-        nextCheck *= nextCheckFac;
-        nextCheck = stepCount + nextCheck;
+        nextCheck = stepCount * (1 + nextCheckFac);
         if (nextCheck > targetMeter.getBlockSize() * 200) targetMeter.setBlockSize(nextCheck / 200);
     }
 }
