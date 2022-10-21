@@ -68,8 +68,8 @@ VirialAlpha(IntegratorMSMC<T, RandomNumberGenerator> & rIntegrator,
             ClusterSum<T> & targetClusterRef,
             ClusterSum<T> & targetClusterTarget) :
             stepCount(0), nextCheck(1000), refIntegrator(rIntegrator), targetIntegrator(tIntegrator),
-            refMeter(MeterOverlap<T>(refClusterTarget, 1, 5, 10)),
-            targetMeter(MeterOverlap<T>(targetClusterRef, 1, -5, 10)),
+            refMeter(MeterOverlap<T>(refClusterTarget, 1, 5, 11)),
+            targetMeter(MeterOverlap<T>(targetClusterRef, 1, -5, 11)),
             newAlpha(0), newAlphaErr(0), alphaCor(0), alphaSpan(0), allDone(false),
             verbose(false) {
     int numAlpha = refMeter.getNumAlpha();
@@ -200,12 +200,12 @@ runSteps(int numSteps) {
         if (verbose) printf("alpha  avg: %22.15e   err: %12.5e   cor: % 6.4f\n", newAlpha, newAlphaErr, alphaCor);
         int numAlpha = refMeter.getNumAlpha();
         double nextCheckFac = 1.4;
-        if (jBestAlpha<numAlpha*0.1 || jBestAlpha>(numAlpha-1)*0.9) alphaSpan *= 2;
-        else if (alphaCor < 0.3 && alphaSpan > 0.5 && jBestAlpha>numAlpha*0.2 && jBestAlpha<(numAlpha-1)*0.8) alphaSpan *= 0.25;
-        else if (alphaCor < 0.6 && alphaSpan > 0.5 && jBestAlpha>numAlpha*0.2 && jBestAlpha<(numAlpha-1)*0.8) alphaSpan *= 0.6;
+        if (jBestAlpha==0 || jBestAlpha>(numAlpha-1)*0.999999) alphaSpan *= 2;
+        else if (alphaCor < 0.3 && alphaSpan > 1 && jBestAlpha>numAlpha*0.2 && jBestAlpha<(numAlpha-1)*0.8) alphaSpan *= 0.25;
+        else if (alphaCor < 0.6 && alphaSpan > 1 && jBestAlpha>numAlpha*0.2 && jBestAlpha<(numAlpha-1)*0.8) alphaSpan *= 0.6;
         else if (alphaCor > 0.2 || newAlphaErr/newAlpha > 0.1) nextCheckFac = 2;
         else if (alphaCor < 0.1) allDone = true;
-        if (alphaSpan < 0.5) alphaSpan = 0.5;
+        if (alphaSpan < 1) alphaSpan = 1;
         setAlpha(newAlpha, alphaSpan);
         nextCheck = stepCount * (1 + nextCheckFac);
         if (nextCheck > targetMeter.getBlockSize() * 200) targetMeter.setBlockSize(nextCheck / 200);
