@@ -1001,5 +1001,6 @@ Zeno::doVirialSamplingThread(ParametersVirial const * parameters,
     //virialProduction.printResults(NULL);
 
     resultsVirial->putData(threadNum, virialProduction.getRefMeter(), virialProduction.getTargetMeter());
+    resultsVirial->putOverlapRatio(threadNum, virialProduction.getAlphaStats()[0], std::pow(virialProduction.getAlphaStats()[1],2));
     resultsVirial->putVirialCoefficient(threadNum, virialProduction.getFullStats()[0][0], std::pow(virialProduction.getFullStats()[0][1],2));
 }
