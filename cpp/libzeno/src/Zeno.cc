@@ -866,7 +866,9 @@ Zeno::getVirialResults
  ResultsVirial * * resultsVirial) {
 
   double refDiameter = 2 * boundingSphere.getRadius();
-  double refIntegral = std::pow(4.0*M_PI*refDiameter*refDiameter*refDiameter/3.0,parametersVirial.getOrder()-1)/2;
+  int nFactorial = 1;
+  for (int i=2; i<=parametersVirial.getOrder(); i++) nFactorial *= i;
+  double refIntegral = nFactorial*std::pow(4.0*M_PI*refDiameter*refDiameter*refDiameter/3.0,parametersVirial.getOrder()-1)/2;
   *resultsVirial = new ResultsVirial(parametersVirial.getNumThreads(),
                                      refIntegral);
 
