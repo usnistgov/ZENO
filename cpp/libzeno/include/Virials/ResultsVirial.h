@@ -44,10 +44,12 @@ public:
     }
     double getRefFrac() const;
     Uncertain<double> getRefAverageReduced() const;
-    Uncertain<double> getRefOverlapAverageReduced() const;
     Uncertain<double> getTargetAverageReduced() const;
-    Uncertain<double> getTargetOverlapAverageReduced() const;
+    Uncertain<double> getOverlapRatioAverageReduced() const;
     double getRefIntegral() const;
+    void putOverlapRatio(int threadNum,
+                         double overlapRatio,
+                         double uncertainty);
     void putVirialCoefficient(int threadNum,
                               double coefficient,
                               double uncertainty);
@@ -59,13 +61,11 @@ public:
 
 private:
     Uncertain<double> * refAverage;
-    Uncertain<double> * refOverlapAverage;
     Uncertain<double> * targetAverage;
-    Uncertain<double> * targetOverlapAverage;
+    Uncertain<double> * overlapRatioAverage;
     Uncertain<double> refAverageReduced;
-    Uncertain<double> refOverlapAverageReduced;
     Uncertain<double> targetAverageReduced;
-    Uncertain<double> targetOverlapAverageReduced;
+    Uncertain<double> overlapRatioAverageReduced;
     int numThreads;
     bool reduced;
     long long * refNumSteps;

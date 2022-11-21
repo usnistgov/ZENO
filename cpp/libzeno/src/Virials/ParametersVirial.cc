@@ -144,8 +144,8 @@ ParametersVirial::serializeMpiBroadcast(int root) const {
 
   longLongsArray[0] = (long long)getNumThreads();
   longLongsArray[1] = (long long)getSeed();
-  longLongsArray[2] = (long long)getStepsWasSet();
-  longLongsArray[3] = getSteps();
+  longLongsArray[2] = getSteps();
+  longLongsArray[3] = (long long)getStepsWasSet();
   longLongsArray[4] = getOrder();
 
   MPI_Bcast(longLongsArray, numLongLongsToSend, MPI_LONG_LONG,
@@ -173,6 +173,6 @@ ParametersVirial::mpiBroadcastDeserialize(int root) {
     setSteps(longLongsArray[2]);
   }
 
-  setOrder((bool)longLongsArray[4]);
+  setOrder(longLongsArray[4]);
 #endif
 }

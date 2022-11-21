@@ -848,7 +848,7 @@ runZeno(ParametersLocal const & parametersLocal,
     if (parametersLocal.getPrintBenchmarks() && 
 	parametersLocal.getMpiRank() == 0) {
 
-      printRAM("interior samples",
+      printRAM("virial steps",
 	       csvItems);
     }
   }
