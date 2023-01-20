@@ -32,11 +32,13 @@
 // ================================================================
 // 
 // Authors: Derek Juba <derek.juba@nist.gov>
-// Created: Mon Feb 24 11:24:59 2014 EDT
+// Created: 2023-01-19
 //
 // ================================================================
 
 #include "BodParser.h"
+
+#include <boost/spirit/include/qi.hpp>
 
 #include "Geometry/Vector3.h"
 
@@ -51,31 +53,52 @@ bod_parser::BodParser::BodParser
  ParametersInteriorSampling * parametersInteriorSampling,
  ParametersResults * parametersResults,
  MixedModel<double> * model) :
-  d_scanner(in),
+  parametersLocal(parametersLocal),
+  in(in),
   parametersWalkOnSpheres(parametersWalkOnSpheres),
   parametersInteriorSampling(parametersInteriorSampling),
   parametersResults(parametersResults),
-  parametersLocal(parametersLocal),
   model(model) {
 
 }
 
-void bod_parser::BodParser::addSphere(double x, double y, double z, double r) {
+int bod_parser::BodParser::parse() {
+  // Copy input file contents into string
+  std::string storage;
+  in.unsetf(std::ios::skipws);
+  std::copy(
+    std::istream_iterator<char>(in),
+    std::istream_iterator<char>(),
+    std::back_inserter(storage));
+  
+  std::string::const_iterator first = storage.begin();
+  std::string::const_iterator last  = storage.end();
+
+  bool parseResult = boost::spirit::qi::parse(first, last, BodParserGrammar(this));
+
+  if (parseResult == false || first != last) {
+    std::cerr << "Error parsing BOD file: Unparseable: " << std::string(first, last) << std::endl;
+
+    exit(1);
+  }
+
+  return 0;
+}
+
+void bod_parser::BodParser::addSphere(Vector3<double> center, double r) {
   if (r < 0) {
     std::cerr << "Error: tried to add sphere with negative radius " << r
 	      << std::endl;
 
     exit(1);
   }
-  
-  Vector3<double> center(x, y, z);
 
   Sphere<double> sphere(center, r);
 
   model->addSphere(sphere);
 }
 
-void bod_parser::BodParser::addCube(double x, double y, double z, double s) {
+void bod_parser::BodParser::addCube(Vector3<double> minCoords, double s) {
   if (s < 0) {
     std::cerr << "Error: tried to add cube with negative offset " << s
 	      << std::endl;
@@ -83,16 +106,19 @@ void bod_parser::BodParser::addCube(double x, double y, double z, double s) {
     exit(1);
   }
   
-  Vector3<double> minCoords(x,     y,     z);
-  Vector3<double> maxCoords(x + s, y + s, z + s);
+  Vector3<double> maxCoords(minCoords + s);
 
   Cuboid<double> cuboid(minCoords, maxCoords);
   
   model->addCuboid(cuboid);
 }
 
-void bod_parser::BodParser::addCuboid(double x1, double y1, double z1,
-				      double x2, double y2, double z2) {
+void bod_parser::BodParser::addCuboid(Vector3<double> corner1,
+				                      Vector3<double> corner2) {
+  double x1{}, y1{}, z1{}, x2{}, y2{}, z2{};
+
+  corner1.getXYZ(x1, y1, z1);
+  corner2.getXYZ(x2, y2, z2);
   
   if (x2 < x1) std::swap(x1, x2);
   if (y2 < y1) std::swap(y1, y2);

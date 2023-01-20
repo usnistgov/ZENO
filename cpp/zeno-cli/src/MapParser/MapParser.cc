@@ -32,11 +32,13 @@
 // ================================================================
 // 
 // Authors: Derek Juba <derek.juba@nist.gov>
-// Created: 2019-08-02
+// Created: 2023-01-13
 //
 // ================================================================
 
 #include "MapParser.h"
+
+#include <boost/spirit/include/qi.hpp>
 
 #include <iostream>
 
@@ -45,9 +47,38 @@
 map_parser::MapParser::MapParser
 (std::istream & in,
  std::unordered_map<std::string, double> * atomIdToRadius)
-  : d_scanner(in),
+  : in(in),
     atomIdToRadius(atomIdToRadius) {
 
+}
+
+int map_parser::MapParser::parse() {  
+  // Copy input file contents into string
+  std::string storage;
+  in.unsetf(std::ios::skipws);
+  std::copy(
+    std::istream_iterator<char>(in),
+    std::istream_iterator<char>(),
+    std::back_inserter(storage));
+  
+  std::string::const_iterator first = storage.begin();
+  std::string::const_iterator last  = storage.end();
+
+  std::vector<Mapping> mappings;
+
+  bool parseResult = boost::spirit::qi::parse(first, last, MapParserGrammar(), mappings);
+
+  if (parseResult == false || first != last) {
+    std::cerr << "Error parsing MAP file: Unparseable: " << std::string(first, last) << std::endl;
+
+    exit(1);
+  }
+
+  for (auto mapping = mappings.begin(); mapping != mappings.end(); ++mapping) {
+    addMapping(mapping->atomId, mapping->radius);
+  }
+
+  return 0;
 }
 
 void map_parser::MapParser::addMapping(std::string atomId, double radius) {

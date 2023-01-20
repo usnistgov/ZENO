@@ -32,11 +32,13 @@
 // ================================================================
 // 
 // Authors: Derek Juba <derek.juba@nist.gov>
-// Created: 2019-07-26
+// Created: 2023-01-18
 //
 // ================================================================
 
 #include "XyzParser.h"
+
+#include <boost/spirit/include/qi.hpp>
 
 #include <iostream>
 
@@ -49,13 +51,48 @@ xyz_parser::XyzParser::XyzParser
  std::istream & in,
  std::list<zeno::MixedModel<double> > * snapshots,
  std::list<std::string> * comments)
-  : d_scanner(in),
+  : in(in),
     atomIdToRadius(&atomIdToRadius),
     snapshots(snapshots),
     comments(comments),
     numAtomsExpected(0),
     numAtomsSeen(0) {
 
+}
+
+int xyz_parser::XyzParser::parse() {
+  // Copy input file contents into string
+  std::string storage;
+  in.unsetf(std::ios::skipws);
+  std::copy(
+    std::istream_iterator<char>(in),
+    std::istream_iterator<char>(),
+    std::back_inserter(storage));
+  
+  std::string::const_iterator first = storage.begin();
+  std::string::const_iterator last  = storage.end();
+
+  std::vector<Snapshot> parsedSnapshots;
+
+  bool parseResult = boost::spirit::qi::parse(first, last, XyzParserGrammar(), parsedSnapshots);
+
+  if (parseResult == false || first != last) {
+    std::cerr << "Error parsing XYZ file: Unparseable: " << std::string(first, last) << std::endl;
+
+    exit(1);
+  }
+
+  for (auto snapshot = parsedSnapshots.begin(); snapshot != parsedSnapshots.end(); ++snapshot) {
+    this->addSnapshot(snapshot->numAtoms);
+
+    this->addComment(snapshot->comment);
+
+    for (auto atom = snapshot->atoms.begin(); atom != snapshot->atoms.end(); ++atom) {
+      this->addAtom(atom->id, atom->x, atom->y, atom->z);
+    }
+  }
+
+  return 0;
 }
 
 void xyz_parser::XyzParser::addSnapshot(int numAtoms) {
@@ -76,16 +113,12 @@ void xyz_parser::XyzParser::addSnapshot(int numAtoms) {
   comments->emplace_back();
 }
 
-void xyz_parser::XyzParser::addCommentWord(std::string commentWord) {
-  if (!comments->back().empty()) {
-    comments->back() += " ";
-  }
-  
-  comments->back() += commentWord;
+void xyz_parser::XyzParser::addComment(std::string comment) {
+  comments->back() = comment;
 }
 
 void xyz_parser::XyzParser::addAtom(std::string id,
-				    double x, double y, double z) {
+				                    double x, double y, double z) {
 
   ++ numAtomsSeen;
 
