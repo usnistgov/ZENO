@@ -23,28 +23,8 @@ set(CMDLINE_C cmdline.c)
 set(CMDLINE_H cmdline.h)
 
 set(BOD_PARSER_DIR ${SRC_DIR_CLI}/BodParser)
-set(BOD_PARSE_CC bod_parse.cc)
-set(BOD_PARSERBASE_H BodParserbase.h)
-
-set(BOD_SCANNER_DIR ${SRC_DIR_CLI}/BodParser)
-set(BOD_SCAN_CC bod_lex.cc)
-set(BOD_SCANNERBASE_H BodScannerbase.h)
-
 set(XYZ_PARSER_DIR ${SRC_DIR_CLI}/XyzParser)
-set(XYZ_PARSE_CC xyz_parse.cc)
-set(XYZ_PARSERBASE_H XyzParserbase.h)
-
-set(XYZ_SCANNER_DIR ${SRC_DIR_CLI}/XyzParser)
-set(XYZ_SCAN_CC xyz_lex.cc)
-set(XYZ_SCANNERBASE_H XyzScannerbase.h)
-
 set(MAP_PARSER_DIR ${SRC_DIR_CLI}/MapParser)
-set(MAP_PARSE_CC map_parse.cc)
-set(MAP_PARSERBASE_H MapParserbase.h)
-
-set(MAP_SCANNER_DIR ${SRC_DIR_CLI}/MapParser)
-set(MAP_SCAN_CC map_lex.cc)
-set(MAP_SCANNERBASE_H MapScannerbase.h)
 
 set(SOURCE_FILES_LIB
   ${SRC_DIR_LIB}/Zeno.cc
@@ -96,15 +76,9 @@ set(HEADER_FILES_LIB
 
 set(SOURCE_FILES_CLI
   ${CMDLINE_DIR}/${CMDLINE_C}
-  ${BOD_PARSER_DIR}/${BOD_PARSE_CC}
   ${BOD_PARSER_DIR}/BodParser.cc
-  ${BOD_SCANNER_DIR}/${BOD_SCAN_CC}
-  ${XYZ_PARSER_DIR}/${XYZ_PARSE_CC}
   ${XYZ_PARSER_DIR}/XyzParser.cc
-  ${XYZ_SCANNER_DIR}/${XYZ_SCAN_CC}
-  ${MAP_PARSER_DIR}/${MAP_PARSE_CC}
   ${MAP_PARSER_DIR}/MapParser.cc
-  ${MAP_SCANNER_DIR}/${MAP_SCAN_CC}
   ${SRC_DIR_CLI}/Main.cc
   ${SRC_DIR_CLI}/ParametersLocal.cc)
 
@@ -140,6 +114,9 @@ target_link_libraries(libzeno ${ZLIB_LIBRARIES})
 
 find_package(Threads REQUIRED)
 target_link_libraries(libzeno ${CMAKE_THREAD_LIBS_INIT})
+
+find_package(Boost 1.47.0 REQUIRED)
+include_directories(${Boost_INCLUDE_DIRS})
 
 #setup rng
 
@@ -222,117 +199,6 @@ if (GEN_CMD_PARSER)
     message(SEND_ERROR "gengetopt not found!")
   endif()
 endif()
-
-#setup file parsers
-
-macro(setup_file_parser
-    OPTION_NAME
-    OPTION_DESCRIPTION
-    NAMESPACE
-    PARSER_DIR
-    PARSE_CC
-    PARSERBASE_H
-    PARSER_CLASS
-    GRAMMAR
-    SCANNER_DIR
-    SCAN_CC
-    SCANNERBASE_H
-    SCANNER_CLASS
-    LEXER)
-  
-  option(${OPTION_NAME} ${OPTION_DESCRIPTION} OFF)
-  mark_as_advanced(${OPTION_NAME})
-
-  if (${OPTION_NAME})
-    #setup bisonc++
-    
-    find_program(BISONCXX_BIN bisonc++)
-
-    mark_as_advanced(BISONCXX_BIN)
-
-    if (BISONCXX_BIN)
-      add_custom_command(
-	OUTPUT ${PARSER_DIR}/${PARSE_CC} ${PARSER_DIR}/${PARSERBASE_H}
-	COMMAND ${BISONCXX_BIN}
-	--target-directory ${PARSER_DIR}
-	--class-name ${PARSER_CLASS}
-	--scanner-class-name ${SCANNER_CLASS}
-	--parsefun-source ${PARSE_CC}
-	--namespace ${NAMESPACE}
-	${PARSER_DIR}/${GRAMMAR}
-	DEPENDS ${PARSER_DIR}/${GRAMMAR}
-	VERBATIM)
-    else()
-      message(SEND_ERROR "bisonc++ not found!")
-    endif()
-
-    #setup flexc++
-    
-    find_program(FLEXCXX_BIN flexc++)
-
-    mark_as_advanced(FLEXCXX_BIN)
-
-    if (FLEXCXX_BIN)
-      add_custom_command(
-	OUTPUT ${SCANNER_DIR}/${SCAN_CC} ${SCANNER_DIR}/${SCANNERBASE_H}
-	COMMAND ${FLEXCXX_BIN}
-	--target-directory ${SCANNER_DIR}
-	--class-name ${SCANNER_CLASS}
-	--lex-source ${SCAN_CC}
-	--namespace ${NAMESPACE}
-	${SCANNER_DIR}/${LEXER}
-	DEPENDS ${SCANNER_DIR}/${LEXER}
-	VERBATIM)
-    else()
-      message(SEND_ERROR "flexc++ not found!")
-    endif()
-  endif()
-endmacro(setup_file_parser)
-
-setup_file_parser(
-  GEN_BOD_PARSER
-  "Generate bod file parser"
-  bod_parser
-  ${BOD_PARSER_DIR}
-  ${BOD_PARSE_CC}
-  ${BOD_PARSERBASE_H}
-  BodParser
-  bod_grammar
-  ${BOD_SCANNER_DIR}
-  ${BOD_SCAN_CC}
-  ${BOD_SCANNERBASE_H}
-  BodScanner
-  bod_lexer)
-
-setup_file_parser(
-  GEN_XYZ_PARSER
-  "Generate xyz file parser"
-  xyz_parser
-  ${XYZ_PARSER_DIR}
-  ${XYZ_PARSE_CC}
-  ${XYZ_PARSERBASE_H}
-  XyzParser
-  xyz_grammar
-  ${XYZ_SCANNER_DIR}
-  ${XYZ_SCAN_CC}
-  ${XYZ_SCANNERBASE_H}
-  XyzScanner
-  xyz_lexer)
-
-setup_file_parser(
-  GEN_MAP_PARSER
-  "Generate map file parser"
-  map_parser
-  ${MAP_PARSER_DIR}
-  ${MAP_PARSE_CC}
-  ${MAP_PARSERBASE_H}
-  MapParser
-  map_grammar
-  ${MAP_SCANNER_DIR}
-  ${MAP_SCAN_CC}
-  ${MAP_SCANNERBASE_H}
-  MapScanner
-  map_lexer)
 
 #setup testing
 
