@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.1)
 
 set(CMAKE_BUILD_TYPE_INIT "Release")
 
-project(ZENO VERSION 5.3.0)
+project(ZENO VERSION 5.3.1)
 
 include(GNUInstallDirs)
 
