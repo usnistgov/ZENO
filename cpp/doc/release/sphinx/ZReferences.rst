@@ -10,5 +10,5 @@ References
 
    \maketitle
 
-.. bibliography:: ZENO.bib
+.. bibliography::
    :style: plain  

@@ -44,6 +44,7 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.mathjax',
     'sphinxcontrib.bibtex',
+    'sphinx_rtd_theme',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -63,7 +64,7 @@ master_doc = 'index'
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = 'English'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -92,11 +93,7 @@ html_theme = 'sphinx_rtd_theme'
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 
-html_context = {
-    'css_files': [
-        '_static/theme_overrides.css',  # override wide tables in RTD theme
-        ],
-     }
+html_css_files = ['theme_overrides.css']
 
 # Custom sidebar templates, must be a dictionary that maps document names
 # to template names.
@@ -111,9 +108,9 @@ html_context = {
 html_favicon = '_static/favicon.ico'
 
 def setup(app):
-	app.add_javascript('https://pages.nist.gov/nist-header-footer/js/jquery-1.9.0.min.js')
-	app.add_javascript('redirectalert.js')
-	app.add_javascript('leavenotice.js') 
+	app.add_js_file('https://pages.nist.gov/nist-header-footer/js/jquery-1.9.0.min.js')
+	app.add_js_file('redirectalert.js')
+	app.add_js_file('leavenotice.js') 
 	return
 
 # -- Options for HTMLHelp output ---------------------------------------------
@@ -174,3 +171,4 @@ texinfo_documents = [
 
 
 # -- Extension configuration -------------------------------------------------
+bibtex_bibfiles = ['ZENO.bib']
