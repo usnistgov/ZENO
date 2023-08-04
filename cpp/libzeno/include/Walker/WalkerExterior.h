@@ -153,6 +153,8 @@ WalkerExterior<T,
       
       return;
     }
+	  
+    minDistance += shellThickness;
 
     (*numSteps)++;
 
