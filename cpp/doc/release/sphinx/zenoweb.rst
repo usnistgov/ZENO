@@ -10,5 +10,5 @@ zenoweb
 
    \maketitle
 
-The ``zenoweb`` feature is currently disabled. Thank you for letting us know that you would like it reenabled. If there is additional information you would like to provide, please contact us at zeno@nist.gov.
+The ``zenoweb`` feature is currently disabled. If you have questions or comments, please contact us at zeno@nist.gov.
 
