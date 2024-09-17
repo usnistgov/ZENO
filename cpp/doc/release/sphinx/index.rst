@@ -15,8 +15,7 @@ quantities.
 Run the code in a web browser
 -----------------------------
 
-The ZENO code can be run directly at https://zeno.nist.gov/zenoweb
-
+The ZENO code used to be able to be run directly. However, this feature is currently disabled. If you would like this feature reenabled, :doc:`please let us know <zenoweb>`.
 
 How to get the code
 -------------------
