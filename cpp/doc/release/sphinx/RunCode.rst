@@ -89,6 +89,33 @@ interior calculation.
 
 ``--max-rsd-volume=<maximum relative standard deviation of volume>``
 
+.. _virial-calculation-1:
+
+Virial calculation
+~~~~~~~~~~~~~~~~~~~~
+
+Length of run is specified only in terms of number of Monte Carlo trials attempted. A typical value is 100000000.
+
+``--virial-steps=<number of trials attempted>``
+
+The order :math:`N` indicates which coefficient :math:`B_N` is calculated.
+
+``--virial-coefficient-order=<order of coefficient>``
+
+The size of the reference sphere should be roughly the size of the particle. It the particle is anisotropic, 
+a rough average of the dimensions would be appropriate. 
+The selection in principle has no effect on the calculated coefficient, but it can affect the efficiency of the calculation 
+(i.e., size of the uncertainty of the calculated coefficient).
+
+``--virial-reference-diameter=<size of reference sphere>``
+
+For potentials that are not just hard repulsion, or that have soft intramolecular bonding potentials, the virial coefficient depends on temperature.  
+The temperature for the calculation is specified on the command line.
+
+``--temperature=<temperature value>``
+
+The specified temperature is in units consistent with the energy parameter(s) specified for the force-field model. Default value is 1.
+
 .. _sec:cmdline:
 
 Description of command-line options

@@ -66,7 +66,7 @@ public:
   void setMapInputFileName(std::string const & mapInputFileName);
   std::string getMapInputFileName() const;
   bool getMapInputFileNameWasSet() const;
-  
+
   void setCsvOutputFileName(std::string const & csvOutputFileName);
   std::string getCsvOutputFileName() const;
   bool getCsvOutputFileNameWasSet() const;

@@ -1,0 +1,26 @@
+Provider: Silverchair
+Database: AIPPublishing
+Content: text/plain; charset="UTF-8"
+
+TY  - JOUR
+AU  - Bansal, Arpit
+AU  - Schultz, Andrew J.
+AU  - Douglas, Jack F.
+AU  - Kofke, David A.
+T1  - Probabilistic computations of virial coefficients of polymeric structures described by rigid configurations of spherical particles: A fundamental extension of the ZENO program
+PY  - 2022
+Y1  - 2022/12/08
+DO  - 10.1063/5.0127465
+JO  - The Journal of Chemical Physics
+JA  - J. Chem. Phys.
+VL  - 157
+IS  - 22
+SP  - 224801
+SN  - 0021-9606
+AB  - We describe an extension of the ZENO program for polymer and nanoparticle characterization that allows for precise calculation of the virial coefficients, with uncertainty estimates, of polymeric structures described by arbitrary rigid configurations of hard spheres. The probabilistic method of virial computation used for this extension employs a previously developed Mayer-sampling Monte Carlo method with overlap sampling that allows for a reduction of bias in the Monte Carlo averaging. This capability is an extension of ZENO in the sense that the existing program is also based on probabilistic sampling methods and involves the same input file formats describing polymer and nanoparticle structures. We illustrate the extension’s capabilities, demonstrate its accuracy, and quantify the efficiency of this extension of ZENO by computing the second, third, and fourth virial coefficients and metrics quantifying the difficulty of their calculation, for model polymeric structures having several different shapes. We obtain good agreement with literature estimates available for some of the model structures considered.
+Y2  - 6/28/2023
+UR  - https://doi.org/10.1063/5.0127465
+ER  -
+
+
+

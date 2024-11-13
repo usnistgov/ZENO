@@ -100,7 +100,8 @@ parseBodFile(ParametersLocal * parametersLocal,
 	     ParametersWalkOnSpheres * parametersWalkOnSpheres,
 	     ParametersInteriorSampling * parametersInteriorSampling,
 	     ParametersResults * parametersResults,
-	     MixedModel<double> * model);
+	     std::vector<MixedModel<double>> * models,
+	     Potential<double> * potential);
 
 void
 parseMapFile(ParametersLocal const & parametersLocal,
@@ -123,7 +124,8 @@ runZeno(ParametersLocal const & parametersLocal,
 	ParametersResults * parametersResults,
 	double readTime,
 	double broadcastTime,
-	MixedModel<double> * model,
+	std::vector<MixedModel<double>> * models,
+	Potential<double> & potential,
 	CsvItems * csvItems);
 
 void
@@ -133,6 +135,7 @@ printOutput(Results const & results,
 	    ParametersVirial const & parametersVirial,
 	    ParametersResults const & parametersResults,
 	    ParametersLocal const & parametersLocal,
+            Potential<double> const & potential,
 	    double initializeTime,
 	    double readTime,
 	    double broadcastTime,
@@ -152,11 +155,16 @@ printParameters(ParametersWalkOnSpheres const & parametersWalkOnSpheres,
 	        ParametersVirial const & parametersVirial,
 	        ParametersResults const & parametersResults,
 		ParametersLocal const & parametersLocal,
+                Potential<double> const & potential,
 		CsvItems * csvItems);
 
 void
 printResults(Results const & results,
 	     CsvItems * csvItems);
+
+void
+printPotentialStyles(Potential<double> const & potential,
+	             CsvItems * csvItems);
 
 template <typename T>
 void
@@ -165,6 +173,12 @@ printExactScalar(std::string const & prettyName,
 		 std::string const & units,
 		 T property,
 		 CsvItems * csvItems);
+
+void
+printString(std::string const & prettyName,
+	    std::string const & csvName,
+	    std::string const & str,
+	    CsvItems * csvItems);
 
 template <typename T>
 void
@@ -287,7 +301,8 @@ int main(int argc, char **argv) {
 	     &globalCsvItems);
   }
 
-  MixedModel<double> model;
+  std::vector<MixedModel<double>> models;
+  Potential<double> potential;
 
   Timer readTimer;
 
@@ -297,10 +312,18 @@ int main(int argc, char **argv) {
 		 &parametersWalkOnSpheres,
 		 &parametersInteriorSampling,
 		 &parametersResults,
-		 &model);
+		 &models,
+                 &potential);
+
+    std::vector<int> numSpheresPerModel;
+    for (MixedModel<double> & m : models) {
+      numSpheresPerModel.push_back(m.getSpheres()->size());
+    }
+    potential.initialize(numSpheresPerModel);
+
     readTimer.stop();
   }
-  
+
   Timer broadcastTimer;
 
   broadcastTimer.start();
@@ -310,7 +333,10 @@ int main(int argc, char **argv) {
   parametersVirial.mpiBroadcast(0);
   parametersResults.mpiBroadcast(0);
   parametersLocal.mpiBroadcast(0);
-  model.mpiBroadcast(0);
+  //std::vector<MixedModel<double>> models;
+  for (MixedModel<double> & m : models) {
+      m.mpiBroadcast(0);
+  }
 
   broadcastTimer.stop();
 
@@ -324,7 +350,7 @@ int main(int argc, char **argv) {
   }
 
   if (parametersLocal.getXyzInputFileNameWasSet() &&
-      !model.isEmpty()) {
+      (models.size() > 1 || !models[0].isEmpty())) {
 
     std::cerr << "Error: Cannot specify non-trajectory geometry when using "
 	      << "trajectory mode" << std::endl;
@@ -361,7 +387,8 @@ int main(int argc, char **argv) {
 	      &parametersResults,
 	      readTimer.getTime(),
 	      broadcastTimer.getTime(),
-	      &model,
+	      &models,
+              potential,
 	      &perRunCsvItemsList.back());
 
     if (runZenoStatus != 0) {
@@ -430,6 +457,8 @@ int main(int argc, char **argv) {
 
       perRunCsvItemsList.emplace_back();
       
+      std::vector<zeno::MixedModel<double>> snapshotModel1;
+      snapshotModel1.push_back(snapshot);
       int runZenoStatus =
 	runZeno(parametersLocal,
 		&snapshotParametersWalkOnSpheres,
@@ -438,7 +467,8 @@ int main(int argc, char **argv) {
 		&snapshotParametersResults,
 		readTimer.getTime(),
 		broadcastTimer.getTime(),
-		&snapshot,
+		&snapshotModel1,
+                potential,
 		&perRunCsvItemsList.back());
 
       if (runZenoStatus != 0) {
@@ -639,6 +669,18 @@ parseCommandLine(int argc, char **argv,
     parametersVirial->setOrder(args_info.virial_coefficient_order_arg);
   }
 
+  if (args_info.virial_reference_diameter_given) {
+    parametersVirial->setReferenceDiameter(args_info.virial_reference_diameter_arg);
+  }
+
+  if (args_info.temperature_given) {
+    parametersVirial->setTemperature(args_info.temperature_arg);
+  }
+
+  if (args_info.num_derivatives_given) {
+    parametersVirial->setNumDerivatives(args_info.num_derivatives_arg);
+  }
+
   parametersLocal->setPrintCounts(args_info.print_counts_given);
   parametersLocal->setPrintBenchmarks(args_info.print_benchmarks_given);
 
@@ -653,7 +695,8 @@ parseBodFile(ParametersLocal * parametersLocal,
 	     ParametersWalkOnSpheres * parametersWalkOnSpheres,
 	     ParametersInteriorSampling * parametersInteriorSampling,
 	     ParametersResults * parametersResults,
-	     MixedModel<double> * model) {
+	     std::vector<MixedModel<double>> * models,
+             Potential<double> * potential) {
 
   std::string fileName = parametersLocal->getInputFileName();
 
@@ -671,15 +714,22 @@ parseBodFile(ParametersLocal * parametersLocal,
 			       parametersWalkOnSpheres,
 			       parametersInteriorSampling,
 			       parametersResults,
-			       model);
+			       models,
+			       potential);
 
   int parseResult = parser.parse();
+
+  if (models->size() == 0) {
+    // perhaps BOD simply contained a trajectory
+    MixedModel<double> m;
+    models->push_back(m);
+  }
 
   if (parseResult != 0) {
     std::cerr << "Error parsing bod input file " << fileName << std::endl;
     exit(EXIT_FAILURE);
   }
-  
+
   inputFile.close();
 }
 
@@ -749,6 +799,7 @@ parseXyzFile(ParametersLocal const & parametersLocal,
   inputFile.close();
 }
 
+
 /// If MPI rank is 0, broadcasts the list of snapshots to all other MPI nodes.
 /// If MPI rank is not 0, fills the list of snapshots with the snapshots
 /// received from the rank 0 node.
@@ -780,10 +831,13 @@ runZeno(ParametersLocal const & parametersLocal,
 	ParametersResults * parametersResults,
 	double readTime,
 	double broadcastTime,
-	MixedModel<double> * model,
+	std::vector<MixedModel<double>> * models,
+	Potential<double> & potential,
 	CsvItems * csvItems) {
   
-  Zeno zeno(model);
+  // If we read a forcefield file, then skip preprocessing as it
+  // re-orders the spheres.
+  Zeno zeno(models, potential);
 
   if (parametersLocal.getPrintBenchmarks() && 
       parametersLocal.getMpiRank() == 0) {
@@ -873,6 +927,7 @@ runZeno(ParametersLocal const & parametersLocal,
 	      *parametersVirial,
 	      *parametersResults,
 	      parametersLocal,
+              potential,
 	      zeno.getInitializeTime(),
 	      readTime,
 	      broadcastTime,
@@ -902,6 +957,7 @@ printOutput(Results const & results,
 	    ParametersVirial const & parametersVirial,
 	    ParametersResults const & parametersResults,
 	    ParametersLocal const & parametersLocal,
+            Potential<double> const & potential,
 	    double initializeTime,
 	    double readTime,
 	    double broadcastTime,
@@ -926,6 +982,7 @@ printOutput(Results const & results,
 		    parametersVirial,
 		    parametersResults,
 		    parametersLocal,
+                    potential,
 		    csvItems);
 
     std::cout << std::endl
@@ -1041,6 +1098,7 @@ printParameters(ParametersWalkOnSpheres const & parametersWalkOnSpheres,
 	        ParametersVirial const & parametersVirial,
 	        ParametersResults const & parametersResults,
 		ParametersLocal const & parametersLocal,
+                Potential<double> const & potential,
 		CsvItems * csvItems) {
   
   printExactScalar("Input file", "input_file", "",
@@ -1118,14 +1176,27 @@ printParameters(ParametersWalkOnSpheres const & parametersWalkOnSpheres,
   }
 
   if (parametersVirial.getOrderWasSet()) {
+
+    printPotentialStyles(potential, csvItems);
+
     printExactScalar("Virial coefficient order", "virial_order", "",
 		     parametersVirial.getOrder(),
+		     csvItems);
+
+    printExactScalar("Temperature for virial coefficient", "virial_temperature", "",
+		     parametersVirial.getTemperature(),
 		     csvItems);
   }
 
   if (parametersVirial.getStepsWasSet()) {
     printExactScalar("Virial steps", "virial_steps", "",
 		     parametersVirial.getSteps(),
+		     csvItems);
+  }
+
+  if (parametersVirial.getNumDerivativesWasSet()) {
+    printExactScalar("Number of derivatives", "num_derivatives", "",
+		     parametersVirial.getNumDerivatives(),
 		     csvItems);
   }
 
@@ -1200,8 +1271,10 @@ printResults(Results const & results,
 		     results.refFrac.value,
 		     csvItems);
 
-    printScalar(results.virialCoefficient,
-		csvItems);
+    for (int iValue = 0; iValue < (int)results.virialCoefficient.size(); iValue++) {
+      printScalar(results.virialCoefficient[iValue],
+		  csvItems);
+    }
 
     std::cout << std::endl;
   }
@@ -1297,6 +1370,29 @@ printResults(Results const & results,
   //     *out << std::endl;
   //   }
   // }
+}
+
+/// Prints potential style names
+///
+void
+printPotentialStyles(Potential<double> const & potential,
+	             CsvItems * csvItems) {
+  if (potential.getEmpty()) return;
+
+  printString("Nonbond style",
+              "nonbond_style",
+              potential.getNonbondStyleName(),
+              csvItems);
+
+  printString("Bond style",
+              "bond_style",
+              potential.getBondStyleName(),
+              csvItems);
+
+  printString("Angle style",
+              "angle_style",
+              potential.getAngleStyleName(),
+              csvItems);
 }
 
 /// Prints a scalar that does not have uncertainty
@@ -1437,6 +1533,23 @@ printMatrix3x3(Result<Matrix3x3<Uncertain<double> > > const & result,
       csvItems->at(2).push_back(to_string_scientific(result.value.get(row, col).getStdDev()));
     }
   }
+}
+
+/// Prints a scalar that does not have uncertainty
+///
+void
+printString(std::string const & prettyName,
+	    std::string const & csvName,
+	    std::string const & str,
+	    CsvItems * csvItems) {
+
+  std::cout << prettyName;
+
+  std::cout << std::fixed << ": " << str << std::endl;
+
+  csvItems->at(0).push_back(csvName);
+  csvItems->at(1).push_back("value");
+  csvItems->at(2).push_back(str);
 }
 
 /// Writes Walk-on-Spheres and Interior Sampling hit points to disk.

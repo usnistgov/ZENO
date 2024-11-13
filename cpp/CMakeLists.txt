@@ -25,6 +25,7 @@ set(CMDLINE_H cmdline.h)
 set(BOD_PARSER_DIR ${SRC_DIR_CLI}/BodParser)
 set(XYZ_PARSER_DIR ${SRC_DIR_CLI}/XyzParser)
 set(MAP_PARSER_DIR ${SRC_DIR_CLI}/MapParser)
+set(FF_PARSER_DIR ${SRC_DIR_CLI}/FfParser)
 
 set(SOURCE_FILES_LIB
   ${SRC_DIR_LIB}/Zeno.cc
@@ -60,6 +61,7 @@ set(HEADER_FILES_LIB
   ${INCLUDE_DIR_LIB}/Geometry/Matrix3x3.h
   ${INCLUDE_DIR_LIB}/Geometry/MixedModel.h
   ${INCLUDE_DIR_LIB}/Geometry/MixedModelProcessed.h
+  ${INCLUDE_DIR_LIB}/Potential.h
   ${INCLUDE_DIR_LIB}/Geometry/Sphere.h
   ${INCLUDE_DIR_LIB}/Geometry/Triangle.h
   ${INCLUDE_DIR_LIB}/Geometry/Vector3.h
@@ -91,6 +93,7 @@ set(SOURCE_FILES_CLI
   ${BOD_PARSER_DIR}/BodParser.cc
   ${XYZ_PARSER_DIR}/XyzParser.cc
   ${MAP_PARSER_DIR}/MapParser.cc
+  ${FF_PARSER_DIR}/FfParser.cc
   ${SRC_DIR_CLI}/Main.cc
   ${SRC_DIR_CLI}/ParametersLocal.cc)
 

@@ -28,12 +28,12 @@ class ClusterSum;
 template <class T>
 class MeterOverlap {
  public:
-    MeterOverlap(ClusterSum<T> & clusterSumPerturb, double alphaCenter, double alphaSpan, int numAlpha);
+    MeterOverlap(ClusterSum<T> & clusterSumPerturb, double alphaCenter, double alphaSpan, int numAlpha, int numValues);
     ~MeterOverlap();
     void setAlpha(double alphaCenter, double alphaSpan);
     int getNumAlpha();
     const double * getAlpha(){return alpha;}
-    void collectData(double primaryValue, bool accepted);
+    void collectData(std::vector<double> primaryValue, bool accepted);
     double ** getStatistics() {
         if (blockCount == 0) {
             for (int i = 0; i < numData; ++i) {
@@ -163,6 +163,7 @@ private:
     double * data;
     double * alpha;
     const int numAlpha;
+    const int numValues;
     int numData;
     long long blockSize, blockCount;
     long long blockCountdown;
@@ -187,9 +188,9 @@ private:
 template <class T>
 MeterOverlap<T>::
 MeterOverlap(ClusterSum<T> & clusterSumPerturb,
-             double alphaCenter, double alphaSpan, int numAlpha) :
+             double alphaCenter, double alphaSpan, int numAlpha, int numValues) :
              clusterSumPerturb(clusterSumPerturb),
-             data(NULL), numAlpha(numAlpha), mostRecent(NULL), currentBlockSum(NULL), blockSum(NULL),
+             data(NULL), numAlpha(numAlpha), numValues(numValues), mostRecent(NULL), currentBlockSum(NULL), blockSum(NULL),
              blockSum2(NULL), correlationSum(NULL),prevBlockSum(NULL), firstBlockSum(NULL),
              stats(NULL), blockSums(NULL), blockCovariance(NULL), blockCovSum(NULL),
              ratioStats(NULL), ratioCovariance(NULL), perturbValue(-1){
@@ -231,7 +232,7 @@ setAlpha(double alphaCenter, double alphaSpan) {
         }
     }
     else {
-        numData = 2;
+        numData = 1 + numValues;
         if (alphaSpan != 0) {
             std::cerr << "If # of alpha is 1, then alpha span must be 0" << std::endl;
             exit(1);
@@ -263,18 +264,20 @@ getNumAlpha() {
 template <class T>
 void
 MeterOverlap<T>::
-collectData(double primaryValue, bool accepted) {
-    double pi = std::abs(primaryValue);
+collectData(std::vector<double> primaryValue, bool accepted) {
+    double pi = std::abs(primaryValue[0]);
     if (pi == 0 || pi == std::numeric_limits<double>::infinity() || std::isnan(pi)) {
         std::cerr << "pi is " << pi << std::endl;
         exit(1);
     }
     if(accepted || perturbValue == -1){
-        perturbValue = std::abs(clusterSumPerturb.value());
+        perturbValue = std::abs(clusterSumPerturb.getValues()[0]);
     }
     if (numAlpha == 1) {
-        data[0] = primaryValue / pi;
-        data[1] = perturbValue / (perturbValue + alpha[0] * pi);
+        for (int i=0; i<numValues; i++) {
+            data[i] = primaryValue[1+i] / pi;
+        }
+        data[numValues] = perturbValue / (perturbValue + alpha[0] * pi);
     } else {
         for (int i = 0; i < numAlpha; ++i) {
             // gamma_OS = pi1 pi0 / (pi1 + alpha pi0)

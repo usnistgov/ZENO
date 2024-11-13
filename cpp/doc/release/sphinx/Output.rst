@@ -12,7 +12,8 @@ Output
 
 Depending on the quantity, the requirements for calculations are
 different. Some quantities require the exterior calculation, some the
-interior, and some both. Additionally, some quantities are direct
+interior, and some both. Virial-coefficient calculations are in a category
+by themselves. Additionally, some quantities are direct
 outputs, while others are indirect—requiring only the direct outputs
 coupled with algebraic expressions. Finally, some special quantities
 require optional input such as the temperature. Each of these
@@ -369,4 +370,53 @@ Sedimentation coefficient
 |              | viscosity, mass, and buoyancy     |
 |              | factor.                           |
 +--------------+-----------------------------------+
+
+Virial coefficient
+------------------------------
+The virial coefficient and its uncertainty are computed in terms of Monte Carlo averages that are 
+described in Ref. :cite:`Bansal2022` (the description there is specific to hard-sphere-based particles,
+and calculations for other models use a minor extension of what is described). 
+The coefficient :math:`B_N` is given in units of Length :math:`^{3(N-1)}`.
+
+Flexible correction
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+The coefficient :math:`B_N` for :math:`N > 2` for non-rigid particles requires an additional
+term—the flexible correction—that is added to the base result (which sums
+only irreducible, or doubly-connected, graphs). See Ref. :cite:`Shaul2011`. For these cases, the output reports first the 
+base term labeled as 
+
+:math:`\texttt{Virial coefficient - flexible correction:}` *<value>*
+
+indicating that the full :math:`B_N` is obtained from the reported value by adding the flexible correction to it.
+
+Then, for :math:`B_3` in particular, the flexible correction is reported as
+
+:math:`\texttt{Flexible correction - 4 B2^2:}` *<value>*
+
+indicating that the flexible correction is obtained upon subtracting :math:`4B_2^2` from the reported
+value. The value of :math:`B_2` required for this calculation must be obtained from a separate ZENO run.
+
+Calculation of the flexible correction is not presently implemented for :math:`N > 3`. In these cases, ZENO reports the 
+base value and a statment indicating that in principle the correct virial coefficient is obtained only 
+upon addition of the (unavailable) correction. However, the correction may be small, to the extent that the
+molecule is nearly rigid.
+
+No flexible correction is required for :math:`B_2` for any type of particle, nor for any :math:`B_N` for rigid
+particles. In these cases, no mention is made of the flexible correction in the output.
+
+Mixtures
+~~~~~~~~~
+
+For a mixture, the requested mixture coefficient is reported in the same manner as just described.
+If a flexible correction is required, then, for :math:`B_3`, the value of :math:`B_2` needed to recover the full correction is
+modified, instead combining the :math:`B_{ij}` of the species pairs. :math:`B_3` for a 2-species mixture (labeled 1 and 2)
+with  for 2 particles of species 1, and 1 particle of species 2, :math:`B_2` is instead
+
+:math:`B_2 \to \frac13\left(B_{12}^2 + 2B_{12}B_{11}\right)`
+
+and for a 3-species mixture (labeled 1, 2, 3)
+
+:math:`B_2 \to \frac13\left(B_{12}B_{13} + B_{12}B_{23} + B_{13}B_{23}\right)`
 

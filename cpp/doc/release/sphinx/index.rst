@@ -33,6 +33,13 @@ ZENO: Software for Calculating Hydrodynamic, Electrical, and Shape Properties of
 *Journal of Research of NIST*, 122:20, 2017. URL: https://doi.org/10.6028/jres.122.020
 :download:`BibTeX <_static/ZENO.bib>` :download:`RIS <_static/ZENO.ris>`
 
+Additionally, for virial-coefficient calculations:
+
+Arpit Bansal, Andrew J. Schultz, Jack F. Douglas, and David A. Kofke. 
+Probabilistic computations of virial coefficients of polymeric structures described by rigid configurations of spherical particles: A fundamental extension of the ZENO program
+*Journal of Chemical Physics*, 157:224801, 2022. URL: https://doi.org/10.1063/5.0127465
+:download:`BibTeX <_static/virial.bib>` :download:`RIS <_static/virial.ris>`
+
 
 .. toctree::
     :maxdepth: 2

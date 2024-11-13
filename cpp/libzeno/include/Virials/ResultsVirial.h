@@ -28,7 +28,7 @@ namespace zeno {
 
 class ResultsVirial{
 public:
-    ResultsVirial(int numThreads, double refIntegral);
+    ResultsVirial(int numThreads, int numValues, double refIntegral);
 
     ~ResultsVirial();
 
@@ -44,20 +44,30 @@ public:
     }
     double getRefFrac() const;
     Uncertain<double> getRefAverageReduced() const;
-    Uncertain<double> getTargetAverageReduced() const;
+    Uncertain<double> getTargetAverageReduced(int iValue) const;
     Uncertain<double> getOverlapRatioAverageReduced() const;
     double getRefIntegral() const;
     void putOverlapRatio(int threadNum,
                          double overlapRatio,
                          double uncertainty);
     void putVirialCoefficient(int threadNum,
+                              int iValue,
                               double coefficient,
                               double uncertainty);
-    Uncertain<double> getVirialCoefficientReduced() const;
+    Uncertain<double> getVirialCoefficientReduced(int iValue) const;
     static double squared(double x) {
       return x*x;
     }
+    int getNumValues() const {
+      return virialCoefficientReduced.size();
+    }
 
+    void setOrder(int order) {
+      this->order = order;
+    }
+    int getOrder() const {
+      return this->order;
+    }
 
 private:
     Uncertain<double> * refAverage;
@@ -66,6 +76,7 @@ private:
     Uncertain<double> refAverageReduced;
     Uncertain<double> targetAverageReduced;
     Uncertain<double> overlapRatioAverageReduced;
+    int order;
     int numThreads;
     bool reduced;
     long long * refNumSteps;
@@ -73,8 +84,8 @@ private:
     long long refNumStepsReduced;
     long long targetNumStepsReduced;
     const double refIntegral;
-    Uncertain<double> * virialCoefficient;
-    Uncertain<double> virialCoefficientReduced;
+    std::vector<Uncertain<double>> * virialCoefficient;
+    std::vector<Uncertain<double>> virialCoefficientReduced;
 };
 
 }

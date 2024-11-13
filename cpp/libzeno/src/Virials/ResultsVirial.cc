@@ -18,7 +18,7 @@
 using namespace zeno;
 
 ResultsVirial::
-    ResultsVirial(int numThreads, double refIntegral)
+    ResultsVirial(int numThreads, int numValues, double refIntegral)
   : refAverage(NULL),
     targetAverage(NULL),
     overlapRatioAverage(NULL),
@@ -33,13 +33,13 @@ ResultsVirial::
     targetNumStepsReduced(0),
     refIntegral(refIntegral),
     virialCoefficient(NULL),
-    virialCoefficientReduced(0){
+    virialCoefficientReduced(numValues,0){
     refAverage = new Uncertain<double>[numThreads];
     targetAverage = new Uncertain<double>[numThreads];
     overlapRatioAverage = new Uncertain<double>[numThreads];
     refNumSteps = new long long[numThreads];
     targetNumSteps = new long long[numThreads];
-    virialCoefficient = new Uncertain<double>[numThreads];
+    virialCoefficient = new std::vector<Uncertain<double>>[numThreads];
 
     for (int threadNum = 0; threadNum < numThreads; threadNum++) {
         refAverage[threadNum] = 0.0;
@@ -47,7 +47,9 @@ ResultsVirial::
         overlapRatioAverage[threadNum] = 0.0;
         refNumSteps[threadNum] = 0;
         targetNumSteps[threadNum] = 0;
-        virialCoefficient[threadNum] = 0;
+        for (int iValue = 0; iValue < numValues; iValue++) {
+            virialCoefficient[threadNum].push_back(0);
+        }
     }
 }
 
@@ -96,7 +98,6 @@ reduce() {
     targetAverageReduced = 0.0;
     refNumStepsReduced = 0;
     targetNumStepsReduced = 0;
-    virialCoefficientReduced = 0;
 
     for (int threadNum = 0; threadNum < numThreads; threadNum++) {
         refAverageReduced += refAverage[threadNum]/(double)numThreads;
@@ -104,7 +105,9 @@ reduce() {
         targetAverageReduced += targetAverage[threadNum]/(double)numThreads;
         targetNumStepsReduced += targetNumSteps[threadNum];
         overlapRatioAverageReduced += overlapRatioAverage[threadNum]/(double)numThreads;
-        virialCoefficientReduced += virialCoefficient[threadNum]/(double)numThreads;
+        for (int iValue = 0; iValue < (int)virialCoefficientReduced.size(); iValue++) {
+            virialCoefficientReduced[iValue] += virialCoefficient[threadNum][iValue]/(double)numThreads;
+        }
     }
 
 #ifdef USE_MPI
@@ -175,7 +178,7 @@ getRefAverageReduced() const {
 
 Uncertain<double>
 ResultsVirial::
-getTargetAverageReduced() const {
+getTargetAverageReduced(int iDer) const {
     assert(reduced);
     return targetAverageReduced;
 }
@@ -201,13 +204,13 @@ putOverlapRatio(int threadNum, double ratio, double uncertainty){
 
 void
 ResultsVirial::
-putVirialCoefficient(int threadNum, double coefficient, double uncertainty){
-    virialCoefficient[threadNum] = Uncertain<double>(coefficient, uncertainty);
+putVirialCoefficient(int threadNum, int iValue, double coefficient, double uncertainty){
+    virialCoefficient[threadNum][iValue] = Uncertain<double>(coefficient, uncertainty);
 }
 
 Uncertain<double>
 ResultsVirial::
-getVirialCoefficientReduced() const {
+getVirialCoefficientReduced(int iValue) const {
     assert(reduced);
-    return virialCoefficientReduced;
+    return virialCoefficientReduced[iValue];
 }

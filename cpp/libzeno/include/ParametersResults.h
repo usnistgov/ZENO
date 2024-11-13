@@ -82,6 +82,9 @@ public:
   double getBuoyancyFactor() const;
   bool getBuoyancyFactorWasSet() const;
 
+  void setVirialFlexible();
+  bool getVirialFlexible() const;
+
   void mpiBroadcast(int root);
 
 private:
@@ -109,6 +112,8 @@ private:
   double solventViscosity;
   Units::Viscosity solventViscosityUnit;
   bool solventViscosityWasSet;
+
+  bool virialFlexible;
 
   double buoyancyFactor;
   bool buoyancyFactorWasSet;

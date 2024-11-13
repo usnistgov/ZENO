@@ -51,6 +51,18 @@ public:
   long long getSteps() const;
   bool getStepsWasSet() const;
 
+  void setReferenceDiameter(double steps);
+  double getReferenceDiameter() const;
+  bool getReferenceDiameterWasSet() const;
+
+  void setTemperature(double steps);
+  double getTemperature() const;
+  bool getTemperatureWasSet() const;
+
+  void setNumDerivatives(int numDerivatives);
+  int getNumDerivatives() const;
+  bool getNumDerivativesWasSet() const;
+
   void mpiBroadcast(int root);
 
 private:
@@ -65,6 +77,15 @@ private:
 
   long long steps;
   bool stepsWasSet;
+
+  double referenceDiameter;
+  bool referenceDiameterWasSet;
+
+  double temperature;
+  bool temperatureWasSet;
+
+  double numDerivatives;
+  bool numDerivativesWasSet;
 
   int order;
   bool orderWasSet;

@@ -40,6 +40,8 @@
 #include <mpi.h>
 #endif
 
+#include <iostream>
+
 #include "ParametersLocal.h"
 
 // ================================================================

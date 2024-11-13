@@ -82,8 +82,8 @@ VirialProduction(IntegratorMSMC<T, RandomNumberGenerator> & rIntegrator,
                  ClusterSum<T> &targetClusterTarget,
                  double alpha, double ri) :
                  refIntegrator(rIntegrator), targetIntegrator(tIntegrator),
-                 refMeter(MeterOverlap<T>(refClusterTarget, alpha, 0, 1)),
-                 targetMeter(MeterOverlap<T>(targetClusterRef, 1/alpha, 0, 1)),
+                 refMeter(MeterOverlap<T>(refClusterTarget, alpha, 0, 1, 1)),
+                 targetMeter(MeterOverlap<T>(targetClusterRef, 1/alpha, 0, 1, targetClusterTarget.numValues()-1)),
                  idealTargetFraction(0.5), refIntegral(ri), refSteps(0), targetSteps(0) {
     int numTargets = targetMeter.getNumData();
     fullStats = (double**)malloc2D(numTargets-1, 2, sizeof(double));

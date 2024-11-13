@@ -38,9 +38,12 @@
 
 #include "BodParser.h"
 
+#include <fstream>
+
 #include <boost/spirit/include/qi.hpp>
 
 #include "Geometry/Vector3.h"
+#include "../FfParser/FfParser.h"
 
 // ================================================================
 
@@ -52,14 +55,31 @@ bod_parser::BodParser::BodParser
  ParametersWalkOnSpheres * parametersWalkOnSpheres,
  ParametersInteriorSampling * parametersInteriorSampling,
  ParametersResults * parametersResults,
- MixedModel<double> * model) :
+ std::vector<MixedModel<double>> * models,
+ Potential<double> * potential) :
   parametersLocal(parametersLocal),
   in(in),
   parametersWalkOnSpheres(parametersWalkOnSpheres),
   parametersInteriorSampling(parametersInteriorSampling),
   parametersResults(parametersResults),
-  model(model) {
+  models(models),
+  potential(potential),
+  activeModel(models->size()),
+  hasModel(false) {
 
+}
+
+void bod_parser::BodParser::initModel() {
+  // we get called when we encounter a line (like SPHERE) that indicates
+  // that our file contains an actual model
+  if (hasModel) return;
+  if ((int)models->size() > activeModel) {
+      std::cerr << "BOD file cannot reference other BOD files and have its own model" << std::endl;
+      exit(1);
+  }
+  MixedModel<double> m;
+  models->push_back(m);
+  hasModel = true;
 }
 
 int bod_parser::BodParser::parse() {
@@ -95,7 +115,8 @@ void bod_parser::BodParser::addSphere(Vector3<double> center, double r) {
 
   Sphere<double> sphere(center, r);
 
-  model->addSphere(sphere);
+  initModel();
+  models->at(activeModel).addSphere(sphere);
 }
 
 void bod_parser::BodParser::addCube(Vector3<double> minCoords, double s) {
@@ -110,7 +131,8 @@ void bod_parser::BodParser::addCube(Vector3<double> minCoords, double s) {
 
   Cuboid<double> cuboid(minCoords, maxCoords);
   
-  model->addCuboid(cuboid);
+  initModel();
+  models->at(activeModel).addCuboid(cuboid);
 }
 
 void bod_parser::BodParser::addCuboid(Vector3<double> corner1,
@@ -129,7 +151,8 @@ void bod_parser::BodParser::addCuboid(Vector3<double> corner1,
 
   Cuboid<double> cuboid(minCoords, maxCoords);
   
-  model->addCuboid(cuboid);
+  initModel();
+  models->at(activeModel).addCuboid(cuboid);
 }
 
 void bod_parser::BodParser::addVoxels(std::string voxelsFileName) {
@@ -148,8 +171,9 @@ void bod_parser::BodParser::addVoxels(std::string voxelsFileName) {
   
   voxelsFilePath.replace(directoryEndPos, std::string::npos, voxelsFileName);
   
+  initModel();
   bool voxelsLoaded = 
-    model->loadVoxels(voxelsFilePath.c_str());
+    models->at(activeModel).loadVoxels(voxelsFilePath.c_str());
 
   if (!voxelsLoaded) {
     std::cerr << "Error loading voxel file: " << voxelsFileName 
@@ -163,6 +187,62 @@ void bod_parser::BodParser::addTrajectory(std::string xyzFileName, std::string m
   parametersLocal->setXyzInputFileName(xyzFileName);
 
   parametersLocal->setMapInputFileName(mapFileName);
+}
+
+void bod_parser::BodParser::addForcefield(std::string ffFileName) {
+  std::ifstream inputFile;
+
+  inputFile.open(ffFileName, std::ifstream::in);
+
+  if (!inputFile.is_open()) {
+    std::cerr << "Error opening ff input file " << ffFileName << std::endl;
+    exit(EXIT_FAILURE);
+  }
+
+  ff_parser::FfParser parser(inputFile,
+                             activeModel,
+			     potential);
+
+  int parseResult = parser.parse();
+
+  if (parseResult != 0) {
+    std::cerr << "Error parsing bod input file " << ffFileName << std::endl;
+    exit(EXIT_FAILURE);
+  }
+ 
+  inputFile.close();
+}
+
+void bod_parser::BodParser::addSpecies(std::string bodFileName) {
+  if (hasModel) {
+      std::cerr << "BOD file cannot reference other BOD files and have its own model" << std::endl;
+      exit(1);
+  }
+  std::ifstream inputFile;
+
+  inputFile.open(bodFileName, std::ifstream::in);
+
+  if (!inputFile.is_open()) {
+    std::cerr << "Error opening bod input file " << bodFileName << std::endl;
+    exit(EXIT_FAILURE);
+  }
+
+  bod_parser::BodParser parser(parametersLocal,
+			       inputFile,
+			       parametersWalkOnSpheres,
+			       parametersInteriorSampling,
+			       parametersResults,
+			       models,
+                               potential);
+
+  int parseResult = parser.parse();
+
+  if (parseResult != 0) {
+    std::cerr << "Error parsing bod input file " << bodFileName << std::endl;
+    exit(EXIT_FAILURE);
+  }
+
+  inputFile.close();
 }
 
 void bod_parser::BodParser::setST(double skinThickness) {

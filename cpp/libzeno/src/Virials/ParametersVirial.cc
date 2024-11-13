@@ -51,6 +51,12 @@ ParametersVirial::ParametersVirial()
     seed(),
     steps(),
     stepsWasSet(false),
+    referenceDiameter(0),
+    referenceDiameterWasSet(false),
+    temperature(1),
+    temperatureWasSet(false),
+    numDerivatives(0),
+    numDerivativesWasSet(false),
     order(),
     orderWasSet(false) {
 
@@ -112,6 +118,57 @@ ParametersVirial::getSteps() const {
 bool 
 ParametersVirial::getStepsWasSet() const {
   return stepsWasSet;
+}
+
+void
+ParametersVirial::setReferenceDiameter(double referenceDiameter) {
+  this->referenceDiameter = referenceDiameter;
+
+  referenceDiameterWasSet = true;
+}
+
+double
+ParametersVirial::getReferenceDiameter() const {
+  return referenceDiameter;
+}
+
+bool
+ParametersVirial::getReferenceDiameterWasSet() const {
+  return referenceDiameterWasSet;
+}
+
+void
+ParametersVirial::setTemperature(double temperature) {
+  this->temperature = temperature;
+
+  temperatureWasSet = true;
+}
+
+double
+ParametersVirial::getTemperature() const {
+  return temperature;
+}
+
+bool
+ParametersVirial::getTemperatureWasSet() const {
+  return temperatureWasSet;
+}
+
+void
+ParametersVirial::setNumDerivatives(int numDerivatvies) {
+  this->numDerivatives = numDerivatvies;
+
+  numDerivativesWasSet = true;
+}
+
+int
+ParametersVirial::getNumDerivatives() const {
+  return numDerivatives;
+}
+
+bool
+ParametersVirial::getNumDerivativesWasSet() const {
+  return numDerivativesWasSet;
 }
 
 void 

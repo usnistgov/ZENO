@@ -53,6 +53,7 @@
 #include "ParametersResults.h"
 #include "../ParametersLocal.h"
 #include "Geometry/MixedModel.h"
+#include "Potential.h"
 
 namespace bod_parser {
     namespace qi = boost::spirit::qi;
@@ -66,11 +67,13 @@ namespace bod_parser {
 	                  zeno::ParametersWalkOnSpheres * parametersWalkOnSpheres,
 	                  zeno::ParametersInteriorSampling * parametersInteriorSampling,
 	                  zeno::ParametersResults * parametersResults,
-	                  zeno::MixedModel<double> * model);
+	                  std::vector<zeno::MixedModel<double>> * models,
+                      zeno::Potential<double> * potential);
 
             int parse();
 
         private:
+            void initModel();
             void addSphere(zeno::Vector3<double> center, double r);
 	        void addCube(zeno::Vector3<double> minCoords, double s);
 	        void addCuboid(zeno::Vector3<double> corner1,
@@ -80,6 +83,8 @@ namespace bod_parser {
                              zeno::Vector3<double> v3);
 	        void addVoxels(std::string voxelsFileName);
 	        void addTrajectory(std::string xyzFileName, std::string mapFileName);
+	        void addForcefield(std::string ffFileName);
+	        void addSpecies(std::string bodFileName);
 	        void setST(double skinThickness);
 	        void setRLAUNCH(double launchRadius);
 	        void setHUNITS(double number, std::string unitString);
@@ -94,7 +99,10 @@ namespace bod_parser {
             zeno::ParametersWalkOnSpheres * parametersWalkOnSpheres;
             zeno::ParametersInteriorSampling * parametersInteriorSampling;
             zeno::ParametersResults * parametersResults;
-            zeno::MixedModel<double> * model;
+            std::vector<zeno::MixedModel<double>> * models;
+            zeno::Potential<double> * potential;
+            int activeModel;
+            bool hasModel;
 
             // Begin class BodParserGrammar
             class BodParserGrammar
@@ -149,6 +157,16 @@ namespace bod_parser {
                                       word >> qi::omit[*qi::space])
                                      [phx::bind(&bod_parser::BodParser::addTrajectory, parent,
                                       qi::_1, qi::_2)];
+
+                        forcefield = (qi::no_case["FORCEFIELD"] >> qi::omit[+qi::blank] >>
+                                      word >> qi::omit[*qi::space])
+                                     [phx::bind(&bod_parser::BodParser::addForcefield, parent,
+                                      qi::_1)];
+
+                        species = (qi::no_case["SPECIES"] >> qi::omit[+qi::blank] >>
+                                      word >> qi::omit[*qi::space])
+                                     [phx::bind(&bod_parser::BodParser::addSpecies, parent,
+                                      qi::_1)];
 
                         parameter_st = (qi::no_case["ST"] >> qi::omit[+qi::blank] >>
                                         qi::double_ >> qi::omit[*qi::space])
@@ -209,6 +227,8 @@ namespace bod_parser {
                                   atom |
                                   voxels |
                                   trajectory |
+                                  forcefield |
+                                  species |
                                   parameter);
                     }
 
@@ -220,6 +240,8 @@ namespace bod_parser {
                     qi::rule<std::string::const_iterator, void()> atom;
                     qi::rule<std::string::const_iterator, void()> voxels;
                     qi::rule<std::string::const_iterator, void()> trajectory;
+                    qi::rule<std::string::const_iterator, void()> forcefield;
+                    qi::rule<std::string::const_iterator, void()> species;
                     qi::rule<std::string::const_iterator, void()> parameter_st;
                     qi::rule<std::string::const_iterator, void()> parameter_rlaunch;
                     qi::rule<std::string::const_iterator, void()> parameter_hunits;

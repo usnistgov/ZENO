@@ -39,17 +39,19 @@ class Particle {
   const Vector3<T> getCenter() const;
   void setCenter(Vector3<T> v);
   void translateBy(Vector3<T> step);
+  void translateSphereBy(int index, Vector3<T> step);
   void rotateBy(Vector3<T> axis, T angle);
   const Vector3<T> getSpherePosition(int index) const;
-  const Vector3<T> getBoundingSpherePosition() const;
   MixedModelProcessed<T> const * getModel();
-  Sphere<T> const * getBoundingSphere();
+  T getBoundingSphereRadius() const;
+  const Vector3<T> getBoundingSpherePosition() const;
 
  private:
     MixedModelProcessed<T> const & model;
-    Matrix3x3<T> orientation{1,0,0,0,1,0,0,0,1};
     Vector3<T> center{0,0,0};
-    Sphere<T> const & boundingSphere;
+    std::vector<Vector3<T>> spheres;
+    Vector3<T> boundingSpherePosition;
+    T boundingSphereRadius;
 };
 
 #include "Virials/Particle.h"
@@ -61,8 +63,11 @@ using namespace zeno;
 
 template <class T>
 Particle<T>::
-Particle(MixedModelProcessed<T> const & model, Sphere<T> const & boundingSphere) : model(model), boundingSphere(boundingSphere)
+Particle(MixedModelProcessed<T> const & model, Sphere<T> const & boundingSphere) : model(model), boundingSpherePosition(boundingSphere.getCenter()), boundingSphereRadius(boundingSphere.getRadius())
               {
+    for (int i=0; i<(int)model.getSpheres()->size(); i++) {
+        spheres.push_back(model.getSpheres()->at(i).getCenter());
+    }
 }
 
 template <class T>
@@ -76,7 +81,7 @@ template <class T>
 int
 Particle<T>::
 numSpheres(){
-    return model.getSpheres() -> size();
+    return spheres.size();
 }
 
 /// Obtain center of particle. Note: This is a constant, hence cannot be modified directly.
@@ -106,6 +111,15 @@ translateBy(Vector3<T> step){
     center += step;
 }
 
+/// Translates the particle by a step obtained as a function parameter.
+///
+template <class T>
+void
+Particle<T>::
+translateSphereBy(int index, Vector3<T> step){
+    spheres[index] += step;
+}
+
 /// Rotates the particle about an axis and an by an angle, both obtained as a function parameters.
 ///
 template <class T>
@@ -114,7 +128,10 @@ Particle<T>::
 rotateBy(Vector3<T> axis, T angle){
     Matrix3x3<T> rotation;
     rotation.setAxisAngle(axis, angle);
-    rotation.transform(orientation);
+    for (Vector3<T> & s : spheres) {
+        rotation.transform(s);
+    }
+    rotation.transform(boundingSpherePosition);
 }
 
 /// Sets the sphere at index of particle based on new position of particle.
@@ -122,9 +139,8 @@ rotateBy(Vector3<T> axis, T angle){
 template <class T>
 const Vector3<T>
 Particle<T>::
-getSpherePosition( int index) const {
-    Vector3<T> position = model.getSpheres() -> at(index).getCenter();
-    orientation.transform(position);
+getSpherePosition(int index) const {
+    Vector3<T> position = spheres.at(index);
     position += center;
     return position;
 }
@@ -141,18 +157,17 @@ getModel(){
 /// Returns a bounding sphere around the assembly of spheres.
 ///
 template <class T>
-Sphere<T> const *
+T
 Particle<T>::
-getBoundingSphere(){
-    return &boundingSphere;
+getBoundingSphereRadius() const {
+    return boundingSphereRadius;
 }
 
 template <class T>
 const Vector3<T>
 Particle<T>::
 getBoundingSpherePosition() const {
-    Vector3<T> position = boundingSphere.getCenter();
-    orientation.transform(position);
+    Vector3<T> position = boundingSpherePosition;
     position += center;
     return position;
 }

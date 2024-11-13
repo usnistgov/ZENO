@@ -21,7 +21,6 @@
 #include "../Timer.h"
 #include "../Geometry/Sphere.h"
 #include "../Geometry/MixedModel.h"
-#include "OverlapTester.h"
 #include "MCMove.h"
 #include "MeterOverlap.h"
 #include "Particle.h"
@@ -39,9 +38,9 @@ class IntegratorMSMC {
     IntegratorMSMC(int threadNum,
                    Timer const * totalTimer,
                    RandomNumberGenerator * randomNumberGenerator,
-                   std::vector<Sphere<double> const *> & boundingSpheres,
+                   std::vector<Sphere<double>> * boundingSpheres,
                    std::vector<int> & numParticles,
-                   std::vector<MixedModelProcessed<T> const *> & models);
+                   std::vector<MixedModelProcessed<T>> * models);
 
   ~IntegratorMSMC();
 
@@ -51,20 +50,19 @@ class IntegratorMSMC {
   RandomUtilities<T, RandomNumberGenerator> * getRandomUtilities();
   void addMove(MCMove<T, RandomNumberGenerator> * mcMove, double moveProb);
   void setMeter(MeterOverlap<T> * meter);
-  void setCurrentValue(double currentValue);
+  void setCurrentValue(std::vector<double> currentValue);
   void setEquilibrationFinished();
 private:
   int threadNum;
   Timer const * totalTimer;
   RandomNumberGenerator * randomNumberGenerator;
-  std::vector<Sphere<double> const *> & boundingSpheres;
   std::vector<int> & numParticles;
   std::vector<Particle<T> *> particles;
   std::vector<MCMove<T, RandomNumberGenerator> *> mcMoves;
   std::vector<double> moveProbs;
   RandomUtilities<T, RandomNumberGenerator> randomUtilities;
   MeterOverlap<T> * meterOverlap;
-  double currentValue;
+  std::vector<double> currentValue;
 };
 
 #include "Virials/IntegratorMSMC.h"
@@ -80,21 +78,21 @@ IntegratorMSMC<T,
 IntegratorMSMC(int threadNum,
                 Timer const * totalTimer,
                 RandomNumberGenerator * randomNumberGenerator,
-                std::vector<Sphere<double> const *> & boundingSpheres,
+                std::vector<Sphere<double>> * boundingSpheres,
                 std::vector<int> & numParticles,
-                std::vector<MixedModelProcessed<T> const *> & models) :
+                std::vector<MixedModelProcessed<T>> * models) :
               threadNum(threadNum),
               totalTimer(totalTimer),
               randomNumberGenerator(randomNumberGenerator),
-              boundingSpheres(boundingSpheres),
-              numParticles(numParticles), randomUtilities(randomNumberGenerator), currentValue(0){
+              numParticles(numParticles), randomUtilities(randomNumberGenerator) {
     for(unsigned int i = 0; i < numParticles.size(); ++i)
     {
         for (int j =0; j < numParticles[i]; ++j)
         {
-            particles.push_back(new Particle<T> (* models[i], * boundingSpheres[i]));
+            particles.push_back(new Particle<T> (models->at(i), boundingSpheres->at(i)));
         }
     }
+    currentValue.push_back(0);
 
 }
 
@@ -192,7 +190,7 @@ template <class T,
         class RandomNumberGenerator>
 void
 IntegratorMSMC<T, RandomNumberGenerator>::
-setCurrentValue(double currentValue) {
+setCurrentValue(std::vector<double> currentValue) {
     this->currentValue = currentValue;
 }
 

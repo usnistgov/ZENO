@@ -99,3 +99,12 @@ longlong optional
 
 option "virial-coefficient-order" - "Order of virial coefficient to compute"
 int optional
+
+option "virial-reference-diameter" - "Virial coefficient reference diameter"
+double optional
+
+option "temperature" - "Temperature"
+double optional
+
+option "num-derivatives" - "Number of virial coefficient temperature derivates to compute"
+int default="0" optional

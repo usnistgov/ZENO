@@ -89,7 +89,7 @@ class Results {
   Result<Vector3<Uncertain<double> > > gyrationEigenvalues;
 
   Result<double> refFrac;
-  Result<Uncertain<double> > virialCoefficient;
+  std::vector<Result<Uncertain<double> > > virialCoefficient;
 
   std::array<double, numFormFactors> formFactorQs;
   std::array<double, numFormFactors> formFactors;

@@ -76,19 +76,11 @@ class MixedModel {
 
   bool isEmpty() const;
   
-  std::vector<Sphere<T> > const * getSpheres() const;
-  std::vector<Cuboid<T> > const * getCuboids() const;
-  std::vector<Triangle<T> > const * getTriangles() const;
+  std::vector<Sphere<T> > * getSpheres();
+  std::vector<Cuboid<T> > * getCuboids();
+  std::vector<Triangle<T> > * getTriangles();
 
-  std::vector<Sphere<T> > * getAndLockSpheres();
-  std::vector<Cuboid<T> > * getAndLockCuboids();
-  std::vector<Triangle<T> > * getAndLockTriangles();
-  
  private:
-  bool spheresLocked;
-  bool cuboidsLocked;
-  bool trianglesLocked;
-  
   std::vector<Sphere<T> > spheres;
   std::vector<Cuboid<T> > cuboids;
   std::vector<Triangle<T> > triangles;
@@ -107,10 +99,7 @@ class MixedModel {
 ///
 template <class T>
 MixedModel<T>::MixedModel()
-: spheresLocked(false),
-  cuboidsLocked(false),
-  trianglesLocked(false),
-  spheres(),
+: spheres(),
   cuboids(),
   triangles() {
 
@@ -126,12 +115,6 @@ MixedModel<T>::~MixedModel() {
 template <class T>
 void
 MixedModel<T>::addSphere(Sphere<T> const & sphere) {
-  assert(!spheresLocked);
-
-  if (spheresLocked) {
-    return;
-  }
-  
   if (sphere.getRadius() == 0) {
     std::cerr << "Warning: degenerate sphere" << std::endl
 	      << sphere << std::endl;
@@ -145,12 +128,6 @@ MixedModel<T>::addSphere(Sphere<T> const & sphere) {
 template <class T>
 void
 MixedModel<T>::addCuboid(Cuboid<T> const & cuboid) {
-  assert(!cuboidsLocked);
-
-  if (cuboidsLocked) {
-    return;
-  }
-  
   if (cuboid.getMaxCoords() == cuboid.getMinCoords()) {
     std::cerr << "Warning: degenerate cuboid" << std::endl
 	      << cuboid << std::endl;
@@ -165,12 +142,6 @@ MixedModel<T>::addCuboid(Cuboid<T> const & cuboid) {
 template <class T>
 bool
 MixedModel<T>::loadVoxels(std::string const & inputFileName) {
-  assert(!cuboidsLocked);
-
-  if (cuboidsLocked) {
-    return false;
-  }
-  
   Voxels<T> voxels;
 
   bool loadSuccess = voxels.loadFitsGz(inputFileName);
@@ -394,62 +365,20 @@ MixedModel<T>::isEmpty() const {
 }
 
 template <class T>
-std::vector<Sphere<T> > const *
-MixedModel<T>::getSpheres() const {
-  return &spheres;
-}
-
-template <class T>
-std::vector<Cuboid<T> > const *
-MixedModel<T>::getCuboids() const {
-  return &cuboids;
-}
-
-template <class T>
-std::vector<Triangle<T> > const *
-MixedModel<T>::getTriangles() const {
-  return &triangles;
-}
-
-template <class T>
 std::vector<Sphere<T> > *
-MixedModel<T>::getAndLockSpheres() {
-  assert(!spheresLocked);
-
-  if (spheresLocked) {
-    return nullptr;
-  }
-
-  spheresLocked = true;
-  
+MixedModel<T>::getSpheres() {
   return &spheres;
 }
 
 template <class T>
 std::vector<Cuboid<T> > *
-MixedModel<T>::getAndLockCuboids() {
-  assert(!cuboidsLocked);
-
-  if (cuboidsLocked) {
-    return nullptr;
-  }
-
-  cuboidsLocked = true;
-  
+MixedModel<T>::getCuboids() {
   return &cuboids;
 }
 
 template <class T>
 std::vector<Triangle<T> > *
-MixedModel<T>::getAndLockTriangles() {
-  assert(!trianglesLocked);
-
-  if (trianglesLocked) {
-    return nullptr;
-  }
-
-  trianglesLocked = true;
-  
+MixedModel<T>::getTriangles() {
   return &triangles;
 }
 

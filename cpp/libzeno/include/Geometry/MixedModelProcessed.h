@@ -128,9 +128,9 @@ MixedModelProcessed<T>::~MixedModelProcessed() {
 template <class T>
 void
 MixedModelProcessed<T>::addMixedModel(MixedModel<T> * mixedModel) {
-  spheres = mixedModel->getAndLockSpheres();
-  cuboids = mixedModel->getAndLockCuboids();
-  triangles = mixedModel->getAndLockTriangles();
+  spheres = mixedModel->getSpheres();
+  cuboids = mixedModel->getCuboids();
+  triangles = mixedModel->getTriangles();
 
   preprocessed = false;
 }

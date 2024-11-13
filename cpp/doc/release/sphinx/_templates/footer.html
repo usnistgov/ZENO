@@ -6,6 +6,7 @@
 	{% include "boilerplate-footer.html" %}
 
 	<!-- Global site tag (gtag.js) - Google Analytics -->
+	<!--
 	<script async src="https://www.googletagmanager.com/gtag/js?id=UA-115121490-5"></script>
 	<script>
 	  window.dataLayer = window.dataLayer || [];
@@ -14,6 +15,19 @@
 	 
 	  gtag('config', 'UA-115121490-5');
 	</script>
+	-->
 
+	<!-- Mandated Google Analytics tag -->
+	<script async type="text/javascript" id="_fed_an_ua_tag" src="https://dap.digitalgov.gov/Universal-Federated-Analytics-Min.js?agency=DOC&subagency=NIST&pua=UA-115121490-5&yt=true&exts=ppsx,pps,f90,sch,rtf,wrl,txz,m1v,xlsm,msi,xsd,f,tif,eps,mpg,xml,pl,xlt,c"></script>
+
+	<!-- Google tag (gtag.js) -->
+	<script async src="https://www.googletagmanager.com/gtag/js?id=G-94M72Z2GJS"></script>
+	<script>
+	  window.dataLayer = window.dataLayer || [];
+	  function gtag(){dataLayer.push(arguments);}
+	  gtag('js', new Date());
+
+	  gtag('config', 'G-94M72Z2GJS');
+	</script>
 
 {% endblock %} 

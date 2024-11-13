@@ -60,6 +60,7 @@ ParametersResults::ParametersResults()
     solventViscosity(),
     solventViscosityUnit(),
     solventViscosityWasSet(false),
+    virialFlexible(false),
     buoyancyFactor(),
     buoyancyFactorWasSet(false) {
 
@@ -176,6 +177,16 @@ ParametersResults::getBuoyancyFactor() const {
 bool
 ParametersResults::getBuoyancyFactorWasSet() const {
   return buoyancyFactorWasSet;
+}
+
+void
+ParametersResults::setVirialFlexible() {
+  this->virialFlexible = true;
+}
+
+bool
+ParametersResults::getVirialFlexible() const {
+  return virialFlexible;
 }
 
 void 

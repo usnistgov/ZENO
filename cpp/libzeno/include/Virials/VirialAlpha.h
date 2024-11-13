@@ -68,8 +68,8 @@ VirialAlpha(IntegratorMSMC<T, RandomNumberGenerator> & rIntegrator,
             ClusterSum<T> & targetClusterRef,
             ClusterSum<T> & targetClusterTarget) :
             stepCount(0), nextCheck(1000), refIntegrator(rIntegrator), targetIntegrator(tIntegrator),
-            refMeter(MeterOverlap<T>(refClusterTarget, 1, 5, 11)),
-            targetMeter(MeterOverlap<T>(targetClusterRef, 1, -5, 11)),
+            refMeter(MeterOverlap<T>(refClusterTarget, 1, 5, 11, 0)),
+            targetMeter(MeterOverlap<T>(targetClusterRef, 1, -5, 11, 0)),
             newAlpha(0), newAlphaErr(0), alphaCor(0), alphaSpan(0), allDone(false),
             verbose(false) {
     int numAlpha = refMeter.getNumAlpha();
@@ -197,18 +197,21 @@ runSteps(int numSteps) {
     if (stepCount >= nextCheck) {
         double jBestAlpha;
         analyze(jBestAlpha);
-        if (verbose) printf("alpha  avg: %22.15e   err: %12.5e   cor: % 6.4f\n", newAlpha, newAlphaErr, alphaCor);
+        if (verbose) printf("steps: %ld  alpha  avg: %22.15e   err: %12.5e   cor: % 6.4f\n", stepCount, newAlpha, newAlphaErr, alphaCor);
         int numAlpha = refMeter.getNumAlpha();
         double nextCheckFac = 1.4;
         if (jBestAlpha==0 || jBestAlpha>(numAlpha-1)*0.999999) alphaSpan *= 2;
+        else if (alphaCor < 0.3 && alphaSpan > 1 && jBestAlpha>numAlpha*0.2 && jBestAlpha<(numAlpha-1)*0.8 && newAlphaErr/newAlpha < 0.2) alphaSpan *= 0.1;
         else if (alphaCor < 0.3 && alphaSpan > 1 && jBestAlpha>numAlpha*0.2 && jBestAlpha<(numAlpha-1)*0.8) alphaSpan *= 0.25;
         else if (alphaCor < 0.6 && alphaSpan > 1 && jBestAlpha>numAlpha*0.2 && jBestAlpha<(numAlpha-1)*0.8) alphaSpan *= 0.6;
-        else if (alphaCor > 0.2 || newAlphaErr/newAlpha > 0.1) nextCheckFac = 2;
-        else if (alphaCor < 0.1) allDone = true;
+        else if (alphaCor > 0.3 || newAlphaErr/newAlpha > 0.2) nextCheckFac = 2;
+        else if (alphaCor < 0.2) allDone = true;
+        if (verbose) printf("  alphaSpan: %f   nextCheckFac: %f\n", alphaSpan, nextCheckFac);
         if (alphaSpan < 1) alphaSpan = 1;
+        if (alphaSpan > 50) alphaSpan = 50;
         setAlpha(newAlpha, alphaSpan);
         nextCheck = stepCount * (1 + nextCheckFac);
-        if (nextCheck > targetMeter.getBlockSize() * 200) targetMeter.setBlockSize(nextCheck / 200);
+        if ((nextCheck-stepCount) > targetMeter.getBlockSize() * 200) targetMeter.setBlockSize((nextCheck-stepCount) / 200);
     }
 }
 

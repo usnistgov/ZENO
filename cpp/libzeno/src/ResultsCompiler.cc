@@ -44,6 +44,7 @@
 #include <cstdlib>
 #include <cmath>
 #include <iostream>
+#include <sstream>
 #include <iomanip>
 #include <thread>
 
@@ -285,13 +286,53 @@ ResultsCompiler::compile(ResultsZeno const * resultsZeno,
   }
 
   if (resultsVirial != NULL) {
-      Uncertain<double> v = resultsVirial->getVirialCoefficientReduced();
-      Result<Uncertain<double> >
-        result("Virial coefficient",
-	       "virial_coefficient",
-	       v,
-	       Units::getName(parameters->getLengthScaleUnit()) + "^3");
-      results->virialCoefficient = result;
+      int numValues = resultsVirial->getNumValues();
+      if (parameters->getVirialFlexible() && resultsVirial->getOrder() >= 3) {
+          Uncertain<double> v = resultsVirial->getVirialCoefficientReduced(0);
+          std::stringstream unitName;
+          unitName << Units::getName(parameters->getLengthScaleUnit()) << "^" << (3*(resultsVirial->getOrder()-1));
+          Result<Uncertain<double> >
+            result("Virial coefficient - flexible correction",
+                   "virial_coefficient",
+                   v,
+                   unitName.str());
+          results->virialCoefficient.push_back(result);
+
+          if (parameters->getVirialFlexible() && resultsVirial->getOrder() == 3) {
+              Uncertain<double> v2 = resultsVirial->getVirialCoefficientReduced(1);
+              Result<Uncertain<double> >
+                result2("Flexible correction - 4 B2^2",
+                        "virial_coefficient_flex",
+                        v2,
+                        unitName.str());
+              results->virialCoefficient.push_back(result2);
+          }
+      }
+      else {
+          Uncertain<double> v = resultsVirial->getVirialCoefficientReduced(0);
+          std::stringstream unitName;
+          unitName << Units::getName(parameters->getLengthScaleUnit()) << "^" << (3*(resultsVirial->getOrder()-1));
+          Result<Uncertain<double> >
+            result("Virial coefficient",
+                   "virial_coefficient",
+                   v,
+                   unitName.str());
+          results->virialCoefficient.push_back(result);
+          for (int iValue = 1; iValue < numValues; iValue++) {
+              Uncertain<double> v = resultsVirial->getVirialCoefficientReduced(iValue);
+              std::stringstream name, csvName;
+              name << "(1/T)-derivative (" << iValue << ")";
+              csvName << "virial_coefficient_" << iValue;
+              std::stringstream unitNameD;
+              unitNameD << "T^" << iValue << " " << Units::getName(parameters->getLengthScaleUnit()) << "^" << (3*(resultsVirial->getOrder()-1));
+              Result<Uncertain<double> >
+                resultD(name.str(),
+	                csvName.str(),
+	                v,
+	                unitNameD.str());
+              results->virialCoefficient.push_back(resultD);
+          }
+      }
 
       Result<double>
         resultRefFrac("Fraction of steps in reference",
