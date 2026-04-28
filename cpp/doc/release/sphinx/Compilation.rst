@@ -27,7 +27,7 @@ be provided by your Operating System distribution.
 Building SPRNG
 ~~~~~~~~~~~~~~
 
-SPRNG can be obtained from http://sprng.org.  The required version is 5.0.
+SPRNG can be obtained from https://www.cs.fsu.edu/~sprng/.  The required version is 5.0.
 
 When configuring the SPRNG library, you will have the option to include
 support for Fortran and MPI.  Neither of these are required for ZENO (even
